@@ -13,6 +13,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+meta:
+  # ASF currently gates repository ruleset reconciliation behind this rollout.
+  environment: github_rulesets
+
 notifications:
     commits:      commits@dubbo.apache.org
     issues:       notifications@dubbo.apache.org
