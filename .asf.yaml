@@ -44,5 +44,5 @@ github:
           # forge either required result.
           - context: CI Required
             app_id: 15368
-          - context: Maintainer Approval
+          - context: Maintainer Approval Gate
             app_id: 15368

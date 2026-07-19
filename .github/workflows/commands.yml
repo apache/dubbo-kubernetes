@@ -94,7 +94,7 @@ jobs:
               repo,
               sha: pr.head.sha,
               state: match[1] && !authorIsMaintainer ? 'pending' : 'success',
-              context: 'Maintainer Approval',
+              context: 'Maintainer Approval Gate',
               description: match[1] && !authorIsMaintainer
                 ? 'Maintainer approval cancelled'
                 : 'Approved by @mfordjody via /lgtm',

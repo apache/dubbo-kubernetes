@@ -43,7 +43,7 @@ permissions:
 
 jobs:
   approval:
-    name: Maintainer Approval
+    name: Publish Maintainer Approval
     runs-on: ubuntu-latest
     timeout-minutes: 5
     if: |
@@ -63,7 +63,7 @@ jobs:
                 repo,
                 sha,
                 state,
-                context: 'Maintainer Approval',
+                context: 'Maintainer Approval Gate',
                 description,
                 target_url: targetUrl,
               });
