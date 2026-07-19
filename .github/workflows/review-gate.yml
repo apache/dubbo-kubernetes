@@ -1,0 +1,117 @@
+# Licensed to the Apache Software Foundation (ASF) under one or more
+# contributor license agreements.  See the NOTICE file distributed with
+# this work for additional information regarding copyright ownership.
+# The ASF licenses this file to You under the Apache License, Version 2.0
+# (the "License"); you may not use this file except in compliance with
+# the License.  You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+name: Maintainer Review Gate
+
+on:
+  pull_request_target:
+    types:
+      - opened
+      - reopened
+      - synchronize
+      - ready_for_review
+  pull_request_review:
+    types:
+      - submitted
+      - dismissed
+  push:
+    branches:
+      - master
+  workflow_dispatch:
+    inputs:
+      pr_number:
+        description: Optional pull request number to recompute
+        required: false
+        type: number
+
+permissions:
+  contents: read
+  pull-requests: read
+  statuses: write
+
+jobs:
+  approval:
+    name: Maintainer Approval
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    if: |
+      github.repository == 'apache/dubbo-kubernetes' &&
+      (github.event_name != 'pull_request_review' ||
+       github.event.review.user.login == 'mfordjody')
+    steps:
+      - name: Publish approval status
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const {owner, repo} = context.repo;
+            const maintainer = 'mfordjody';
+            const publish = async (sha, state, description, targetUrl) => {
+              await github.rest.repos.createCommitStatus({
+                owner,
+                repo,
+                sha,
+                state,
+                context: 'Maintainer Approval',
+                description,
+                target_url: targetUrl,
+              });
+            };
+
+            if (context.eventName === 'push') {
+              await publish(context.sha, 'success', 'Merged through the protected branch', context.payload.compare);
+              return;
+            }
+
+            let pr = context.payload.pull_request;
+            if (context.eventName === 'workflow_dispatch') {
+              const prNumber = Number(context.payload.inputs?.pr_number || 0);
+              if (!prNumber) {
+                await publish(context.sha, 'success', 'Maintainer-authorized workflow dispatch', `${context.serverUrl}/${owner}/${repo}/actions/runs/${context.runId}`);
+                return;
+              }
+              ({data: pr} = await github.rest.pulls.get({owner, repo, pull_number: prNumber}));
+            }
+
+            if (!pr) {
+              core.setFailed('Pull request payload is required');
+              return;
+            }
+
+            const authorIsMaintainer = pr.user.login.toLowerCase() === maintainer;
+            let approved = authorIsMaintainer;
+            if (!approved) {
+              const reviews = await github.paginate(github.rest.pulls.listReviews, {
+                owner,
+                repo,
+                pull_number: pr.number,
+                per_page: 100,
+              });
+              approved = reviews.some((review) =>
+                review.user?.login.toLowerCase() === maintainer &&
+                review.state === 'APPROVED' &&
+                review.commit_id === pr.head.sha,
+              );
+            }
+
+            await publish(
+              pr.head.sha,
+              approved ? 'success' : 'pending',
+              authorIsMaintainer
+                ? 'Maintainer-authored pull request'
+                : approved
+                  ? `Approved by @${maintainer}`
+                  : `Waiting for @${maintainer} approval`,
+              pr.html_url,
+            );
