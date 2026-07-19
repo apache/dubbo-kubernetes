@@ -42,3 +42,27 @@ github:
         contexts:
           # This stable aggregate check fails unless every required CI job passes.
           - CI Required
+  rulesets:
+    # Stage the review policy on an isolated branch before targeting master.
+    - name: "Solo Maintainer Review Gate"
+      target: branch
+      enforcement: active
+      bypass_actors:
+        - actor_id: 91593982
+          actor_type: User
+          bypass_mode: pull_request
+      conditions:
+        ref_name:
+          include:
+            - "refs/heads/policy/ruleset-sandbox"
+          exclude: []
+      rules:
+        - type: deletion
+        - type: non_fast_forward
+        - type: pull_request
+          parameters:
+            dismiss_stale_reviews_on_push: true
+            require_code_owner_review: true
+            require_last_push_approval: false
+            required_approving_review_count: 1
+            required_review_thread_resolution: true

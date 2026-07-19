@@ -20,8 +20,9 @@
 #   /unassign [@user ...]  remove assignees
 #   /lgtm                  (PR only, write access, not the PR author) label the
 #                          PR with `lgtm`; if the commenter is an approver in
-#                          the root OWNERS file, the PR is squash-merged (or
-#                          auto-merge is enabled while checks are running) —
+#                          the root OWNERS file, request a squash merge (or
+#                          auto-merge while checks run). Repository rulesets
+#                          still enforce CI and required Code Owner review;
 #                          non-approvers only apply the label
 #   /lgtm cancel           remove the `lgtm` label and disable auto-merge
 #   /close                 close the issue/PR (author or write access)
