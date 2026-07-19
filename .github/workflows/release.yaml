@@ -238,9 +238,7 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Install Helm
-        uses: azure/setup-helm@v5.0.1
-        with:
-          version: 'v3.16.4'
+        run: tools/ci/install-helm.sh v3.16.4
 
       - name: Lint, package, and verify charts
         env:

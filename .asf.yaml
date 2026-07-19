@@ -36,8 +36,9 @@ github:
     # Enable wiki for documentation
     wiki: false
   protected_branches:
-    master: {}
-    # only disable force push
-    # foo: bar
-
-
+    master:
+      required_status_checks:
+        strict: true
+        contexts:
+          # This stable aggregate check fails unless every required CI job passes.
+          - CI Required

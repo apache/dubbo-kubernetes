@@ -132,7 +132,7 @@ func (f *fakeConfigController) HasSynced() bool          { return true }
 
 func (f *fakeConfigController) create(t *testing.T, cfg config.Config) {
 	t.Helper()
-	if _, err := f.ConfigStore.Create(cfg); err != nil {
+	if _, err := f.Create(cfg); err != nil {
 		t.Fatal(err)
 	}
 	current := *f.Get(cfg.GroupVersionKind, cfg.Name, cfg.Namespace)
@@ -145,7 +145,7 @@ func (f *fakeConfigController) update(t *testing.T, cfg config.Config) {
 	t.Helper()
 	old := *f.Get(cfg.GroupVersionKind, cfg.Name, cfg.Namespace)
 	cfg.ResourceVersion = ""
-	if _, err := f.ConfigStore.Update(cfg); err != nil {
+	if _, err := f.Update(cfg); err != nil {
 		t.Fatal(err)
 	}
 	current := *f.Get(cfg.GroupVersionKind, cfg.Name, cfg.Namespace)
@@ -157,7 +157,7 @@ func (f *fakeConfigController) update(t *testing.T, cfg config.Config) {
 func (f *fakeConfigController) delete(t *testing.T, kind config.GroupVersionKind, name, namespace string) {
 	t.Helper()
 	old := *f.Get(kind, name, namespace)
-	if err := f.ConfigStore.Delete(kind, name, namespace, nil); err != nil {
+	if err := f.Delete(kind, name, namespace, nil); err != nil {
 		t.Fatal(err)
 	}
 	for _, handler := range f.handlers[kind] {

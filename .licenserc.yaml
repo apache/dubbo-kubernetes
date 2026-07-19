@@ -23,6 +23,9 @@ header:
     - '**/*.pb.go'
     - '**/*.gen.go'
     - '**/*.cache'
+
+    # Upstream KRT sources retain the Istio Authors Apache-2.0 header.
+    - 'pkg/kube/krt/**'
     
     # Configuration and template files
     - '**/*.proto'
@@ -58,6 +61,7 @@ header:
     
     # Test data
     - '**/testdata/**'
+    - '**/*.pem'
     
     # Log files
     - '**/*.log'
