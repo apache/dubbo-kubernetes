@@ -20,9 +20,9 @@
 #   /unassign [@user ...]  remove assignees
 #   /lgtm                  (PR only, write access, not the PR author) label the
 #                          PR with `lgtm`; if the commenter is an approver in
-#                          the root OWNERS file, request a squash merge (or
-#                          auto-merge while checks run). Repository rulesets
-#                          still enforce CI and required Code Owner review;
+#                          the root OWNERS file, record Maintainer Approval and
+#                          request a squash merge (or auto-merge while checks
+#                          run). Required status checks still enforce CI;
 #                          non-approvers only apply the label
 #   /lgtm cancel           remove the `lgtm` label and disable auto-merge
 #   /close                 close the issue/PR (author or write access)
@@ -49,6 +49,7 @@ permissions:
   issues: write
   pull-requests: write
   actions: write
+  statuses: write
 
 jobs:
   command:
@@ -69,6 +70,36 @@ jobs:
         with:
           app-id: ${{ secrets.BOT_APP_ID }}
           private-key: ${{ secrets.BOT_APP_PRIVATE_KEY }}
+
+      # Keep the required status tied to the built-in GitHub Actions App even
+      # when slash-command comments and merges use a custom bot identity.
+      - name: Record maintainer approval
+        if: github.event.issue.pull_request && github.actor == 'mfordjody'
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ github.token }}
+          script: |
+            const firstLine = (context.payload.comment.body || '').trim().split(/\r?\n/)[0].trim();
+            const match = firstLine.match(/^\/lgtm(?:\s+(cancel))?\s*$/i);
+            if (!match) return;
+
+            const {owner, repo} = context.repo;
+            const pullNumber = context.payload.issue.number;
+            const {data: pr} = await github.rest.pulls.get({owner, repo, pull_number: pullNumber});
+            const authorIsMaintainer = pr.user.login.toLowerCase() === 'mfordjody';
+            if (!match[1] && authorIsMaintainer) return;
+
+            await github.rest.repos.createCommitStatus({
+              owner,
+              repo,
+              sha: pr.head.sha,
+              state: match[1] && !authorIsMaintainer ? 'pending' : 'success',
+              context: 'Maintainer Approval',
+              description: match[1] && !authorIsMaintainer
+                ? 'Maintainer approval cancelled'
+                : 'Approved by @mfordjody via /lgtm',
+              target_url: pr.html_url,
+            });
 
       - name: Dispatch command
         uses: actions/github-script@v7
