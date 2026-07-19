@@ -39,6 +39,10 @@ github:
     master:
       required_status_checks:
         strict: true
-        contexts:
-          # This stable aggregate check fails unless every required CI job passes.
-          - CI Required
+        checks:
+          # Pin both gates to the GitHub Actions App so a personal token cannot
+          # forge either required result.
+          - context: CI Required
+            app_id: 15368
+          - context: Maintainer Approval Gate
+            app_id: 15368
