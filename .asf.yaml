@@ -16,6 +16,7 @@
 meta:
   # ASF currently gates repository ruleset reconciliation behind this rollout.
   environment: github_rulesets
+  nextgen: true
 
 notifications:
     commits:      commits@dubbo.apache.org
