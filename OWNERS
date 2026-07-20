@@ -14,8 +14,8 @@
 # limitations under the License.
 
 # OWNERS drives the /lgtm merge command in .github/workflows/commands.yml.
-# The required Maintainer Approval status independently enforces approval by
-# an approver before another user's pull request can merge.
+# The required Maintainer Approval status independently enforces /lgtm from
+# an approver before any pull request can merge.
 
 approvers:
   - mfordjody

@@ -22,10 +22,6 @@ on:
       - reopened
       - synchronize
       - ready_for_review
-  pull_request_review:
-    types:
-      - submitted
-      - dismissed
   push:
     branches:
       - master
@@ -46,17 +42,13 @@ jobs:
     name: Publish Maintainer Approval
     runs-on: ubuntu-latest
     timeout-minutes: 5
-    if: |
-      github.repository == 'apache/dubbo-kubernetes' &&
-      (github.event_name != 'pull_request_review' ||
-       github.event.review.user.login == 'mfordjody')
+    if: github.repository == 'apache/dubbo-kubernetes'
     steps:
       - name: Publish approval status
         uses: actions/github-script@v7
         with:
           script: |
             const {owner, repo} = context.repo;
-            const maintainer = 'mfordjody';
             const publish = async (sha, state, description, targetUrl) => {
               await github.rest.repos.createCommitStatus({
                 owner,
@@ -89,31 +81,9 @@ jobs:
               return;
             }
 
-            const authorIsMaintainer = pr.user.login.toLowerCase() === maintainer;
-            let approved = authorIsMaintainer;
-            if (!approved) {
-              const reviews = await github.paginate('GET /repos/{owner}/{repo}/pulls/{pull_number}/reviews', {
-                owner,
-                repo,
-                pull_number: pr.number,
-                per_page: 100,
-              });
-              const currentApprovals = reviews.filter((review) =>
-                review.user?.login?.toLowerCase() === maintainer &&
-                String(review.state).toUpperCase() === 'APPROVED' &&
-                review.commit_id === pr.head.sha,
-              );
-              core.info(`Found ${currentApprovals.length} current approval(s) from @${maintainer} among ${reviews.length} review(s)`);
-              approved = currentApprovals.length > 0;
-            }
-
             await publish(
               pr.head.sha,
-              approved ? 'success' : 'pending',
-              authorIsMaintainer
-                ? 'Maintainer-authored pull request'
-                : approved
-                  ? `Approved by @${maintainer}`
-                  : `Waiting for @${maintainer} approval`,
+              'pending',
+              'Waiting for @mfordjody /lgtm',
               pr.html_url,
             );
