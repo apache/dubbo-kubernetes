@@ -32,10 +32,21 @@ Comment on an issue or pull request with one of the following commands (the comm
 |---|---|---|---|
 | `/assign [@user ...]` | issue / PR | anyone (self); write access (others) | Assign the issue or PR |
 | `/unassign [@user ...]` | issue / PR | anyone (self); write access (others) | Remove assignees |
-| `/lgtm` | PR | collaborators with write access (not the PR author) | Add the `lgtm` label; if the commenter is an approver in the root [`OWNERS`](OWNERS) file, the PR is squash-merged (auto-merge if checks are still running) |
+| `/lgtm` | PR | approvers in the root [`OWNERS`](OWNERS) file | Record maintainer approval and enable GitHub Auto-merge; the PR is squash-merged after required checks pass |
 | `/lgtm cancel` | PR | write access or PR author | Remove the `lgtm` label and disable auto-merge |
 | `/close` | issue / PR | author or write access | Close |
 | `/reopen` | issue / PR | author or write access | Reopen |
 | `/retest` | PR | author or write access | Re-run failed workflow runs for the PR head commit |
+
+## Automatic pull request labels
+
+The GitHub bot labels pull requests from their changed paths and branch names.
+Component labels include `cni`, `dubboctl`, `dubbod`, `operator`, `helm`,
+`networking`, and `samples`. Cross-cutting labels include `documentation`,
+`testing`, `performance`, `security`, `build`, `release`, `dependencies`, and
+`github_actions`.
+
+Pushes to a pull request reset its maintainer approval and remove the `lgtm`
+label. An approver must review the new head and comment `/lgtm` again.
 
 Thank you for contributing to Dubbo Kubernetes!
