@@ -20,8 +20,8 @@
 #   /unassign [@user ...]  remove assignees
 #   /lgtm                  (PR only) only an approver in the root OWNERS file
 #                          can record Maintainer Approval. The PR is squash
-#                          merged immediately when CI is green, or by the
-#                          workflow-run handler when CI finishes.
+#                          merged immediately when CI is green, or queued with
+#                          GitHub Auto-merge while required checks finish.
 #   /lgtm cancel           remove the `lgtm` label and reset approval
 #   /close                 close the issue/PR (author or write access)
 #   /reopen                reopen the issue/PR (author or write access)
@@ -41,20 +41,8 @@ on:
   issue_comment:
     types:
       - created
-  workflow_run:
-    workflows:
-      - CI
-    types:
-      - completed
-  workflow_dispatch:
-    inputs:
-      pr_number:
-        description: Pull request to reconsider for an approved merge
-        required: true
-        type: number
 
 permissions:
-  checks: read
   contents: write
   issues: write
   pull-requests: write
@@ -273,14 +261,13 @@ jobs:
                   await reply(`Merged on behalf of @${commenter} via \`/lgtm\`.`);
                 } catch (mergeErr) {
                   core.info(`Merge deferred until CI finishes: ${mergeErr.message}`);
-                  await github.rest.actions.createWorkflowDispatch({
-                    owner,
-                    repo,
-                    workflow_id: 'commands.yml',
-                    ref: pr.base.ref,
-                    inputs: {pr_number: String(pr.number)},
-                  });
-                  await reply(`\`/lgtm\` recorded by @${commenter}. The PR will be squash merged automatically after required CI passes.`);
+                  if (!pr.auto_merge) {
+                    await github.graphql(
+                      `mutation($id: ID!) { enablePullRequestAutoMerge(input: {pullRequestId: $id, mergeMethod: SQUASH}) { pullRequest { number } } }`,
+                      {id: pr.node_id},
+                    );
+                  }
+                  await reply(`\`/lgtm\` recorded by @${commenter}. GitHub Auto-merge will squash merge the PR after required CI passes.`);
                 }
                 return;
               }
@@ -327,98 +314,5 @@ jobs:
                 }
                 await ack('rocket');
                 return;
-              }
-            }
-
-  merge-approved:
-    name: Merge Approved Pull Request
-    runs-on: ubuntu-latest
-    timeout-minutes: 5
-    if: |
-      github.repository == 'apache/dubbo-kubernetes' &&
-      (github.event_name == 'workflow_dispatch' ||
-       (github.event_name == 'workflow_run' &&
-        github.event.workflow_run.event == 'pull_request' &&
-        github.event.workflow_run.conclusion == 'success'))
-    steps:
-      - name: Merge current-head pull request approved via /lgtm
-        uses: actions/github-script@v7
-        with:
-          script: |
-            const {owner, repo} = context.repo;
-            let headSha;
-            let candidates;
-            if (context.eventName === 'workflow_dispatch') {
-              const pullNumber = Number(context.payload.inputs.pr_number);
-              const {data: pr} = await github.rest.pulls.get({owner, repo, pull_number: pullNumber});
-              headSha = pr.head.sha;
-              candidates = [pr];
-            } else {
-              headSha = context.payload.workflow_run.head_sha;
-              const {data: associated} = await github.rest.repos.listPullRequestsAssociatedWithCommit({
-                owner,
-                repo,
-                commit_sha: headSha,
-              });
-              candidates = associated.filter((pr) =>
-                pr.state === 'open' &&
-                pr.head.sha === headSha &&
-                ['master', 'main'].includes(pr.base.ref),
-              );
-            }
-
-            for (const candidate of candidates) {
-              const {data: pr} = await github.rest.pulls.get({
-                owner,
-                repo,
-                pull_number: candidate.number,
-              });
-              const labels = new Set(pr.labels.map((label) => label.name));
-              if (pr.state !== 'open' || pr.head.sha !== headSha ||
-                  !['master', 'main'].includes(pr.base.ref) || !labels.has('lgtm')) {
-                core.info(`#${pr.number}: missing lgtm label`);
-                continue;
-              }
-
-              const {data: combined} = await github.rest.repos.getCombinedStatusForRef({
-                owner,
-                repo,
-                ref: headSha,
-              });
-              const approval = combined.statuses.find((status) =>
-                status.context === 'Maintainer Approval Gate',
-              );
-              if (approval?.state !== 'success') {
-                core.info(`#${pr.number}: maintainer approval is ${approval?.state || 'missing'}`);
-                continue;
-              }
-
-              const {data: checks} = await github.rest.checks.listForRef({
-                owner,
-                repo,
-                ref: headSha,
-                per_page: 100,
-              });
-              const requiredCI = checks.check_runs.find((check) =>
-                check.name === 'CI Required' && check.app?.slug === 'github-actions',
-              );
-              if (requiredCI?.conclusion !== 'success') {
-                core.info(`#${pr.number}: CI Required is ${requiredCI?.conclusion || requiredCI?.status || 'missing'}`);
-                continue;
-              }
-
-              try {
-                const {data: result} = await github.rest.pulls.merge({
-                  owner,
-                  repo,
-                  pull_number: pr.number,
-                  merge_method: 'squash',
-                  sha: headSha,
-                });
-                if (!result.merged) {
-                  core.setFailed(`#${pr.number}: ${result.message}`);
-                }
-              } catch (error) {
-                core.setFailed(`#${pr.number}: ${error.message}`);
               }
             }

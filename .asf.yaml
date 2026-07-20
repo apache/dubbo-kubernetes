@@ -21,6 +21,8 @@ notifications:
 github:
   homepage: "https://kdubbo.github.io"
   description: "Build a native mesh using gRPC and xDS"
+  pull_requests:
+    allow_auto_merge: true
   labels:
     - dubbo
     - consul
