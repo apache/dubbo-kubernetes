@@ -34,6 +34,7 @@ on:
 
 permissions:
   contents: read
+  issues: write
   pull-requests: read
   statuses: write
 
@@ -79,6 +80,19 @@ jobs:
             if (!pr) {
               core.setFailed('Pull request payload is required');
               return;
+            }
+
+            if (context.eventName === 'pull_request_target' && context.payload.action === 'synchronize') {
+              try {
+                await github.rest.issues.removeLabel({
+                  owner,
+                  repo,
+                  issue_number: pr.number,
+                  name: 'lgtm',
+                });
+              } catch (error) {
+                if (error.status !== 404) throw error;
+              }
             }
 
             await publish(
