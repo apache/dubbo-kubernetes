@@ -43,7 +43,7 @@ on:
       - created
   workflow_run:
     workflows:
-      - Dubbo Kubernetes CI
+      - CI
     types:
       - completed
   workflow_dispatch:
