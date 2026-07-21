@@ -31,6 +31,9 @@ limitations under the License.
 
 <!-- List exact commands, environments, and results. Add screenshots or cluster evidence when behavior is user-visible. -->
 
+> Merge authorization: after required checks pass, only an `/lgtm` comment
+> from `@mfordjody` authorizes the automatic squash merge.
+
 ## Compatibility and rollout
 
 <!-- Describe upgrade, downgrade, API, configuration, performance, security, and rollback implications. Write "None" when not applicable. -->

@@ -13,7 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-name: Dubbo Kubernetes CI
+name: CI
 
 on:
   push:
@@ -91,6 +91,9 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     if: github.repository == 'apache/dubbo-kubernetes'
+    permissions:
+      contents: read
+      id-token: write
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -113,12 +116,13 @@ jobs:
           retention-days: 7
 
       - name: Upload coverage to Codecov
-        uses: codecov/codecov-action@v4
+        uses: codecov/codecov-action@v5
         with:
-          file: ./coverage.txt
+          files: ./coverage.txt
           flags: unittests
           name: codecov-umbrella
           fail_ci_if_error: true
+          use_oidc: true
 
   performance:
     name: Performance Scale Smoke

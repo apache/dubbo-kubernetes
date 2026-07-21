@@ -13,12 +13,28 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# OWNERS drives the /lgtm merge command in .github/workflows/commands.yml.
-# The required Maintainer Approval status independently enforces /lgtm from
-# an approver before any pull request can merge.
+name: Labels
 
-approvers:
-  - mfordjody
+on:
+  pull_request_target:
+    types:
+      - opened
+      - reopened
+      - synchronize
+      - ready_for_review
 
-reviewers:
-  - mfordjody
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  changed-files:
+    name: Apply PR Labels
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    if: github.repository == 'apache/dubbo-kubernetes'
+    steps:
+      - name: Apply labels from changed paths
+        uses: actions/labeler@b8dd2d9be0f68b860e7dae5dae7d772984eacd6d # v6.2.0
+        with:
+          repo-token: ${{ github.token }}

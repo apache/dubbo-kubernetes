@@ -18,12 +18,11 @@
 #   /assign [@user ...]    assign the issue/PR (self-assign needs no permission;
 #                          assigning others requires write access)
 #   /unassign [@user ...]  remove assignees
-#   /lgtm                  (PR only, write access, not the PR author) label the
-#                          PR with `lgtm`; if the commenter is an approver in
-#                          the root OWNERS file, the PR is squash-merged (or
-#                          auto-merge is enabled while checks are running) —
-#                          non-approvers only apply the label
-#   /lgtm cancel           remove the `lgtm` label and disable auto-merge
+#   /lgtm                  (PR only) only an approver in the root OWNERS file
+#                          can record Maintainer Approval. The PR is squash
+#                          merged immediately when CI is green, or queued with
+#                          GitHub Auto-merge while required checks finish.
+#   /lgtm cancel           remove the `lgtm` label and reset approval
 #   /close                 close the issue/PR (author or write access)
 #   /reopen                reopen the issue/PR (author or write access)
 #   /retest                (PR only, write access) re-run failed workflow runs
@@ -48,6 +47,7 @@ permissions:
   issues: write
   pull-requests: write
   actions: write
+  statuses: write
 
 jobs:
   command:
@@ -55,6 +55,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     if: |
+      github.event_name == 'issue_comment' &&
       github.repository == 'apache/dubbo-kubernetes' &&
       startsWith(github.event.comment.body, '/')
     env:
@@ -68,6 +69,49 @@ jobs:
         with:
           app-id: ${{ secrets.BOT_APP_ID }}
           private-key: ${{ secrets.BOT_APP_PRIVATE_KEY }}
+
+      # Keep the required status tied to the built-in GitHub Actions App even
+      # when slash-command comments and merges use a custom bot identity.
+      - name: Record maintainer approval
+        if: github.event.issue.pull_request
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ github.token }}
+          script: |
+            const firstLine = (context.payload.comment.body || '').trim().split(/\r?\n/)[0].trim();
+            const match = firstLine.match(/^\/lgtm(?:\s+(cancel))?\s*$/i);
+            if (!match) return;
+
+            const {owner, repo} = context.repo;
+            const pullNumber = context.payload.issue.number;
+            const {data: pr} = await github.rest.pulls.get({owner, repo, pull_number: pullNumber});
+            const cancelled = !!match[1];
+            if (!cancelled && context.actor.toLowerCase() !== 'mfordjody') return;
+            if (cancelled && context.actor.toLowerCase() !== pr.user.login.toLowerCase()) {
+              try {
+                const {data: permission} = await github.rest.repos.getCollaboratorPermissionLevel({
+                  owner,
+                  repo,
+                  username: context.actor,
+                });
+                if (!['admin', 'maintain', 'write'].includes(permission.permission)) return;
+              } catch (error) {
+                core.info(`Approval cancellation denied: ${error.message}`);
+                return;
+              }
+            }
+
+            await github.rest.repos.createCommitStatus({
+              owner,
+              repo,
+              sha: pr.head.sha,
+              state: cancelled ? 'pending' : 'success',
+              context: 'Maintainer Approval Gate',
+              description: cancelled
+                ? 'Maintainer approval cancelled'
+                : 'Approved by @mfordjody via /lgtm',
+              target_url: pr.html_url,
+            });
 
       - name: Dispatch command
         uses: actions/github-script@v7
@@ -180,14 +224,20 @@ jobs:
                   await ack('+1');
                   return;
                 }
-                if (commenter === issue.user.login) {
-                  await reply(`@${commenter}: you cannot \`/lgtm\` your own pull request.`);
-                  return;
-                }
                 if (!(await hasWriteAccess(commenter))) {
                   await reply(`@${commenter}: only collaborators with write access can \`/lgtm\` a pull request.`);
                   return;
                 }
+
+                const approvers = await getApprovers();
+                if (!approvers.includes(commenter.toLowerCase())) {
+                  const who = approvers.length
+                    ? approvers.map((a) => '@' + a).join(', ')
+                    : 'nobody (OWNERS file missing or empty)';
+                  await reply(`@${commenter}: merging requires \`/lgtm\` from an approver in the OWNERS file: ${who}.`);
+                  return;
+                }
+
                 try {
                   await github.rest.issues.createLabel({owner, repo, name: 'lgtm', color: '15dd18', description: 'Looks good to me, ready to merge'});
                 } catch (e) {
@@ -196,32 +246,28 @@ jobs:
                 await github.rest.issues.addLabels({owner, repo, issue_number: issueNumber, labels: ['lgtm']});
                 await ack('+1');
 
-                const approvers = await getApprovers();
-                if (!approvers.includes(commenter.toLowerCase())) {
-                  const who = approvers.length
-                    ? approvers.map((a) => '@' + a).join(', ')
-                    : 'nobody (OWNERS file missing or empty)';
-                  await reply(`\`lgtm\` label added by @${commenter}. Merging requires \`/lgtm\` from an approver in the OWNERS file: ${who}.`);
-                  return;
-                }
-
                 const {data: pr} = await github.rest.pulls.get({owner, repo, pull_number: issueNumber});
                 if (pr.merged) {
                   return;
                 }
                 try {
-                  await github.rest.pulls.merge({owner, repo, pull_number: issueNumber, merge_method: 'squash'});
+                  await github.rest.pulls.merge({
+                    owner,
+                    repo,
+                    pull_number: issueNumber,
+                    merge_method: 'squash',
+                    sha: pr.head.sha,
+                  });
                   await reply(`Merged on behalf of @${commenter} via \`/lgtm\`.`);
                 } catch (mergeErr) {
-                  try {
+                  core.info(`Merge deferred until CI finishes: ${mergeErr.message}`);
+                  if (!pr.auto_merge) {
                     await github.graphql(
                       `mutation($id: ID!) { enablePullRequestAutoMerge(input: {pullRequestId: $id, mergeMethod: SQUASH}) { pullRequest { number } } }`,
                       {id: pr.node_id},
                     );
-                    await reply(`\`lgtm\` recorded by @${commenter}. Auto-merge (squash) enabled — the PR will merge once required checks pass.`);
-                  } catch (autoErr) {
-                    await reply(`\`lgtm\` recorded by @${commenter}, but the PR could not be merged automatically:\n\n- merge: ${mergeErr.message}\n- auto-merge: ${autoErr.message}\n\nPlease merge manually once checks pass.`);
                   }
+                  await reply(`\`/lgtm\` recorded by @${commenter}. GitHub Auto-merge will squash merge the PR after required CI passes.`);
                 }
                 return;
               }
