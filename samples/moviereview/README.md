@@ -2,9 +2,8 @@
 
 moviepage / details / reviews(v1,v2,v3) / ratings 六个服务，应用代码本身是裸 HTTP、监听 9080，不依赖任何 Dubbo SDK。
 
-**这个示例必须在开启注入的 namespace 里运行。** 注入后 CNI 会拦截 pod 入站流量，
-9080 对 kubelet 不可达，健康检查只能走 sidecar 的 15080 端口 —— `deployment.yaml`
-里的探针端口就是按这个前提写的。不打注入标签，Pod 会因为探针失败而反复重启。
+这组清单不含任何网格专用字段，作为普通 Kubernetes 应用可以独立部署。开启注入后，
+注入器会把探针端口改写到 sidecar 上，无需改动清单。
 
 ### 构建镜像
 
@@ -18,7 +17,7 @@ PLATFORM=linux/amd64 samples/moviereview/build.sh              # 集群节点架
 
 ```bash
 kubectl create ns moviereview
-kubectl label ns moviereview dubbo-injection=enabled   # 必需
+kubectl label ns moviereview dubbo-injection=enabled   # 可选，纳入网格时才需要
 kubectl apply -f samples/moviereview/deployment.yaml
 kubectl -n moviereview rollout status deploy/moviepage
 kubectl -n moviereview get svc frontend
