@@ -458,6 +458,8 @@ func postProcessPod(pod *corev1.Pod, injectedPod corev1.Pod, req InjectionParame
 		if err := addApplicationContainerConfig(pod, req); err != nil {
 			return err
 		}
+		// Must run after the sidecar is merged in: the rewrite reads the port it forwards to.
+		RewriteAppProbes(pod)
 	}
 
 	if err := reorderPod(pod, req); err != nil {

@@ -192,13 +192,13 @@ spec:
         readinessProbe:
           httpGet:
             path: /healthz
-            port: 15080
+            port: 9080
           initialDelaySeconds: 3
           periodSeconds: 5
         livenessProbe:
           httpGet:
             path: /healthz
-            port: 15080
+            port: 9080
           initialDelaySeconds: 10
           periodSeconds: 10
 ---
@@ -234,13 +234,13 @@ spec:
         readinessProbe:
           httpGet:
             path: /healthz
-            port: 15080
+            port: 9080
           initialDelaySeconds: 3
           periodSeconds: 5
         livenessProbe:
           httpGet:
             path: /healthz
-            port: 15080
+            port: 9080
           initialDelaySeconds: 10
           periodSeconds: 10
 ---
@@ -276,13 +276,13 @@ spec:
         readinessProbe:
           httpGet:
             path: /healthz
-            port: 15080
+            port: 9080
           initialDelaySeconds: 3
           periodSeconds: 5
         livenessProbe:
           httpGet:
             path: /healthz
-            port: 15080
+            port: 9080
           initialDelaySeconds: 10
           periodSeconds: 10
 ---
@@ -318,13 +318,13 @@ spec:
         readinessProbe:
           httpGet:
             path: /healthz
-            port: 15080
+            port: 9080
           initialDelaySeconds: 3
           periodSeconds: 5
         livenessProbe:
           httpGet:
             path: /healthz
-            port: 15080
+            port: 9080
           initialDelaySeconds: 10
           periodSeconds: 10
 ---
@@ -363,13 +363,13 @@ spec:
         readinessProbe:
           httpGet:
             path: /healthz
-            port: 15080
+            port: 9080
           initialDelaySeconds: 3
           periodSeconds: 5
         livenessProbe:
           httpGet:
             path: /healthz
-            port: 15080
+            port: 9080
           initialDelaySeconds: 10
           periodSeconds: 10
 ---
@@ -408,12 +408,12 @@ spec:
         readinessProbe:
           httpGet:
             path: /healthz
-            port: 15080
+            port: 9080
           initialDelaySeconds: 3
           periodSeconds: 5
         livenessProbe:
           httpGet:
             path: /healthz
-            port: 15080
+            port: 9080
           initialDelaySeconds: 10
           periodSeconds: 10
