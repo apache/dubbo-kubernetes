@@ -26,7 +26,7 @@ import (
 	"strings"
 	"time"
 
-	testproto "github.com/apache/dubbo-kubernetes/dubbod/discovery/cmd/app/testproto"
+	testproto "github.com/apache/dubbo-kubernetes/dubbod/discovery/cmd/app/testdata"
 	"github.com/apache/dubbo-kubernetes/pkg/config/constants"
 	"github.com/apache/dubbo-kubernetes/pkg/log"
 	"google.golang.org/grpc"

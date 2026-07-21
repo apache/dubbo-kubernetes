@@ -35,15 +35,17 @@ def forward_headers():
     return headers
 
 
+# Returns (data, ok). The caller must propagate ok into the HTTP status so that
+# an upstream failure stays visible to probes, load generators and the mesh.
 def get_json(url, fallback, headers=None):
     try:
         response = requests.get(url, headers=headers or {}, timeout=2)
         response.raise_for_status()
-        return response.json()
+        return response.json(), True
     except (requests.RequestException, ValueError) as exc:
         data = fallback.copy()
         data["error"] = str(exc)
-        return data
+        return data, False
 
 
 @app.get("/healthz")
@@ -70,7 +72,7 @@ def logout():
 def index():
     headers = forward_headers()
     user = session.get("user", "")
-    details = get_json(
+    details, details_ok = get_json(
         DETAILS_URL,
         {
             "title": "Unknown",
@@ -84,11 +86,13 @@ def index():
         },
         headers,
     )
-    reviews = get_json(REVIEWS_URL, {"version": "unavailable", "items": [], "rating": None}, headers)
-    page_status = 200
+    reviews, reviews_ok = get_json(
+        REVIEWS_URL, {"version": "unavailable", "items": [], "rating": None}, headers
+    )
+    page_status = 200 if details_ok and reviews_ok else 503
     title = escape(str(details.get("title", "Unknown")))
     year = escape(str(details.get("year", "-")))
-    pages = escape(str(page_status))
+    upstream = escape(str(page_status))
     director = escape(str(details.get("director", "-")))
     genres = " / ".join(escape(str(genre)) for genre in details.get("genres", []))
     runtime = escape(str(details.get("runtime", "147 min")))
@@ -103,7 +107,7 @@ def index():
         f"<div class='metric'><span>{label}</span><strong>{value}</strong></div>"
         for label, value in [
             ("Release", year),
-            ("Pages", pages),
+            ("Upstream", upstream),
             ("Director", director),
             ("Genre", genres),
             ("Runtime", runtime),

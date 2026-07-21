@@ -19,10 +19,11 @@ package bootstrap
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/apache/dubbo-kubernetes/pkg/util/ptr"
 	"os"
 	"strconv"
 	"strings"
+
+	"github.com/apache/dubbo-kubernetes/pkg/util/ptr"
 
 	"github.com/apache/dubbo-kubernetes/pkg/config/constants"
 	"github.com/apache/dubbo-kubernetes/pkg/model"
@@ -50,7 +51,6 @@ type MetadataOptions struct {
 	DubboSubjectAltName    []string
 	CredentialSocketExists bool
 	XDSRootCert            string
-	annotationFilePath     string
 	MetadataDiscovery      *bool
 	Envs                   []string
 }

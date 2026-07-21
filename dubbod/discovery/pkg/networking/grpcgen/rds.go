@@ -330,14 +330,6 @@ func defaultSingleClusterRoute(clusterName string) *route.Route {
 	}
 }
 
-func defaultRouteMatch() *route.RouteMatch {
-	return &route.RouteMatch{
-		PathSpecifier: &route.RouteMatch_Prefix{
-			Prefix: "/",
-		},
-	}
-}
-
 // buildRoutesFromGatewayHTTPRoute converts Gateway API HTTPRoute resources to XDS Route configurations
 func buildRoutesFromGatewayHTTPRoute(httpRoutes []config.Config, hostName host.Name, defaultPort int) []*route.Route {
 	if len(httpRoutes) == 0 {

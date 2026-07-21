@@ -54,7 +54,6 @@ import (
 	kubelib "github.com/apache/dubbo-kubernetes/pkg/kube"
 	"github.com/apache/dubbo-kubernetes/pkg/kube/inject"
 	"github.com/apache/dubbo-kubernetes/pkg/kube/kclient"
-	"github.com/apache/dubbo-kubernetes/pkg/kube/krt"
 	"github.com/apache/dubbo-kubernetes/pkg/kube/multicluster"
 	"github.com/apache/dubbo-kubernetes/pkg/kube/namespace"
 	"github.com/apache/dubbo-kubernetes/pkg/log"
@@ -97,8 +96,7 @@ type Server struct {
 	guiMux      *http.ServeMux
 	httpsMux    *http.ServeMux // webhooks
 
-	monitoringMux   *http.ServeMux
-	metricsExporter http.Handler
+	monitoringMux *http.ServeMux
 
 	ConfigStores     []model.ConfigStoreController
 	configController model.ConfigStoreController
@@ -122,15 +120,12 @@ type Server struct {
 
 	dnsNames []string
 
-	certMu           sync.RWMutex
-	internalDebugMux *http.ServeMux
+	certMu sync.RWMutex
 
 	readinessProbes map[string]readinessProbe
 	readinessFlags  *readinessFlags
 
 	webhookInfo *webhookInfo
-
-	krtDebugger *krt.DebugHandler
 
 	RWConfigStore                   model.ConfigStoreController
 	proxylessGRPCWorkloadController *proxylessGRPCWorkloadController

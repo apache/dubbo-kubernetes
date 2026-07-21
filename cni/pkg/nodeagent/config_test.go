@@ -27,8 +27,8 @@ func TestParseNetConfDefaults(t *testing.T) {
 	if err != nil {
 		t.Fatalf("ParseNetConf() failed: %v", err)
 	}
-	if conf.CNIVersion != defaultCNIVersion {
-		t.Fatalf("cniVersion = %q, want %q", conf.CNIVersion, defaultCNIVersion)
+	if conf.CNIVersion != "1.0.0" {
+		t.Fatalf("cniVersion = %q, want %q", conf.CNIVersion, "1.0.0")
 	}
 	if conf.ManagedLabel != inject.ProxylessManagedLabel || conf.ManagedLabelValue != inject.ProxylessManagedLabelValue {
 		t.Fatalf("managed label = %s/%s, want %s/%s", conf.ManagedLabel, conf.ManagedLabelValue,

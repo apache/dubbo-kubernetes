@@ -17,11 +17,12 @@
 package controller
 
 import (
-	"github.com/apache/dubbo-kubernetes/pkg/util/ptr"
 	"sort"
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/apache/dubbo-kubernetes/pkg/util/ptr"
 
 	"github.com/apache/dubbo-kubernetes/dubbod/discovery/pkg/model"
 	"github.com/apache/dubbo-kubernetes/dubbod/discovery/pkg/serviceregistry"
@@ -40,10 +41,8 @@ import (
 	"github.com/apache/dubbo-kubernetes/pkg/kube/krt"
 	"github.com/apache/dubbo-kubernetes/pkg/queue"
 	"github.com/apache/dubbo-kubernetes/pkg/slices"
-	"github.com/hashicorp/go-multierror"
 	"go.uber.org/atomic"
 	v1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	klabels "k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/intstr"
@@ -124,15 +123,6 @@ func (c *Controller) onSystemNamespaceEvent(_, ns *v1.Namespace, ev model.Event)
 		return nil
 	}
 	return nil
-}
-
-func (c *Controller) syncPods() error {
-	var err *multierror.Error
-	pods := c.podsClient.List(metav1.NamespaceAll, klabels.Everything())
-	for _, s := range pods {
-		err = multierror.Append(err, c.pods.onEvent(nil, s, model.EventAdd))
-	}
-	return err.ErrorOrNil()
 }
 
 type Options struct {
@@ -512,11 +502,4 @@ func registerHandlers[T controllers.ComparableObject](c *Controller,
 				})
 			},
 		})
-}
-
-func (c *Controller) servicesForNamespacedName(name types.NamespacedName) []*model.Service {
-	if svc := c.GetService(kube.ServiceHostname(name.Name, name.Namespace, c.opts.DomainSuffix)); svc != nil {
-		return []*model.Service{svc}
-	}
-	return nil
 }

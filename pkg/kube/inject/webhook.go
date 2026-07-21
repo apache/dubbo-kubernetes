@@ -93,7 +93,6 @@ type ValuesConfig struct {
 type InjectionParameters struct {
 	pod                 *corev1.Pod
 	deployMeta          types.NamespacedName
-	namespace           *corev1.Namespace
 	typeMeta            metav1.TypeMeta
 	templates           map[string]*template.Template
 	defaultTemplate     []string

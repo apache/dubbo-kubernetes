@@ -24,6 +24,9 @@ rules:
   - apiGroups: [ "networking.dubbo.apache.org" ]
     verbs: [ "get", "watch", "list" ]
     resources: [ "*" ]
+  - apiGroups: [ "telemetry.dubbo.apache.org" ]
+    verbs: [ "get", "watch", "list" ]
+    resources: [ "*" ]
   - apiGroups: ["admissionregistration.k8s.io"]
     resources: ["mutatingwebhookconfigurations"]
     verbs: ["get", "list", "watch", "update", "patch"]
@@ -63,6 +66,7 @@ rules:
       - gatewayclasses
       - httproutes
       - backendtlspolicies
+      - referencegrants
     verbs:
       - get
       - list

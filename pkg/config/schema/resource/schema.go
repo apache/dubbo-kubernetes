@@ -19,6 +19,8 @@ package resource
 import (
 	"errors"
 	"fmt"
+	"reflect"
+
 	"github.com/apache/dubbo-kubernetes/pkg/config"
 	"github.com/apache/dubbo-kubernetes/pkg/config/labels"
 	"github.com/apache/dubbo-kubernetes/pkg/config/validation"
@@ -26,7 +28,6 @@ import (
 	"google.golang.org/protobuf/reflect/protoreflect"
 	"google.golang.org/protobuf/reflect/protoregistry"
 	"k8s.io/apimachinery/pkg/runtime/schema"
-	"reflect"
 )
 
 var protoMessageType = protoregistry.GlobalTypes.FindMessageByName
@@ -166,10 +167,6 @@ type schemaImpl struct {
 	statusPackage  string
 	identifier     string
 	synthetic      bool
-
-	variableName string
-	resource     Schema
-	name         config.GroupVersionKind
 }
 
 // Build a Schema instance.

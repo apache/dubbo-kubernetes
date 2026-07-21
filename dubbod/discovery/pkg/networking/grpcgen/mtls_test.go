@@ -23,7 +23,6 @@ import (
 	"github.com/apache/dubbo-kubernetes/pkg/config/schema/gvk"
 	"github.com/apache/dubbo-kubernetes/pkg/grpcxds"
 	security "github.com/kdubbo/api/security/v1alpha3"
-	cluster "github.com/kdubbo/xds-api/cluster/v1"
 	tlsv1 "github.com/kdubbo/xds-api/extensions/transport_sockets/tls/v1"
 	listener "github.com/kdubbo/xds-api/listener/v1"
 )
@@ -160,22 +159,6 @@ func newPeerAuthenticationConfig(name, namespace string, mode security.PeerAuthe
 			},
 		},
 	}
-}
-
-func findCluster(t *testing.T, resources model.Resources, name string) *cluster.Cluster {
-	t.Helper()
-	for _, resource := range resources {
-		if resource.Name != name {
-			continue
-		}
-		c := &cluster.Cluster{}
-		if err := resource.Resource.UnmarshalTo(c); err != nil {
-			t.Fatalf("unmarshal cluster %s: %v", name, err)
-		}
-		return c
-	}
-	t.Fatalf("cluster %s not found in %d resources", name, len(resources))
-	return nil
 }
 
 func findListener(t *testing.T, resources model.Resources, name string) *listener.Listener {

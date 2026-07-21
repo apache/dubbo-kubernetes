@@ -377,7 +377,7 @@ func convertConfToConflist(path string, plugin map[string]any) error {
 		return fmt.Errorf("stat %s: %w", backupPath, err)
 	}
 	conflist := map[string]any{
-		"cniVersion": stringValue(cfg["cniVersion"], defaultCNIVersion),
+		"cniVersion": stringValue(cfg["cniVersion"], "1.0.0"),
 		"name":       stringValue(cfg["name"], strings.TrimSuffix(filepath.Base(path), filepath.Ext(path))),
 		"plugins":    []any{cfg, plugin},
 	}

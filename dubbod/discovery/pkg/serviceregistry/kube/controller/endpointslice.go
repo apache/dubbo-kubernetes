@@ -26,7 +26,6 @@ import (
 	"github.com/apache/dubbo-kubernetes/pkg/config/schema/kind"
 	"github.com/apache/dubbo-kubernetes/pkg/kube/kclient"
 	"github.com/apache/dubbo-kubernetes/pkg/util/sets"
-	"github.com/hashicorp/go-multierror"
 	corev1 "k8s.io/api/core/v1"
 	v1 "k8s.io/api/discovery/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -162,20 +161,6 @@ func (esc *endpointSliceController) updateEndpointSlice(slice *v1.EndpointSlice)
 	for _, hostname := range esc.c.hostNamesForNamespacedName(getServiceNamespacedName(slice)) {
 		esc.updateEndpointCacheForSlice(hostname, slice)
 	}
-}
-
-func (esc *endpointSliceController) initializeNamespace(ns string, filtered bool) error {
-	var err *multierror.Error
-	var endpoints []*v1.EndpointSlice
-	if filtered {
-		endpoints = esc.slices.List(ns, klabels.Everything())
-	} else {
-		endpoints = esc.slices.ListUnfiltered(ns, klabels.Everything())
-	}
-	for _, s := range endpoints {
-		err = multierror.Append(err, esc.onEvent(nil, s, model.EventAdd))
-	}
-	return err.ErrorOrNil()
 }
 
 func (esc *endpointSliceController) updateEndpointCacheForSlice(hostName host.Name, epSlice *v1.EndpointSlice) {

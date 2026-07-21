@@ -26,7 +26,6 @@ import (
 type EndpointBuilder struct {
 	labels         labels.Instance
 	serviceAccount string
-	workloadName   string
 	namespace      string
 	hostname       string
 	subDomain      string

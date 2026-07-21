@@ -35,8 +35,6 @@ type uninstallArgs struct {
 	// filenames string
 	// sets is a string with the format "path=value".
 	sets []string
-	// manifestPath is a path to a charts and profiles directory in the local filesystem with a release tgz.
-	manifestPath string
 	// purge results in deletion of all Dubbo resources.
 	purge bool
 	// skipConfirmation determines whether the user is prompted for confirmation.
