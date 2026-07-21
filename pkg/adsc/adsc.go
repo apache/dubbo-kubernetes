@@ -118,8 +118,6 @@ type ADSC struct {
 	initialLds bool
 	// httpListeners contains received listeners with a http_connection_manager filter.
 	httpListeners map[string]*listener.Listener
-	// tcpListeners contains all listeners of type TCP (not-HTTP)
-	tcpListeners map[string]*listener.Listener
 	// All received clusters of type eds, keyed by name
 	edsClusters map[string]*cluster.Cluster
 	// All received clusters of no-eds type, keyed by name

@@ -4,7 +4,7 @@
 // - protoc             v6.33.0
 // source: dubbod/discovery/cmd/app/testproto/xds_test.proto
 
-package testproto
+package testdata
 
 import (
 	context "context"

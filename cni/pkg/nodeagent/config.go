@@ -26,7 +26,6 @@ import (
 )
 
 const (
-	defaultCNIVersion   = "1.0.0" // 无用版本
 	defaultStateDir     = "/var/run/dubbo-cni"
 	defaultIPTablesPath = "iptables"
 	defaultIPSetPath    = "ipset"
@@ -61,7 +60,7 @@ func ParseNetConf(data []byte) (NetConf, error) {
 		}
 	}
 	if conf.CNIVersion == "" {
-		conf.CNIVersion = defaultCNIVersion
+		conf.CNIVersion = "1.0.0"
 	}
 	if conf.ManagedLabel == "" {
 		conf.ManagedLabel = inject.ProxylessManagedLabel

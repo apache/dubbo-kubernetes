@@ -31,7 +31,6 @@ import (
 	"github.com/apache/dubbo-kubernetes/pkg/maps"
 	"github.com/apache/dubbo-kubernetes/pkg/slices"
 	"github.com/apache/dubbo-kubernetes/pkg/util/sets"
-	"github.com/google/go-cmp/cmp"
 )
 
 type Resolution int
@@ -172,23 +171,6 @@ type DubboEndpoint struct {
 	// If specified, the fully qualified Pod hostname will be "<hostname>.<subdomain>.<pod namespace>.svc.<cluster domain>".
 	SubDomain string
 	NodeName  string
-}
-
-type endpointDiscoverabilityPolicyImpl struct {
-	name string
-	f    func(*DubboEndpoint, *Proxy) bool
-}
-
-func (p *endpointDiscoverabilityPolicyImpl) String() string {
-	return p.name
-}
-
-var endpointDiscoverabilityPolicyImplCmpOpt = cmp.Comparer(func(x, y endpointDiscoverabilityPolicyImpl) bool {
-	return x.String() == y.String()
-})
-
-func (p *endpointDiscoverabilityPolicyImpl) CmpOpts() []cmp.Option {
-	return []cmp.Option{endpointDiscoverabilityPolicyImplCmpOpt}
 }
 
 func (ep *DubboEndpoint) FirstAddressOrNil() string {

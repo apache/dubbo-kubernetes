@@ -18,7 +18,6 @@ package controllers
 
 import (
 	"github.com/apache/dubbo-kubernetes/pkg/config"
-	dubbolog "github.com/apache/dubbo-kubernetes/pkg/log"
 	"go.uber.org/atomic"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/util/workqueue"
@@ -37,7 +36,6 @@ type Queue struct {
 	maxAttempts int
 	workFn      func(key any) error
 	closed      chan struct{}
-	log         *dubbolog.Scope
 }
 
 func NewQueue(name string, options ...func(*Queue)) Queue {

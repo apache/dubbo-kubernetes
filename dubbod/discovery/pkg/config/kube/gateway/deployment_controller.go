@@ -44,7 +44,6 @@ import (
 	"github.com/apache/dubbo-kubernetes/pkg/cluster"
 	"github.com/apache/dubbo-kubernetes/pkg/config"
 	"github.com/apache/dubbo-kubernetes/pkg/config/constants"
-	"github.com/apache/dubbo-kubernetes/pkg/config/schema/gvk"
 	"github.com/apache/dubbo-kubernetes/pkg/config/schema/gvr"
 	telemetryconfig "github.com/apache/dubbo-kubernetes/pkg/config/telemetry"
 	"github.com/apache/dubbo-kubernetes/pkg/kube"
@@ -699,50 +698,6 @@ func formatGatewayServicePorts(ports []corev1.ServicePort) string {
 		out = append(out, fmt.Sprintf("%s:%d->%s", port.Name, port.Port, port.TargetPort.String()))
 	}
 	return strings.Join(out, ",")
-}
-
-func (d *DeploymentController) buildDxgateRuntimeConfig(gw gateway.Gateway) (string, string, error) {
-	routes := d.httpRoutes.List(metav1.NamespaceAll, klabels.Everything())
-	services := d.services.List(metav1.NamespaceAll, klabels.Everything())
-	backendTLS := d.backendTLSPolicies()
-	return buildDxgateRuntimeConfig(gw, routes, services, backendTLS, d.circuitBreakerPolicyConfigs(), d.domainSuffix())
-}
-
-func (d *DeploymentController) circuitBreakerPolicyConfigs() []config.Config {
-	if d.circuitBreakers != nil {
-		policies := d.circuitBreakers.List(metav1.NamespaceAll, klabels.Everything())
-		out := make([]config.Config, 0, len(policies))
-		for _, policy := range policies {
-			out = append(out, config.Config{
-				Meta: config.Meta{
-					GroupVersionKind:  gvk.CircuitBreakerPolicy,
-					Name:              policy.Name,
-					Namespace:         policy.Namespace,
-					Labels:            policy.Labels,
-					Annotations:       policy.Annotations,
-					ResourceVersion:   policy.ResourceVersion,
-					CreationTimestamp: policy.CreationTimestamp.Time,
-					OwnerReferences:   policy.OwnerReferences,
-					UID:               string(policy.UID),
-					Generation:        policy.Generation,
-				},
-				Spec:   policy.Spec.DeepCopy(),
-				Status: policy.Status.DeepCopy(),
-			})
-		}
-		return out
-	}
-	if d.env != nil {
-		return d.env.List(gvk.CircuitBreakerPolicy, model.NamespaceAll)
-	}
-	return nil
-}
-
-func (d *DeploymentController) backendTLSPolicies() []*gateway.BackendTLSPolicy {
-	if d.backendTLS != nil {
-		return d.backendTLS.List(metav1.NamespaceAll, klabels.Everything())
-	}
-	return nil
 }
 
 func buildDxgateRuntimeConfig(gw gateway.Gateway, routes []*gateway.HTTPRoute, services []*corev1.Service, backendTLSPolicies []*gateway.BackendTLSPolicy, policies []config.Config, domainSuffix string) (string, string, error) {

@@ -16,10 +16,6 @@
 
 package k8sleaderelection
 
-import (
-	"sync"
-)
-
 // This file provides abstractions for setting the provider (e.g., prometheus)
 // of metrics.
 
@@ -82,14 +78,6 @@ var globalMetricsFactory = leaderMetricsFactory{
 
 type leaderMetricsFactory struct {
 	metricsProvider MetricsProvider
-
-	onlyOnce sync.Once
-}
-
-func (f *leaderMetricsFactory) setProvider(mp MetricsProvider) {
-	f.onlyOnce.Do(func() {
-		f.metricsProvider = mp
-	})
 }
 
 func (f *leaderMetricsFactory) newLeaderMetrics() leaderMetricsAdapter {

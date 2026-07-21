@@ -41,6 +41,11 @@ def root():
 
 @app.get("/reviews")
 def reviews():
+    # ratings 不可用时返回 502，与 reviews-v3 保持一致。
+    try:
+        score = rating()
+    except (requests.RequestException, ValueError) as exc:
+        return jsonify({"version": "v2", "items": [], "error": str(exc)}), 502
     return jsonify(
         {
             "version": "v2",
@@ -48,7 +53,7 @@ def reviews():
                 "人物关系更清晰。",
                 "这个版本会调用 ratings 服务。"
             ],
-            "rating": rating(),
+            "rating": score,
         }
     )
 

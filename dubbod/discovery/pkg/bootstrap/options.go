@@ -22,15 +22,8 @@ import (
 	kubecontroller "github.com/apache/dubbo-kubernetes/dubbod/discovery/pkg/serviceregistry/kube/controller"
 	"github.com/apache/dubbo-kubernetes/pkg/config/constants"
 	"github.com/apache/dubbo-kubernetes/pkg/ctrlz"
-	"github.com/apache/dubbo-kubernetes/pkg/env"
 	"github.com/apache/dubbo-kubernetes/pkg/keepalive"
 	"github.com/apache/dubbo-kubernetes/pkg/kube/krt"
-)
-
-var (
-	PodNamespace = env.Register("POD_NAMESPACE", constants.DubboSystemNamespace, "").Get()
-	PodName      = env.Register("POD_NAME", "", "").Get()
-	Revision     = env.Register("REVISION", "", "").Get()
 )
 
 type RegistryOptions struct {

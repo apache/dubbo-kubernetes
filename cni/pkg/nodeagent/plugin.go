@@ -145,7 +145,7 @@ func firstPodIP(conf NetConf, pod PodInfo) string {
 
 func versionOutput(cniVersion string) []byte {
 	if cniVersion == "" {
-		cniVersion = defaultCNIVersion
+		cniVersion = "1.0.0"
 	}
 	out, _ := json.Marshal(map[string]any{
 		"cniVersion":        cniVersion,

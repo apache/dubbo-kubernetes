@@ -19,7 +19,6 @@ package model
 import (
 	"cmp"
 	"encoding/json"
-	"sort"
 	"strings"
 	"sync"
 	"time"
@@ -172,7 +171,6 @@ type destinationRuleIndex struct {
 
 type consolidatedSubRules struct {
 	specificSubRules map[host.Name][]*ConsolidatedSubRule
-	wildcardSubRules map[host.Name][]*ConsolidatedSubRule
 }
 
 func NewPushContext() *PushContext {
@@ -208,13 +206,6 @@ func newDestinationRuleIndex() destinationRuleIndex {
 	return destinationRuleIndex{
 		namespaceLocal:      map[string]*consolidatedSubRules{},
 		exportedByNamespace: map[string]*consolidatedSubRules{},
-	}
-}
-
-func newConsolidatedDestRules() *consolidatedSubRules {
-	return &consolidatedSubRules{
-		specificSubRules: map[host.Name][]*ConsolidatedSubRule{},
-		wildcardSubRules: map[host.Name][]*ConsolidatedSubRule{},
 	}
 }
 
@@ -930,106 +921,6 @@ func isBackendTLSPolicyServiceTarget(target sigsk8siogatewayapiapisv1.LocalPolic
 
 func backendTLSPolicyServiceKey(namespace, name string) string {
 	return namespace + "/" + name
-}
-
-// sortConfigBySelectorAndCreationTime sorts the list of config objects based on creation time.
-func sortConfigBySelectorAndCreationTime(configs []config.Config) []config.Config {
-	sort.Slice(configs, func(i, j int) bool {
-		// Sort by creation time ordering
-		if r := configs[i].CreationTimestamp.Compare(configs[j].CreationTimestamp); r != 0 {
-			return r == -1 // -1 means i is less than j, so return true.
-		}
-		if r := cmp.Compare(configs[i].Name, configs[j].Name); r != 0 {
-			return r == -1
-		}
-		return cmp.Compare(configs[i].Namespace, configs[j].Namespace) == -1
-	})
-	return configs
-}
-
-func (ps *PushContext) setDestinationRules(configs []config.Config) {
-	sortConfigBySelectorAndCreationTime(configs)
-
-	namespaceLocalSubRules := make(map[string]*consolidatedSubRules)
-	exportedDestRulesByNamespace := make(map[string]*consolidatedSubRules)
-	rootNamespaceLocalDestRules := newConsolidatedDestRules()
-
-	for i := range configs {
-		rule := configs[i].Spec.(*networking.DestinationRule)
-
-		rule.Host = string(ResolveShortnameToFQDN(rule.Host, configs[i].Meta))
-		exportToSet := sets.NewWithLength[visibility.Instance](len(rule.ExportTo))
-		for _, e := range rule.ExportTo {
-			exportToSet.Insert(visibility.Instance(e))
-		}
-
-		// add only if the dest rule is exported with . or * or explicit exportTo containing this namespace
-		// The global exportTo doesn't matter here (its either . or * - both of which are applicable here)
-		if exportToSet.IsEmpty() || exportToSet.Contains(visibility.Public) || exportToSet.Contains(visibility.Private) ||
-			exportToSet.Contains(visibility.Instance(configs[i].Namespace)) {
-			// Store in an index for the config's namespace
-			// a proxy from this namespace will first look here for the destination rule for a given service
-			// This pool consists of both public/private destination rules.
-			if _, exist := namespaceLocalSubRules[configs[i].Namespace]; !exist {
-				namespaceLocalSubRules[configs[i].Namespace] = newConsolidatedDestRules()
-			}
-			// Merge this destination rule with any public/private dest rules for same host in the same namespace
-			// If there are no duplicates, the dest rule will be added to the list
-			ps.mergeDestinationRule(namespaceLocalSubRules[configs[i].Namespace], configs[i], exportToSet)
-		}
-
-		isPrivateOnly := false
-		// No exportTo in destinationRule. Use the global default
-		// We only honor . and *
-		if exportToSet.IsEmpty() && ps.exportToDefaults.destinationRule.Contains(visibility.Private) {
-			isPrivateOnly = true
-		} else if exportToSet.Len() == 1 && (exportToSet.Contains(visibility.Private) || exportToSet.Contains(visibility.Instance(configs[i].Namespace))) {
-			isPrivateOnly = true
-		}
-
-		if !isPrivateOnly {
-			if _, exist := exportedDestRulesByNamespace[configs[i].Namespace]; !exist {
-				exportedDestRulesByNamespace[configs[i].Namespace] = newConsolidatedDestRules()
-			}
-			ps.mergeDestinationRule(exportedDestRulesByNamespace[configs[i].Namespace], configs[i], exportToSet)
-		} else if configs[i].Namespace == ps.Mesh.RootNamespace {
-			ps.mergeDestinationRule(rootNamespaceLocalDestRules, configs[i], exportToSet)
-		}
-	}
-
-	ps.destinationRuleIndex.namespaceLocal = namespaceLocalSubRules
-	ps.destinationRuleIndex.exportedByNamespace = exportedDestRulesByNamespace
-	ps.destinationRuleIndex.rootNamespaceLocal = rootNamespaceLocalDestRules
-
-	// Log indexing results
-	log.Debugf("indexed %d namespaces with local rules", len(namespaceLocalSubRules))
-	for ns, rules := range namespaceLocalSubRules {
-		totalRules := 0
-		for hostname, ruleList := range rules.specificSubRules {
-			totalRules += len(ruleList)
-			// Log TLS configuration for each merged DestinationRule
-			for _, rule := range ruleList {
-				if dr, ok := rule.rule.Spec.(*networking.DestinationRule); ok {
-					hasTLS := dr.TrafficPolicy != nil && dr.TrafficPolicy.Tls != nil
-					tlsMode := "none"
-					if hasTLS {
-						tlsMode = dr.TrafficPolicy.Tls.Mode.String()
-					}
-					log.Debugf("namespace %s, hostname %s: DestinationRule has %d subsets, TLS mode: %s",
-						ns, hostname, len(dr.Subsets), tlsMode)
-				}
-			}
-		}
-		log.Debugf("namespace %s has %d DestinationRules with %d specific hostnames", ns, totalRules, len(rules.specificSubRules))
-	}
-	log.Debugf("indexed %d namespaces with exported rules", len(exportedDestRulesByNamespace))
-	if rootNamespaceLocalDestRules != nil {
-		totalRootRules := 0
-		for _, ruleList := range rootNamespaceLocalDestRules.specificSubRules {
-			totalRootRules += len(ruleList)
-		}
-		log.Debugf("root namespace has %d DestinationRules with %d specific hostnames", totalRootRules, len(rootNamespaceLocalDestRules.specificSubRules))
-	}
 }
 
 // ServiceAccounts returns the SPIFFE identities associated with the workloads

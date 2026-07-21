@@ -27,8 +27,6 @@ import (
 	"github.com/apache/dubbo-kubernetes/dubbod/discovery/pkg/config/kube/file"
 	"github.com/apache/dubbo-kubernetes/dubbod/discovery/pkg/config/kube/gateway"
 	"github.com/apache/dubbo-kubernetes/dubbod/discovery/pkg/config/memory"
-	dubboCredentials "github.com/apache/dubbo-kubernetes/dubbod/discovery/pkg/credentials"
-	"github.com/apache/dubbo-kubernetes/dubbod/discovery/pkg/credentials/kube"
 	"github.com/apache/dubbo-kubernetes/dubbod/discovery/pkg/features"
 	"github.com/apache/dubbo-kubernetes/dubbod/discovery/pkg/leaderelection"
 	"github.com/apache/dubbo-kubernetes/dubbod/discovery/pkg/leaderelection/k8sleaderelection/k8sresourcelock"
@@ -248,14 +246,6 @@ func (s *Server) initConfigController(args *DubboArgs) error {
 	})
 
 	return nil
-}
-
-func (s *Server) getRootCertFromSecret(name, namespace string) (*dubboCredentials.CertInfo, error) {
-	secret, err := s.kubeClient.Kube().CoreV1().Secrets(namespace).Get(context.Background(), name, v1.GetOptions{})
-	if err != nil {
-		return nil, fmt.Errorf("failed to get credential with name %v: %v", name, err)
-	}
-	return kube.ExtractRoot(secret.Data)
 }
 
 func (s *Server) checkAndRunNonRevisionLeaderElectionIfRequired(args *DubboArgs, activateCh chan struct{}) {
