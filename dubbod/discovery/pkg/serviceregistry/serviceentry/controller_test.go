@@ -25,6 +25,7 @@ import (
 	"github.com/apache/dubbo-kubernetes/pkg/config"
 	"github.com/apache/dubbo-kubernetes/pkg/config/schema/collections"
 	"github.com/apache/dubbo-kubernetes/pkg/config/schema/gvk"
+	meta "github.com/kdubbo/api/meta/v1alpha1"
 	networking "github.com/kdubbo/api/networking/v1alpha3"
 	typev1alpha3 "github.com/kdubbo/api/type/v1alpha3"
 )
@@ -46,8 +47,11 @@ func TestControllerReconcilesServiceEntryAndWorkloadEntry(t *testing.T) {
 		Address:        "10.0.0.10",
 		Ports:          map[string]uint32{"grpc": 16000},
 		Labels:         map[string]string{"app": "reviews"},
+		Network:        "vm-network",
+		Locality:       "us-east-1/zone-a/rack-1",
+		Weight:         7,
 		ServiceAccount: "reviews",
-	}}
+	}, Status: &meta.DubboStatus{Conditions: []*meta.DubboCondition{{Type: "Ready", Status: "False"}}}}
 	configs.create(t, workload)
 	entry := config.Config{Meta: config.Meta{
 		GroupVersionKind: gvk.ServiceEntry,
@@ -79,6 +83,18 @@ func TestControllerReconcilesServiceEntryAndWorkloadEntry(t *testing.T) {
 	endpoint := last.endpoints[0]
 	if endpoint.FirstAddressOrNil() != "10.0.0.10" || endpoint.EndpointPort != 16000 || endpoint.ServiceAccount != "reviews" {
 		t.Fatalf("unexpected endpoint: address=%s port=%d serviceAccount=%s", endpoint.FirstAddressOrNil(), endpoint.EndpointPort, endpoint.ServiceAccount)
+	}
+	if endpoint.Network != "vm-network" || endpoint.Locality != "us-east-1/zone-a/rack-1" || endpoint.LbWeight != 7 {
+		t.Fatalf("unexpected topology: network=%s locality=%s weight=%d", endpoint.Network, endpoint.Locality, endpoint.LbWeight)
+	}
+	if endpoint.HealthStatus != model.UnHealthy {
+		t.Fatalf("endpoint health = %v, want unhealthy", endpoint.HealthStatus)
+	}
+
+	workload.Status.(*meta.DubboStatus).Conditions[0].Status = "True"
+	configs.update(t, workload)
+	if got := updater.lastEDS(t).endpoints[0].HealthStatus; got != model.Healthy {
+		t.Fatalf("updated endpoint health = %v, want healthy", got)
 	}
 
 	workload.Spec.(*networking.WorkloadEntry).Address = "10.0.0.11"

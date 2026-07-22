@@ -18,6 +18,8 @@ package endpoints
 
 import (
 	"fmt"
+	"sort"
+	"strings"
 
 	"github.com/apache/dubbo-kubernetes/dubbod/discovery/pkg/features"
 	"github.com/apache/dubbo-kubernetes/dubbod/discovery/pkg/model"
@@ -35,6 +37,7 @@ import (
 	// endpoint "github.com/kdubbo/xds-api/endpoint/v1"
 	endpoint "github.com/kdubbo/xds-api/endpoint/v1"
 
+	"google.golang.org/protobuf/types/known/structpb"
 	"google.golang.org/protobuf/types/known/wrapperspb"
 )
 
@@ -137,6 +140,12 @@ func (b *EndpointBuilder) BuildClusterLoadAssignmentWithGateways(endpointIndex *
 	defer shards.RUnlock()
 
 	// Filter and convert endpoints
+	type localityEndpoints struct {
+		locality  *core.Locality
+		endpoints []*endpoint.LbEndpoint
+		weight    uint32
+	}
+	localities := make(map[string]*localityEndpoints)
 	var lbEndpoints []*endpoint.LbEndpoint
 	var filteredCount int
 	var totalEndpoints int
@@ -193,6 +202,13 @@ func (b *EndpointBuilder) BuildClusterLoadAssignmentWithGateways(endpointIndex *
 				continue
 			}
 			lbEndpoints = append(lbEndpoints, lbEp)
+			group := localities[ep.Locality]
+			if group == nil {
+				group = &localityEndpoints{locality: parseLocality(ep.Locality)}
+				localities[ep.Locality] = group
+			}
+			group.endpoints = append(group.endpoints, lbEp)
+			group.weight += lbEp.GetLoadBalancingWeight().GetValue()
 		}
 	}
 
@@ -208,7 +224,6 @@ func (b *EndpointBuilder) BuildClusterLoadAssignmentWithGateways(endpointIndex *
 		return buildEmptyClusterLoadAssignment(b.clusterName)
 	}
 
-	// Create LocalityLbEndpoints with empty locality (default)
 	healthyCount := 0
 	unhealthyInLbCount := 0
 	drainingCount := 0
@@ -225,20 +240,40 @@ func (b *EndpointBuilder) BuildClusterLoadAssignmentWithGateways(endpointIndex *
 	log.Infof("cluster %s [hostname=%s, port=%d] - total endpoints: %d [healthy=%d, unhealthy=%d, draining=%d, SupportsUnhealthyEndpoints=%v]",
 		b.clusterName, b.hostname, b.port, len(lbEndpoints), healthyCount, unhealthyInLbCount, drainingCount, b.service.SupportsUnhealthyEndpoints())
 
-	localityLbEndpoints := []*endpoint.LocalityLbEndpoints{
-		{
-			Locality:    &core.Locality{},
-			LbEndpoints: lbEndpoints,
-			LoadBalancingWeight: &wrapperspb.UInt32Value{
-				Value: uint32(len(lbEndpoints)),
-			},
-		},
+	localityNames := make([]string, 0, len(localities))
+	for name := range localities {
+		localityNames = append(localityNames, name)
+	}
+	sort.Strings(localityNames)
+	localityLbEndpoints := make([]*endpoint.LocalityLbEndpoints, 0, len(localityNames))
+	for _, name := range localityNames {
+		group := localities[name]
+		localityLbEndpoints = append(localityLbEndpoints, &endpoint.LocalityLbEndpoints{
+			Locality:            group.locality,
+			LbEndpoints:         group.endpoints,
+			LoadBalancingWeight: wrapperspb.UInt32(group.weight),
+		})
 	}
 
 	return &endpoint.ClusterLoadAssignment{
 		ClusterName: b.clusterName,
 		Endpoints:   localityLbEndpoints,
 	}
+}
+
+func parseLocality(value string) *core.Locality {
+	parts := strings.SplitN(value, "/", 3)
+	locality := &core.Locality{}
+	if len(parts) > 0 {
+		locality.Region = parts[0]
+	}
+	if len(parts) > 1 {
+		locality.Zone = parts[1]
+	}
+	if len(parts) > 2 {
+		locality.SubZone = parts[2]
+	}
+	return locality
 }
 
 func (b *EndpointBuilder) servicePort(port int) *model.Port {
@@ -295,6 +330,10 @@ func (b *EndpointBuilder) buildLbEndpointForCluster(ep *model.DubboEndpoint, end
 		healthStatus = core.HealthStatus_UNHEALTHY
 	}
 
+	weight := ep.LbWeight
+	if weight == 0 {
+		weight = 1
+	}
 	return &endpoint.LbEndpoint{
 		HostIdentifier: &endpoint.LbEndpoint_Endpoint{
 			Endpoint: &endpoint.Endpoint{
@@ -302,10 +341,25 @@ func (b *EndpointBuilder) buildLbEndpointForCluster(ep *model.DubboEndpoint, end
 			},
 		},
 		HealthStatus: healthStatus,
+		Metadata:     buildEndpointMetadata(ep),
 		LoadBalancingWeight: &wrapperspb.UInt32Value{
-			Value: 1,
+			Value: weight,
 		},
 	}
+}
+
+func buildEndpointMetadata(ep *model.DubboEndpoint) *core.Metadata {
+	if ep.Network == "" && ep.Locality == "" {
+		return nil
+	}
+	return &core.Metadata{FilterMetadata: map[string]*structpb.Struct{
+		"networking.dubbo.apache.org": {
+			Fields: map[string]*structpb.Value{
+				"network":  structpb.NewStringValue(ep.Network),
+				"locality": structpb.NewStringValue(ep.Locality),
+			},
+		},
+	}}
 }
 
 func (b *EndpointBuilder) eastWestGatewayForCluster(endpointCluster cluster.ID, gateways map[cluster.ID]multicluster.EastWestGateway) (multicluster.EastWestGateway, bool) {

@@ -29,6 +29,8 @@
 #   UPGRADE_FROM_IMAGE   image expected by the previous chart (default: kdubbo/dubbod:debug)
 #   SKIP_BUILD      set to 1 to reuse an already-built ${IMAGE}
 #   KEEP_CLUSTER    set to 1 to keep the kind cluster after the run
+#   KIND            path to the kind binary      (default: kind)
+#   KIND_NODE_IMAGE kind node image override     (default: kind release default)
 
 set -euo pipefail
 
@@ -44,6 +46,8 @@ APP_NS="e2e"
 KUBECTL=(kubectl --context "kind-${CLUSTER_NAME}")
 UPGRADE_TMP_DIR=""
 PREVIOUS_CHART=""
+KIND="${KIND:-kind}"
+KIND_NODE_IMAGE="${KIND_NODE_IMAGE:-}"
 
 log() { echo "--- $*"; }
 
@@ -59,7 +63,7 @@ fail() {
 cleanup() {
   if [[ -n "${PF_PID:-}" ]]; then kill "${PF_PID}" 2>/dev/null || true; fi
   if [[ "${KEEP_CLUSTER:-0}" != "1" ]]; then
-    kind delete cluster --name "${CLUSTER_NAME}" || true
+    "${KIND}" delete cluster --name "${CLUSTER_NAME}" || true
   fi
   if [[ -n "${UPGRADE_TMP_DIR}" && "${UPGRADE_TMP_DIR}" == */dubbo-upgrade.* ]]; then
     rm -rf -- "${UPGRADE_TMP_DIR}"
@@ -106,15 +110,19 @@ if [[ "${IMAGE}" != "${UPGRADE_FROM_IMAGE}" ]]; then
   docker tag "${IMAGE}" "${UPGRADE_FROM_IMAGE}"
 fi
 
-if ! kind get clusters 2>/dev/null | grep -qx "${CLUSTER_NAME}"; then
+if ! "${KIND}" get clusters 2>/dev/null | grep -qx "${CLUSTER_NAME}"; then
   log "creating kind cluster ${CLUSTER_NAME}"
-  kind create cluster --name "${CLUSTER_NAME}" --wait 120s
+  KIND_CREATE_ARGS=(create cluster --name "${CLUSTER_NAME}" --wait 120s)
+  if [[ -n "${KIND_NODE_IMAGE}" ]]; then
+    KIND_CREATE_ARGS+=(--image "${KIND_NODE_IMAGE}")
+  fi
+  "${KIND}" "${KIND_CREATE_ARGS[@]}"
 fi
 
 log "loading ${IMAGE} into kind"
-kind load docker-image "${IMAGE}" --name "${CLUSTER_NAME}"
+"${KIND}" load docker-image "${IMAGE}" --name "${CLUSTER_NAME}"
 if [[ "${IMAGE}" != "${UPGRADE_FROM_IMAGE}" ]]; then
-  kind load docker-image "${UPGRADE_FROM_IMAGE}" --name "${CLUSTER_NAME}"
+  "${KIND}" load docker-image "${UPGRADE_FROM_IMAGE}" --name "${CLUSTER_NAME}"
 fi
 
 log "installing Gateway API CRDs"
@@ -184,6 +192,10 @@ log "applying ServiceEntry through the validating webhook"
 "${KUBECTL[@]}" -n "${APP_NS}" apply -f "${ROOT}/tests/e2e/testdata/serviceentry.yaml" \
   || fail "valid ServiceEntry was rejected"
 
+log "registering a VM workload through WorkloadEntry"
+"${KUBECTL[@]}" -n "${APP_NS}" apply -f "${ROOT}/tests/e2e/testdata/vm-workload.yaml" \
+  || fail "valid VM WorkloadEntry was rejected"
+
 log "port-forwarding dubbod monitoring port"
 "${KUBECTL[@]}" -n "${SYSTEM_NS}" port-forward deploy/dubbod 18080:8080 >/dev/null 2>&1 &
 PF_PID=$!
@@ -202,6 +214,12 @@ retry() {
 
 check_registry_service() { probe /debug/registryz | grep -q "httpbin.${APP_NS}.svc"; }
 check_registry_serviceentry() { probe /debug/registryz | grep -q "external.example.com"; }
+check_registry_vm() { probe /debug/registryz | grep -q "reviews-vm.mesh.local"; }
+check_vm_health() {
+  local health="$1"
+  probe /debug/endpointz | tr -d '\n ' \
+    | grep -q "\"hostname\":\"reviews-vm.mesh.local\".*\"address\":\"192.0.2.10\".*\"health\":\"${health}\".*\"network\":\"vm-network\".*\"locality\":\"us-east-1/zone-a/rack-1\".*\"weight\":7"
+}
 check_metrics() { probe /metrics | grep -q "^dubbod_"; }
 
 retry "monitoring endpoint up" probe /version
@@ -211,5 +229,20 @@ log "asserting httpbin service is in the registry"
 retry "httpbin in /debug/registryz" check_registry_service
 log "asserting ServiceEntry host is in the registry"
 retry "ServiceEntry in /debug/registryz" check_registry_serviceentry
+log "asserting VM service and endpoint topology are published"
+retry "VM ServiceEntry in /debug/registryz" check_registry_vm
+retry "healthy VM endpoint in /debug/endpointz" check_vm_health HEALTHY
+
+log "marking the VM endpoint unhealthy through the status subresource"
+"${KUBECTL[@]}" -n "${APP_NS}" patch workloadentry reviews-vm --subresource=status --type=merge \
+  -p '{"status":{"conditions":[{"type":"Ready","status":"False","reason":"E2EHealthCheck"}]}}' \
+  || fail "could not update VM health status"
+retry "unhealthy VM endpoint in /debug/endpointz" check_vm_health UNHEALTHY
+
+log "restoring the VM endpoint health"
+"${KUBECTL[@]}" -n "${APP_NS}" patch workloadentry reviews-vm --subresource=status --type=merge \
+  -p '{"status":{"conditions":[{"type":"Ready","status":"True","reason":"E2EHealthCheck"}]}}' \
+  || fail "could not restore VM health status"
+retry "recovered VM endpoint in /debug/endpointz" check_vm_health HEALTHY
 
 log "e2e smoke test passed"

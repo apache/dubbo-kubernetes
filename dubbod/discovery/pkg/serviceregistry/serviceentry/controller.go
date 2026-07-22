@@ -19,6 +19,7 @@ package serviceentry
 import (
 	"sort"
 	"strconv"
+	"strings"
 	"sync"
 
 	"github.com/apache/dubbo-kubernetes/dubbod/discovery/pkg/model"
@@ -33,6 +34,7 @@ import (
 	"github.com/apache/dubbo-kubernetes/pkg/config/visibility"
 	"github.com/apache/dubbo-kubernetes/pkg/slices"
 	"github.com/apache/dubbo-kubernetes/pkg/util/sets"
+	meta "github.com/kdubbo/api/meta/v1alpha1"
 	networking "github.com/kdubbo/api/networking/v1alpha3"
 )
 
@@ -204,7 +206,7 @@ func selectWorkloads(namespace string, entry *networking.ServiceEntry, configs [
 	if selector == nil {
 		out := make([]namedWorkload, 0, len(entry.GetEndpoints()))
 		for i, workload := range entry.GetEndpoints() {
-			out = append(out, namedWorkload{name: entryName(i), workload: workload})
+			out = append(out, namedWorkload{name: entryName(i), workload: workload, healthStatus: model.Healthy})
 		}
 		return out
 	}
@@ -216,7 +218,7 @@ func selectWorkloads(namespace string, entry *networking.ServiceEntry, configs [
 		}
 		workload, ok := cfg.Spec.(*networking.WorkloadEntry)
 		if ok && wanted.Match(labels.Instance(workload.GetLabels())) {
-			out = append(out, namedWorkload{name: cfg.Name, workload: workload})
+			out = append(out, namedWorkload{name: cfg.Name, workload: workload, healthStatus: workloadHealth(cfg.Status)})
 		}
 	}
 	sort.Slice(out, func(i, j int) bool { return out[i].name < out[j].name })
@@ -224,8 +226,26 @@ func selectWorkloads(namespace string, entry *networking.ServiceEntry, configs [
 }
 
 type namedWorkload struct {
-	name     string
-	workload *networking.WorkloadEntry
+	name         string
+	workload     *networking.WorkloadEntry
+	healthStatus model.HealthStatus
+}
+
+func workloadHealth(status config.Status) model.HealthStatus {
+	dubboStatus, ok := status.(*meta.DubboStatus)
+	if !ok || dubboStatus == nil {
+		return model.Healthy
+	}
+	for _, condition := range dubboStatus.GetConditions() {
+		if condition == nil || (!strings.EqualFold(condition.GetType(), "Ready") && !strings.EqualFold(condition.GetType(), "Healthy")) {
+			continue
+		}
+		if strings.EqualFold(condition.GetStatus(), "True") {
+			return model.Healthy
+		}
+		return model.UnHealthy
+	}
+	return model.Healthy
 }
 
 func entryName(index int) string {
@@ -234,7 +254,7 @@ func entryName(index int) string {
 
 func buildEndpoints(cfg config.Config, entry *networking.ServiceEntry, svc *model.Service, workloads []namedWorkload) []*model.DubboEndpoint {
 	if len(workloads) == 0 && (entry.GetResolution() == networking.ServiceEntry_DNS || entry.GetResolution() == networking.ServiceEntry_DNS_ROUND_ROBIN) {
-		workloads = []namedWorkload{{name: cfg.Name, workload: &networking.WorkloadEntry{Address: string(svc.Hostname)}}}
+		workloads = []namedWorkload{{name: cfg.Name, workload: &networking.WorkloadEntry{Address: string(svc.Hostname)}, healthStatus: model.Healthy}}
 	}
 	result := make([]*model.DubboEndpoint, 0, len(workloads)*len(entry.GetPorts()))
 	for _, named := range workloads {
@@ -246,12 +266,19 @@ func buildEndpoints(cfg config.Config, entry *networking.ServiceEntry, svc *mode
 			if targetPort == 0 {
 				targetPort = port.GetNumber()
 			}
+			weight := named.workload.GetWeight()
+			if weight == 0 {
+				weight = 1
+			}
 			result = append(result, &model.DubboEndpoint{
 				ServiceAccount:  named.workload.GetServiceAccount(),
 				Addresses:       []string{named.workload.GetAddress()},
 				ServicePortName: port.GetName(),
 				Labels:          labels.Instance(named.workload.GetLabels()),
-				HealthStatus:    model.Healthy,
+				Network:         named.workload.GetNetwork(),
+				Locality:        named.workload.GetLocality(),
+				LbWeight:        weight,
+				HealthStatus:    named.healthStatus,
 				EndpointPort:    targetPort,
 				WorkloadName:    named.name,
 				Namespace:       cfg.Namespace,

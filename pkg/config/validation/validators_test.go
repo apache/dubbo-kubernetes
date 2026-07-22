@@ -342,10 +342,14 @@ func TestValidateWorkloadEntry(t *testing.T) {
 		wantErr bool
 	}{
 		{name: "valid IP", spec: &networking.WorkloadEntry{Address: "10.0.0.1", Ports: map[string]uint32{"grpc": 50051}}, wantErr: false},
-		{name: "valid DNS", spec: &networking.WorkloadEntry{Address: "vm.example.com"}, wantErr: false},
+		{name: "valid DNS", spec: &networking.WorkloadEntry{Address: "vm.example.com", Locality: "us-east-1/zone-a/rack-1", ServiceAccount: "reviews-vm"}, wantErr: false},
 		{name: "missing address", spec: &networking.WorkloadEntry{}, wantErr: true},
+		{name: "wildcard address", spec: &networking.WorkloadEntry{Address: "*.example.com"}, wantErr: true},
 		{name: "invalid port", spec: &networking.WorkloadEntry{Address: "10.0.0.1", Ports: map[string]uint32{"grpc": 0}}, wantErr: true},
 		{name: "invalid labels", spec: &networking.WorkloadEntry{Address: "10.0.0.1", Labels: map[string]string{"bad key": "value"}}, wantErr: true},
+		{name: "invalid locality empty segment", spec: &networking.WorkloadEntry{Address: "10.0.0.1", Locality: "us-east-1//rack-1"}, wantErr: true},
+		{name: "invalid locality depth", spec: &networking.WorkloadEntry{Address: "10.0.0.1", Locality: "region/zone/subzone/extra"}, wantErr: true},
+		{name: "invalid service account", spec: &networking.WorkloadEntry{Address: "10.0.0.1", ServiceAccount: "Bad_Account"}, wantErr: true},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {

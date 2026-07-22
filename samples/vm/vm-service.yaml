@@ -1,0 +1,39 @@
+# Licensed to the Apache Software Foundation (ASF) under one or more
+# contributor license agreements.  See the NOTICE file distributed with
+# this work for additional information regarding copyright ownership.
+# The ASF licenses this file to You under the Apache License, Version 2.0.
+
+apiVersion: networking.dubbo.apache.org/v1alpha3
+kind: WorkloadEntry
+metadata:
+  name: payment-vm-01
+  namespace: default
+spec:
+  address: 192.0.2.10
+  ports:
+    grpc: 50051
+  labels:
+    app: payment
+    version: v1
+  network: datacenter-1
+  locality: us-east-1/zone-a/rack-1
+  weight: 1
+  serviceAccount: payment
+---
+apiVersion: networking.dubbo.apache.org/v1alpha3
+kind: ServiceEntry
+metadata:
+  name: payment
+  namespace: default
+spec:
+  hosts:
+    - payment.mesh.local
+  location: MESH_INTERNAL
+  resolution: STATIC
+  ports:
+    - number: 50051
+      name: grpc
+      protocol: GRPC
+  workloadSelector:
+    matchLabels:
+      app: payment

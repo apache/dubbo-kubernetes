@@ -129,6 +129,55 @@ func TestBuildClusterLoadAssignmentKeepsLocalShardPodIPWhenGatewayConfigured(t *
 	}
 }
 
+func TestBuildClusterLoadAssignmentPreservesVMLocalityHealthAndWeight(t *testing.T) {
+	hostname := host.Name("reviews.mesh.local")
+	svc := newEndpointTestService("reviews", "bookinfo", string(hostname), 50051)
+	push := newEndpointTestPushContext(t, nil, []*model.Service{svc})
+	index := model.NewEndpointIndex(model.DisabledCache{})
+	index.UpdateServiceEndpoints(model.ShardKey{}, string(hostname), "bookinfo", []*model.DubboEndpoint{
+		{
+			Addresses:       []string{"10.0.0.10"},
+			EndpointPort:    50051,
+			ServicePortName: "http",
+			Locality:        "us-east-1/zone-a/rack-1",
+			LbWeight:        7,
+			HealthStatus:    model.Healthy,
+		},
+		{
+			Addresses:       []string{"10.0.0.11"},
+			EndpointPort:    50051,
+			ServicePortName: "http",
+			Locality:        "us-west-2/zone-b",
+			LbWeight:        3,
+			HealthStatus:    model.UnHealthy,
+		},
+	}, false)
+
+	clusterName := model.BuildSubsetKey(model.TrafficDirectionOutbound, "", hostname, 50051)
+	cla := NewEndpointBuilder(clusterName, newEndpointTestProxy(), push).BuildClusterLoadAssignment(index)
+	localities := cla.GetEndpoints()
+	if len(localities) != 2 {
+		t.Fatalf("localities = %d, want 2", len(localities))
+	}
+	if got := localities[0].GetLocality(); got.GetRegion() != "us-east-1" || got.GetZone() != "zone-a" || got.GetSubZone() != "rack-1" {
+		t.Fatalf("first locality = %v", got)
+	}
+	if got := localities[0].GetLoadBalancingWeight().GetValue(); got != 7 {
+		t.Fatalf("first locality weight = %d, want 7", got)
+	}
+	first := localities[0].GetLbEndpoints()[0]
+	metadata := first.GetMetadata().GetFilterMetadata()["networking.dubbo.apache.org"]
+	if got := metadata.GetFields()["locality"].GetStringValue(); got != "us-east-1/zone-a/rack-1" {
+		t.Fatalf("first endpoint locality metadata = %q", got)
+	}
+	if got := first.GetLoadBalancingWeight().GetValue(); got != 7 {
+		t.Fatalf("first endpoint weight = %d, want 7", got)
+	}
+	if got := localities[1].GetLbEndpoints()[0].GetHealthStatus(); got.String() != "UNHEALTHY" {
+		t.Fatalf("second endpoint health = %v, want UNHEALTHY", got)
+	}
+}
+
 func firstEndpointAddress(t *testing.T, cla *endpoint.ClusterLoadAssignment) string {
 	t.Helper()
 	localities := cla.GetEndpoints()

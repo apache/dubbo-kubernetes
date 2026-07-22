@@ -315,7 +315,7 @@ func validateWorkloadEntry(field string, workload *networking.WorkloadEntry) err
 		return fmt.Errorf("%s must not be null", field)
 	}
 	var errs error
-	if err := validateServiceEntryHost(field+".address", workload.GetAddress()); err != nil {
+	if err := validateWorkloadAddress(field+".address", workload.GetAddress()); err != nil {
 		errs = AppendErrors(errs, err)
 	}
 	for name, port := range workload.GetPorts() {
@@ -329,7 +329,31 @@ func validateWorkloadEntry(field string, workload *networking.WorkloadEntry) err
 	if err := labels.Instance(workload.GetLabels()).Validate(); err != nil {
 		errs = AppendErrors(errs, fmt.Errorf("%s.labels: %v", field, err))
 	}
+	if locality := workload.GetLocality(); locality != "" {
+		parts := strings.Split(locality, "/")
+		if len(parts) > 3 {
+			errs = AppendErrors(errs, fmt.Errorf("%s.locality %q must use region/zone/subzone form", field, locality))
+		}
+		for _, part := range parts {
+			if part == "" {
+				errs = AppendErrors(errs, fmt.Errorf("%s.locality %q must not contain empty segments", field, locality))
+				break
+			}
+		}
+	}
+	if serviceAccount := workload.GetServiceAccount(); serviceAccount != "" {
+		if messages := kvalidation.IsDNS1123Subdomain(serviceAccount); len(messages) > 0 {
+			errs = AppendErrors(errs, fmt.Errorf("%s.serviceAccount %q is invalid: %v", field, serviceAccount, messages))
+		}
+	}
 	return errs
+}
+
+func validateWorkloadAddress(field, value string) error {
+	if strings.Contains(value, "*") {
+		return fmt.Errorf("%s %q must not contain a wildcard", field, value)
+	}
+	return validateServiceEntryHost(field, value)
 }
 
 // ValidateTelemetry checks that a Telemetry resource is well-formed.
