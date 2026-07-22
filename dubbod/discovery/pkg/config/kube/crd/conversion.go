@@ -24,7 +24,10 @@ import (
 	"reflect"
 
 	"github.com/apache/dubbo-kubernetes/pkg/config"
+	"github.com/apache/dubbo-kubernetes/pkg/config/schema/collections"
 	"github.com/apache/dubbo-kubernetes/pkg/config/schema/resource"
+	"google.golang.org/protobuf/encoding/protojson"
+	"google.golang.org/protobuf/proto"
 
 	kubeyaml "k8s.io/apimachinery/pkg/util/yaml"
 
@@ -56,26 +59,26 @@ func parseInputsImpl(inputs string, withValidate bool) ([]config.Config, []Dubbo
 			continue
 		}
 
-		// gvk := obj.GroupVersionKind()
-		// s, exists := collections.DubboGatewayAPI().FindByGroupVersionAliasesKind(resource.FromKubernetesGVK(&gvk))
-		// if !exists {
-		// 	log.Debugf("unrecognized type %v", obj.Kind)
-		// 	others = append(others, obj)
-		// 	continue
-		// }
-		//
-		// cfg, err := ConvertObject(s, &obj, "")
-		// if err != nil {
-		// 	return nil, nil, fmt.Errorf("cannot parse proto message for %v: %v", obj.Name, err)
-		// }
-		//
-		// if withValidate {
-		// 	if _, err := s.ValidateConfig(*cfg); err != nil {
-		// 		return nil, nil, fmt.Errorf("configuration is invalid: %v", err)
-		// 	}
-		// }
-		//
-		// varr = append(varr, *cfg)
+		gvk := obj.GroupVersionKind()
+		s, exists := collections.DubboGatewayAPI().FindByGroupVersionAliasesKind(resource.FromKubernetesGVK(&gvk))
+		if !exists {
+			log.Debugf("unrecognized type %v", obj.Kind)
+			others = append(others, obj)
+			continue
+		}
+
+		cfg, err := ConvertObject(s, &obj, "")
+		if err != nil {
+			return nil, nil, fmt.Errorf("cannot parse proto message for %v: %v", obj.Name, err)
+		}
+
+		if withValidate {
+			if _, err := s.ValidateConfig(*cfg); err != nil {
+				return nil, nil, fmt.Errorf("configuration is invalid: %v", err)
+			}
+		}
+
+		varr = append(varr, *cfg)
 	}
 
 	return varr, others, nil
@@ -89,6 +92,12 @@ func FromJSON(s resource.Schema, js string) (config.Spec, error) {
 	c, err := s.NewInstance()
 	if err != nil {
 		return nil, err
+	}
+	if pb, ok := c.(proto.Message); ok {
+		if err = (protojson.UnmarshalOptions{DiscardUnknown: true}).Unmarshal([]byte(js), pb); err != nil {
+			return nil, err
+		}
+		return c, nil
 	}
 	if err = config.ApplyJSON(c, js); err != nil {
 		return nil, err

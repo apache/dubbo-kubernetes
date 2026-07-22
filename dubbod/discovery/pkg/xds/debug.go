@@ -23,6 +23,7 @@ import (
 	"sort"
 	"time"
 
+	"github.com/apache/dubbo-kubernetes/dubbod/discovery/pkg/model"
 	"github.com/apache/dubbo-kubernetes/pkg/config/schema/collections"
 )
 
@@ -64,6 +65,7 @@ func (s *DiscoveryServer) AppendDebugHandlers(mux *http.ServeMux) {
 	register("/debug/syncz", "Synchronization status of all proxies connected to this dubbod instance", s.syncz)
 	register("/debug/configz", "Configuration resources known to this dubbod instance", s.configz)
 	register("/debug/registryz", "Services in the service registry", s.registryz)
+	register("/debug/endpointz", "Endpoints published through xDS", s.endpointz)
 
 	mux.HandleFunc("/debug", func(w http.ResponseWriter, req *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
@@ -156,6 +158,87 @@ func (s *DiscoveryServer) registryz(w http.ResponseWriter, _ *http.Request) {
 		})
 	}
 	writeJSON(w, services)
+}
+
+func (s *DiscoveryServer) endpointz(w http.ResponseWriter, _ *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+	if s.Env == nil || s.Env.EndpointIndex == nil {
+		writeJSON(w, []any{})
+		return
+	}
+	type debugEndpoint struct {
+		Hostname       string `json:"hostname"`
+		Namespace      string `json:"namespace"`
+		Address        string `json:"address"`
+		Port           uint32 `json:"port"`
+		Health         string `json:"health"`
+		Network        string `json:"network,omitempty"`
+		Locality       string `json:"locality,omitempty"`
+		Weight         uint32 `json:"weight"`
+		ServiceAccount string `json:"serviceAccount,omitempty"`
+		Workload       string `json:"workload,omitempty"`
+	}
+	result := make([]debugEndpoint, 0)
+	push := s.Env.PushContext()
+	if push == nil {
+		writeJSON(w, result)
+		return
+	}
+	for _, svc := range push.GetAllServices() {
+		if svc == nil {
+			continue
+		}
+		shards, found := s.Env.EndpointIndex.ShardsForService(string(svc.Hostname), svc.Attributes.Namespace)
+		if !found {
+			continue
+		}
+		shards.RLock()
+		for _, endpoints := range shards.Shards {
+			for _, ep := range endpoints {
+				if ep == nil {
+					continue
+				}
+				result = append(result, debugEndpoint{
+					Hostname:       string(svc.Hostname),
+					Namespace:      svc.Attributes.Namespace,
+					Address:        ep.FirstAddressOrNil(),
+					Port:           ep.EndpointPort,
+					Health:         endpointHealthString(ep.HealthStatus),
+					Network:        ep.Network,
+					Locality:       ep.Locality,
+					Weight:         ep.LbWeight,
+					ServiceAccount: ep.ServiceAccount,
+					Workload:       ep.WorkloadName,
+				})
+			}
+		}
+		shards.RUnlock()
+	}
+	sort.Slice(result, func(i, j int) bool {
+		if result[i].Hostname != result[j].Hostname {
+			return result[i].Hostname < result[j].Hostname
+		}
+		if result[i].Address != result[j].Address {
+			return result[i].Address < result[j].Address
+		}
+		return result[i].Port < result[j].Port
+	})
+	writeJSON(w, result)
+}
+
+func endpointHealthString(status model.HealthStatus) string {
+	switch status {
+	case model.Healthy:
+		return "HEALTHY"
+	case model.UnHealthy:
+		return "UNHEALTHY"
+	case model.Draining:
+		return "DRAINING"
+	case model.Terminating:
+		return "TERMINATING"
+	default:
+		return "UNKNOWN"
+	}
 }
 
 func writeJSON(w http.ResponseWriter, obj any) {

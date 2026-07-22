@@ -159,6 +159,9 @@ type DubboEndpoint struct {
 	Addresses              []string
 	ServicePortName        string
 	Labels                 labels.Instance
+	Network                string
+	Locality               string
+	LbWeight               uint32
 	HealthStatus           HealthStatus
 	SendUnhealthyEndpoints bool
 	DiscoverabilityPolicy  EndpointDiscoverabilityPolicy `json:"-"`
@@ -195,7 +198,11 @@ func (ep *DubboEndpoint) Equals(other *DubboEndpoint) bool {
 	// Check things we can directly compare...
 	eq := ep.ServicePortName == other.ServicePortName &&
 		ep.ServiceAccount == other.ServiceAccount &&
-		ep.WorkloadName == other.WorkloadName
+		ep.WorkloadName == other.WorkloadName &&
+		ep.Network == other.Network &&
+		ep.Locality == other.Locality &&
+		ep.LbWeight == other.LbWeight &&
+		ep.SendUnhealthyEndpoints == other.SendUnhealthyEndpoints
 	if !eq {
 		return false
 	}
