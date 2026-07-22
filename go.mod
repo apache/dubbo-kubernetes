@@ -33,7 +33,7 @@ require (
 	github.com/containers/image/v5 v5.34.0
 	github.com/containers/storage v1.57.1
 	github.com/docker/cli v29.4.3+incompatible
-	github.com/docker/docker-credential-helpers v0.9.5
+	github.com/docker/docker-credential-helpers v0.9.8
 	github.com/docker/go-connections v0.7.0
 	github.com/evanphx/json-patch/v5 v5.9.11
 	github.com/fatih/color v1.18.0
