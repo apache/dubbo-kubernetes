@@ -20,7 +20,6 @@ Log fetches are on demand with `tail` capped at 2000 by the backend.
 
 ```
 OBSERVE   Overview        real  api/overview
-          Topology        real  derived from api/overview (config-plane graph)
           Metrics         real  api/metrics (control-plane Prometheus registry)
           Logs            real  api/logs
 MESH      Services        real  overview.services
@@ -29,7 +28,6 @@ MESH      Services        real  overview.services
           Config          real  overview.configKinds (counts only)
 PLANNED   Traffic         gated — no request-level telemetry feed exists
           Events          gated — no Kubernetes events feed exists
-          Alerts          gated — no alerting rule engine exists
 SYSTEM    Runtime         real  overview.server / mesh / version / instance
 ```
 
@@ -48,20 +46,6 @@ renders a capability gate stating exactly which backend feed is missing (see §6
 | Gateway table | `gatewayInstances[].{name,namespace,gatewayClass,gatewayName,readyReplicas,desiredReplicas,isReady}` |
 | Registry table | `registries[].{provider,cluster,synced}` |
 | Header cluster / ns / updated | `clusterId`, `namespace`, `updatedAt` |
-
-### Topology page (config-plane graph — honest by construction)
-Nodes and edges are all derivable facts; nothing is invented:
-| Graph element | Source |
-|---|---|
-| Registry nodes | `registries[]` (status = `synced`) |
-| Control-plane node | `instances[]` ready ratio, `counts.xdsConnections`, `version` |
-| Gateway nodes | `gatewayInstances[]` ready ratio |
-| Namespace groups + service nodes | `services[]` grouped by `namespace`; per-node `registry`, `exposure`, `ports`, `meshExternal` |
-| registry → dubbod edge | sync relationship, styled by `synced` |
-| dubbod → namespace edge | xDS distribution (service count per namespace) |
-| dubbod → gateway edge | provisioning relationship (`managed-by=dubbod`), styled by `isReady` |
-| Edge RPS / error rate / latency | **missing capability** — labeled "telemetry not connected", never faked |
-| gateway → service routing edges | **missing capability** — needs HTTPRoute parentRef/backendRef detail API |
 
 ### Metrics page (all series from `api/metrics`)
 | UI element | Metric family |
@@ -86,10 +70,10 @@ from `PodLogOptions.Timestamps: true`).
 ## 4. Drill-down model
 
 Global → module → entity drawer. One right-hand drawer component serves every
-entity type (service, gateway, registry, control plane, config kind, topology
-node) so drill-down behaves identically everywhere. Drawer actions only expose
-operations the backend can execute today: fetch logs (dubbod/gateway), open
-metrics, locate in topology, copy hostname/address.
+entity type (service, gateway, registry, control plane, config kind) so
+drill-down behaves identically everywhere. Drawer actions only expose operations
+the backend can execute today: fetch logs (dubbod/gateway), open metrics, copy
+hostname/address.
 
 ## 5. Mock mode
 
@@ -103,9 +87,8 @@ marks mock mode; it is never on by default.
 
 | Capability | Blocked UI | Required feed |
 |---|---|---|
-| Request-level telemetry (RPS, error rate, P95/P99 per service/edge) | Traffic page; edge metrics in Topology; service KPI columns | metrics ingestion from proxyless workloads (e.g. scrape/OTLP) aggregated by service pair |
+| Request-level telemetry (RPS, error rate, P95/P99 per service/edge) | Traffic page; service KPI columns | metrics ingestion from proxyless workloads (e.g. scrape/OTLP) aggregated by service pair |
 | Kubernetes events | Events page; event timeline in drawers | `api/events` backed by an events informer |
-| Alerting | Alerts page; alert badges | rule engine + alert store (ack/silence lifecycle) |
 | Historical time series | Metrics page beyond session buffer; time-range pickers | TSDB-backed query API (or Prometheus proxy) |
 | Per-resource config listing/spec | Config page rows → resource list & YAML | `api/configs?kind=` listing endpoint |
 | Service instance/endpoint listing | Service drawer endpoints tab | `api/services/{host}/endpoints` |
@@ -130,5 +113,5 @@ Each gate page states the required feed in these exact terms.
   One y-axis per chart; legend + direct labels for multi-series.
 - States implemented everywhere: skeleton (first load), error banner with retry,
   empty, capability gate, mock banner. Reduced motion respected.
-- Responsive: nav rail collapses to icons < 1200 px; grids reflow; topology and
-  tables stay usable at 1280×800.
+- Responsive: nav rail collapses to icons < 1200 px; grids and tables stay
+  usable at 1280×800.
