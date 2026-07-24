@@ -64,9 +64,6 @@ data:
       scrape_interval: 15s
       evaluation_interval: 15s
 
-    rule_files:
-    - /etc/prometheus/rules/*.yaml
-
     scrape_configs:
     - job_name: prometheus
       static_configs:
@@ -104,60 +101,6 @@ data:
         target_label: pod
       - source_labels: [__meta_kubernetes_pod_label_app_kubernetes_io_name]
         target_label: app
----
-apiVersion: v1
-kind: ConfigMap
-metadata:
-  name: prometheus-rules
-  namespace: dubbo-system
-  labels:
-    app.kubernetes.io/name: prometheus
-    app.kubernetes.io/part-of: dubbo-observability
-data:
-  dubbo-alerts.yaml: |
-    groups:
-    - name: dubbo-observability
-      rules:
-      - alert: Dxgate5xxRateHigh
-        expr: sum by (namespace, gateway, route, cluster) (rate(dxgate_http_route_requests_total{status_code=~"5.."}[5m])) > 0
-        for: 5m
-        labels:
-          severity: warning
-        annotations:
-          summary: dxgate 5xx responses are increasing
-          description: dxgate is returning 5xx responses for one or more Gateway routes.
-      - alert: DxgateP95LatencyHigh
-        expr: histogram_quantile(0.95, sum by (le, namespace, gateway, route, cluster) (rate(dxgate_http_route_latency_ms_bucket[5m]))) > 1000
-        for: 10m
-        labels:
-          severity: warning
-        annotations:
-          summary: dxgate P95 latency is above 1s
-          description: Gateway upstream latency is above the sample threshold.
-      - alert: DxgateNotReady
-        expr: up{app="dxgate"} == 0
-        for: 2m
-        labels:
-          severity: critical
-        annotations:
-          summary: dxgate metrics target is down
-          description: Prometheus cannot scrape a dxgate pod or the pod is not ready.
-      - alert: DubbodXDSRejects
-        expr: sum(rate(dubbod_total_xds_rejects[5m])) > 0
-        for: 5m
-        labels:
-          severity: warning
-        annotations:
-          summary: xDS rejects are increasing
-          description: One or more data-plane clients rejected xDS resources from dubbod.
-      - alert: DubbodSDSError
-        expr: sum(rate(dubbod_sds_certificate_errors_total[5m])) > 0
-        for: 5m
-        labels:
-          severity: warning
-        annotations:
-          summary: SDS certificate errors are increasing
-          description: Workload certificate fetch or delivery is failing.
 ---
 apiVersion: v1
 kind: Service
@@ -230,17 +173,11 @@ spec:
         - name: config
           mountPath: /etc/prometheus
           readOnly: true
-        - name: rules
-          mountPath: /etc/prometheus/rules
-          readOnly: true
         - name: storage
           mountPath: /prometheus
       volumes:
       - name: config
         configMap:
           name: prometheus
-      - name: rules
-        configMap:
-          name: prometheus-rules
       - name: storage
         emptyDir: {}

@@ -24,7 +24,6 @@
  */
 
 import { mockOverview, mockLogs, mockMetrics } from "./mock.js";
-import { Topology } from "./topology.js";
 import {
   Sparkline, TrendChart, BucketBars, BreakdownBars,
   bucketQuantile, fmtNumber, fmtDuration,
@@ -96,9 +95,9 @@ const applyTheme = (mode) => {
 
 const LEGACY_ROUTES = { home: "overview", mesh: "services", meshgateway: "gateways", configuration: "config" };
 const ROUTES = [
-  "overview", "topology", "metrics", "logs",
+  "overview", "metrics", "logs",
   "services", "gateways", "registries", "config",
-  "traffic", "events", "alerts", "runtime",
+  "traffic", "events", "runtime",
 ];
 const parseRoute = () => {
   let hash = (location.hash || "").replace(/^#\/?/, "");
@@ -233,8 +232,7 @@ const Drawer = ({ item, onClose, onOpenLogs, navigate }) => {
               <span class="chip chip-gate">request metrics n/a</span>
             </div>
             <div class="drawer-actions">
-              <button class="btn" onClick=${() => { onClose(); navigate("topology"); }}>Locate in topology</button>
-              <button class="btn btn-ghost" onClick=${() => copyText(data.hostname)}>Copy hostname</button>
+              <button class="btn" onClick=${() => copyText(data.hostname)}>Copy hostname</button>
             </div>
           `}
 
@@ -246,7 +244,6 @@ const Drawer = ({ item, onClose, onOpenLogs, navigate }) => {
             <${Field} label="Replicas" mono>${data.readyReplicas || 0} / ${data.desiredReplicas || 0} ready</${Field}>
             <div class="drawer-actions">
               <button class="btn" onClick=${() => onOpenLogs({ kind: "gateway", name: data.name, namespace: data.namespace })}>View logs</button>
-              <button class="btn btn-ghost" onClick=${() => { onClose(); navigate("topology"); }}>Locate in topology</button>
             </div>
           `}
 
@@ -932,19 +929,13 @@ const GATED = {
     title: "Traffic",
     purpose: "Per-service and per-edge request analytics: RPS, success rate, error breakdown, latency percentiles, protocol split and drill-down to slow calls.",
     missing: "Request-level telemetry from proxyless gRPC workloads — a metrics ingestion path (scrape or OTLP) aggregated by service pair. The xds-api wire protocol carries no per-request stats today.",
-    wouldShow: ["RPS / error-rate / P95 per service and per edge", "traffic-weighted topology edges", "status-code and protocol breakdowns", "time-range comparison and anomaly flags"],
+    wouldShow: ["RPS / error-rate / P95 per service and per edge", "status-code and protocol breakdowns", "time-range comparison and anomaly flags"],
   },
   events: {
     title: "Events",
     purpose: "Timeline of mesh-relevant Kubernetes events: push failures, gateway provisioning, injector activity, config rejections — each linked to its resource.",
     missing: "An api/events feed backed by a Kubernetes events informer (or an internal event store) scoped to mesh resources.",
     wouldShow: ["chronological event stream with severity", "affected-resource links into services/gateways", "filters by kind, namespace, and reason"],
-  },
-  alerts: {
-    title: "Alerts",
-    purpose: "Active and historical alerts with acknowledge / silence / close lifecycle, wired to the metrics that triggered them.",
-    missing: "An alerting rule engine and alert store. Nothing evaluates thresholds server-side today; the GUI will not fabricate alert states.",
-    wouldShow: ["severity-grouped active alerts", "ack / silence / close actions with audit trail", "links to the triggering metric and topology node"],
   },
 };
 
@@ -953,7 +944,6 @@ const GATED = {
 const NAV = [
   { group: "Observe", items: [
     { id: "overview", label: "Overview" },
-    { id: "topology", label: "Topology" },
     { id: "metrics", label: "Metrics" },
     { id: "logs", label: "Logs" },
   ]},
@@ -966,7 +956,6 @@ const NAV = [
   { group: "Planned", items: [
     { id: "traffic", label: "Traffic", gated: true },
     { id: "events", label: "Events", gated: true },
-    { id: "alerts", label: "Alerts", gated: true },
   ]},
   { group: "System", items: [
     { id: "runtime", label: "Runtime" },
@@ -976,7 +965,6 @@ const NAV = [
 const NavIcon = ({ id }) => {
   const paths = {
     overview: html`<path d="M3 12h5V3H3zM10 21h5v-9h-5zM17 8h4V3h-4zM3 21h5v-6H3zM10 9h5V3h-5zM17 21h4V11h-4z"/>`,
-    topology: html`<circle cx="5" cy="12" r="2.5"/><circle cx="19" cy="6" r="2.5"/><circle cx="19" cy="18" r="2.5"/><path d="M7.4 11l9.2-4.2M7.4 13l9.2 4.2" fill="none"/>`,
     metrics: html`<path d="M3 20h18M6 16l4-6 4 3 5-8" fill="none"/>`,
     logs: html`<path d="M4 5h16M4 10h16M4 15h10M4 20h7" fill="none"/>`,
     services: html`<circle cx="12" cy="12" r="8.5" fill="none"/><circle cx="12" cy="12" r="3"/>`,
@@ -985,7 +973,6 @@ const NavIcon = ({ id }) => {
     config: html`<circle cx="12" cy="12" r="3" fill="none"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M19.1 4.9L17 7M7 17l-2.1 2.1" fill="none"/>`,
     traffic: html`<path d="M3 17c4 0 4-10 9-10s5 10 9 10" fill="none"/>`,
     events: html`<circle cx="12" cy="12" r="8.5" fill="none"/><path d="M12 7v5l3.5 2" fill="none"/>`,
-    alerts: html`<path d="M12 3l9.5 17h-19zM12 10v4M12 17.3v.4" fill="none"/>`,
     runtime: html`<rect x="4" y="4" width="16" height="16" rx="2" fill="none"/><path d="M9 9h6v6H9z" fill="none"/>`,
   };
   return html`<svg viewBox="0 0 24 24" class="nav-icon" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">${paths[id] || paths.overview}</svg>`;
@@ -1149,27 +1136,6 @@ const App = () => {
 
         <div class="content" key=${route}>
           ${route === "overview" && html`<${OverviewPage} ...${pageProps} />`}
-          ${route === "topology" && html`
-            <div class="page page-flush">
-              <div class="page-head">
-                <div>
-                  <${Eyebrow}>observe / topology</${Eyebrow}>
-                  <h1 class="page-title">Topology</h1>
-                  <div class="page-sub">Configuration-plane relationships as of ${updatedAt || "–"} — registries sync into dubbod; dubbod provisions gateways and pushes xDS to workloads.</div>
-                </div>
-              </div>
-              <${Topology} data=${data} selectedId=${drawer?.nodeId}
-                onSelect=${(node) => {
-                  const map = {
-                    registry: () => setDrawer({ type: "registry", nodeId: node.id, title: node.label, status: node.status, data: node.data }),
-                    gateway: () => setDrawer({ type: "gateway", nodeId: node.id, title: node.label, status: node.status, data: node.data }),
-                    service: () => setDrawer({ type: "service", nodeId: node.id, title: node.label, status: "unknown", data: node.data }),
-                    controlplane: () => setDrawer({ type: "controlplane", nodeId: node.id, title: "dubbod", status: node.status, data: node.data }),
-                  };
-                  map[node.type]?.();
-                }} />
-            </div>
-          `}
           ${route === "metrics" && html`
             <${MetricsPage} history=${history} interval=${metricsInterval} setInterval=${setMetricsInterval}
               paused=${metricsPaused} setPaused=${setMetricsPaused} error=${metricsError} retry=${pollMetrics} />
