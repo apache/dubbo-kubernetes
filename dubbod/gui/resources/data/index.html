@@ -21,7 +21,7 @@ limitations under the License.
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <base href="{{ .BasePath }}/" />
-  <title>Dubbo Console</title>
+  <title>Dubbod GUI</title>
   <link rel="icon" type="image/png" href="./dubbo-logo.png" />
   <link rel="stylesheet" href="./styles.css" />
   <script>
@@ -39,23 +39,8 @@ limitations under the License.
 </head>
 <body>
   <div id="root"></div>
-
-  <script type="module">
-    import { h, Fragment, render } from 'https://esm.sh/preact';
-    import { useState, useEffect, useMemo, useRef, useCallback } from 'https://esm.sh/preact/hooks';
-    import htm from 'https://esm.sh/htm';
-
-    window.html = htm.bind(h);
-    window.Fragment = Fragment;
-    window.render = render;
-    window.useState = useState;
-    window.useEffect = useEffect;
-    window.useMemo = useMemo;
-    window.useRef = useRef;
-    window.useCallback = useCallback;
-  </script>
-
   <script id="dubbod-gui-config" type="application/json">{{ .ConfigJSON }}</script>
+  <!-- Every asset below is served from this binary; the console makes no external requests. -->
   <script src="./app.js" type="module"></script>
 </body>
 </html>

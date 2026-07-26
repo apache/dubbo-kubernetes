@@ -16,6 +16,7 @@
 package bootstrap
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -34,30 +35,101 @@ import (
 
 	discoverymodel "github.com/apache/dubbo-kubernetes/dubbod/discovery/pkg/model"
 	"github.com/apache/dubbo-kubernetes/dubbod/gui"
+	"github.com/apache/dubbo-kubernetes/dubbod/security/pkg/nodeagent/util"
 	"github.com/apache/dubbo-kubernetes/pkg/config"
+	"github.com/apache/dubbo-kubernetes/pkg/config/constants"
 	"github.com/apache/dubbo-kubernetes/pkg/config/schema/gvk"
+	"github.com/apache/dubbo-kubernetes/pkg/kube/inject"
 	"github.com/apache/dubbo-kubernetes/pkg/log"
 	"github.com/apache/dubbo-kubernetes/pkg/monitoring"
+	"github.com/apache/dubbo-kubernetes/pkg/util/sets"
 	"github.com/apache/dubbo-kubernetes/pkg/version"
 	dto "github.com/prometheus/client_model/go"
+	sigsk8siogatewayapiapisv1 "sigs.k8s.io/gateway-api/apis/v1"
 )
 
 type guiOverview struct {
-	Product          string              `json:"product"`
-	Version          string              `json:"version"`
-	Cluster          string              `json:"clusterId"`
-	Namespace        string              `json:"namespace"`
-	PodName          string              `json:"podName,omitempty"`
-	Mesh             guiOverviewMesh     `json:"mesh"`
-	Server           guiOverviewServer   `json:"server"`
-	Status           guiOverviewStatus   `json:"status"`
-	Counts           guiOverviewCounts   `json:"counts"`
-	ConfigKinds      []guiConfigKind     `json:"configKinds"`
-	Registries       []guiRegistry       `json:"registries"`
-	Services         []guiService        `json:"services"`
-	Instances        []guiDubbodInstance `json:"instances"`
+	Product     string              `json:"product"`
+	Version     string              `json:"version"`
+	Cluster     string              `json:"clusterId"`
+	Namespace   string              `json:"namespace"`
+	PodName     string              `json:"podName,omitempty"`
+	Mesh        guiOverviewMesh     `json:"mesh"`
+	Server      guiOverviewServer   `json:"server"`
+	Status      guiOverviewStatus   `json:"status"`
+	Counts      guiOverviewCounts   `json:"counts"`
+	ConfigKinds []guiConfigKind     `json:"configKinds"`
+	Registries  []guiRegistry       `json:"registries"`
+	Services    []guiService        `json:"services"`
+	Instances   []guiDubbodInstance `json:"instances"`
+	DataPlane   []guiWorkload       `json:"dataPlane"`
+	// Total running pods per namespace that a sidecar is expected in, so the
+	// console can show "5/6 injected" when one pod predates the label.
+	DataPlanePods    map[string]int      `json:"dataPlanePods,omitempty"`
+	Routes           []guiRoute          `json:"routes"`
+	XDSClients       []guiXDSClient      `json:"xdsClients"`
 	GatewayInstances []guiDubbodInstance `json:"gatewayInstances"`
 	UpdatedAt        time.Time           `json:"updatedAt"`
+}
+
+// guiWorkload is one injected data plane pod, joined with the xDS stream it
+// holds open against this control plane (if any).
+type guiWorkload struct {
+	Name           string     `json:"name"`
+	Namespace      string     `json:"namespace"`
+	IP             string     `json:"ip,omitempty"`
+	Phase          string     `json:"phase"`
+	Ready          bool       `json:"ready"`
+	SidecarReady   bool       `json:"sidecarReady"`
+	ServiceAccount string     `json:"serviceAccount,omitempty"`
+	Image          string     `json:"image,omitempty"`
+	Inbound        string     `json:"inbound,omitempty"`
+	Upstream       string     `json:"upstream,omitempty"`
+	XDSAddress     string     `json:"xdsAddress,omitempty"`
+	Restarts       int32      `json:"restarts"`
+	MTLSModes      []string   `json:"mtlsModes,omitempty"`
+	CertExpiresAt  *time.Time `json:"certExpiresAt,omitempty"`
+	CertRootActive bool       `json:"certRootActive"`
+	ConfigError    string     `json:"configError,omitempty"`
+	Connected      bool       `json:"connected"`
+	NodeID         string     `json:"nodeId,omitempty"`
+	NodeType       string     `json:"nodeType,omitempty"`
+	ConnectedAt    *time.Time `json:"connectedAt,omitempty"`
+	Watched        []string   `json:"watched,omitempty"`
+}
+
+// guiXDSClient is one live ADS stream. Only proxies that actually open a stream
+// appear here — the inbound sidecar reads certificates off disk and never
+// connects, so its absence is expected rather than a fault.
+type guiXDSClient struct {
+	NodeID      string    `json:"nodeId"`
+	NodeType    string    `json:"nodeType,omitempty"`
+	Peer        string    `json:"peer,omitempty"`
+	ConnectedAt time.Time `json:"connectedAt"`
+	Watched     []string  `json:"watched,omitempty"`
+}
+
+// guiRoute is one HTTPRoute as the control plane has it loaded: which parent it
+// attaches to, and where each rule sends traffic. This is the call graph dubbod
+// has programmed, not observed traffic — nothing in the xDS wire protocol
+// reports which call actually happened.
+type guiRoute struct {
+	Name      string         `json:"name"`
+	Namespace string         `json:"namespace"`
+	Parents   []string       `json:"parents,omitempty"`
+	Hostnames []string       `json:"hostnames,omitempty"`
+	Rules     []guiRouteRule `json:"rules,omitempty"`
+}
+
+type guiRouteRule struct {
+	Match    string            `json:"match,omitempty"`
+	Backends []guiRouteBackend `json:"backends,omitempty"`
+}
+
+type guiRouteBackend struct {
+	Name   string `json:"name"`
+	Port   int32  `json:"port,omitempty"`
+	Weight int32  `json:"weight,omitempty"`
 }
 
 type guiDubbodInstance struct {
@@ -133,6 +205,8 @@ type guiService struct {
 	ServiceAccounts int    `json:"serviceAccounts"`
 	DefaultAddress  string `json:"defaultAddress,omitempty"`
 	MeshExternal    bool   `json:"meshExternal"`
+	MTLSMode        string `json:"mtlsMode,omitempty"`
+	MTLSFromPolicy  bool   `json:"mtlsFromPolicy"`
 }
 
 type guiMetricsResponse struct {
@@ -517,6 +591,8 @@ func (s *Server) buildGUIOverview() guiOverview {
 		}
 	}
 
+	dataPlane, dataPlanePods := s.buildGUIDataPlane()
+
 	registries := s.buildGUIRegistries()
 	configKinds := s.buildGUIConfigKinds()
 	services := s.buildGUIServices()
@@ -581,52 +657,368 @@ func (s *Server) buildGUIOverview() guiOverview {
 		Registries:       registries,
 		Services:         services,
 		Instances:        instances,
+		Routes:           s.buildGUIRoutes(),
+		XDSClients:       s.buildGUIXDSClients(),
+		DataPlane:        dataPlane,
+		DataPlanePods:    dataPlanePods,
 		GatewayInstances: s.buildGUIGatewayInstances(),
 		UpdatedAt:        time.Now().UTC(),
 	}
 }
 
+const (
+	// guiDubbodPodSelector matches the label the dubbod chart puts on control
+	// plane pods (manifests/charts/dubbod/templates/deployment.yaml).
+	guiDubbodPodSelector = "app=dubbod"
+
+	// Gateway deployments provisioned by dubbod carry these labels; the same
+	// pair identifies gateway pods so the data plane listing can skip them.
+	guiGatewayNameLabel = "app.kubernetes.io/name"
+	guiGatewayNameValue = "dxgate"
+	guiGatewaySelector  = guiGatewayNameLabel + "=" + guiGatewayNameValue + ",app.kubernetes.io/managed-by=dubbod"
+
+	// What the inbound sidecar enforces when no PeerAuthentication applies.
+	grpcInboundFallbackMTLSMode = "PERMISSIVE"
+)
+
 func (s *Server) buildGUIDubbodInstances() []guiDubbodInstance {
 	instances := make([]guiDubbodInstance, 0)
 
-	if s.kubeClient != nil {
-		pods, err := s.kubeClient.Kube().CoreV1().Pods(s.namespace).List(context.TODO(), metav1.ListOptions{
-			LabelSelector: "app=dubbo-control-plane",
-		})
-		if err == nil && len(pods.Items) > 0 {
-			for _, pod := range pods.Items {
-				ready := false
-				for _, cond := range pod.Status.Conditions {
-					if cond.Type == corev1.PodReady && cond.Status == corev1.ConditionTrue {
-						ready = true
-						break
-					}
-				}
-				instances = append(instances, guiDubbodInstance{
-					Name:      pod.Name,
-					Namespace: pod.Namespace,
-					IP:        pod.Status.PodIP,
-					IsReady:   ready,
-				})
-			}
-		}
-	}
-
-	// fallback if no pods found or kubeclient is nil
-	if len(instances) == 0 {
-		ip := "127.0.0.1"
-		if s.podName != "" {
-			ip = "localhost" // Fallback IP when running locally
-		}
-		instances = append(instances, guiDubbodInstance{
+	// Off-cluster runs (`go run ./dubbod/discovery/cmd`) have no pods to list, so
+	// report this process as-is rather than inventing an address for it.
+	if s.kubeClient == nil {
+		return append(instances, guiDubbodInstance{
 			Name:      s.podName,
 			Namespace: s.namespace,
-			IP:        ip,
 			IsReady:   true,
 		})
 	}
 
+	pods, err := s.kubeClient.Kube().CoreV1().Pods(s.namespace).List(context.TODO(), metav1.ListOptions{
+		LabelSelector: guiDubbodPodSelector,
+	})
+	if err != nil {
+		log.Warnf("gui: listing control plane pods in %s: %v", s.namespace, err)
+		return instances
+	}
+
+	for _, pod := range pods.Items {
+		instances = append(instances, guiDubbodInstance{
+			Name:      pod.Name,
+			Namespace: pod.Namespace,
+			IP:        pod.Status.PodIP,
+			IsReady:   podReady(pod),
+		})
+	}
+
+	sort.SliceStable(instances, func(i, j int) bool { return instances[i].Name < instances[j].Name })
+
 	return instances
+}
+
+// xdsTypeShortName turns an xDS type URL into the three-letter name operators
+// actually use. Unknown URLs fall back to their last path segment rather than
+// being dropped, so a new resource type shows up instead of silently vanishing.
+func xdsTypeShortName(typeURL string) string {
+	switch {
+	case strings.HasSuffix(typeURL, ".Cluster"):
+		return "CDS"
+	case strings.HasSuffix(typeURL, ".ClusterLoadAssignment"):
+		return "EDS"
+	case strings.HasSuffix(typeURL, ".Listener"):
+		return "LDS"
+	case strings.HasSuffix(typeURL, ".RouteConfiguration"):
+		return "RDS"
+	case strings.HasSuffix(typeURL, ".Secret"):
+		return "SDS"
+	}
+	if idx := strings.LastIndex(typeURL, "."); idx >= 0 && idx+1 < len(typeURL) {
+		return typeURL[idx+1:]
+	}
+	return typeURL
+}
+
+func (s *Server) buildGUIXDSClients() []guiXDSClient {
+	clients := make([]guiXDSClient, 0)
+	for _, conn := range s.XDSServer.AllClients() {
+		proxy := conn.Proxy()
+		if proxy == nil {
+			continue
+		}
+		entry := guiXDSClient{
+			NodeID:      proxy.ID,
+			NodeType:    string(proxy.Type),
+			Peer:        conn.Peer(),
+			ConnectedAt: conn.ConnectedAt().UTC(),
+		}
+		proxy.RLock()
+		for typeURL := range proxy.WatchedResources {
+			entry.Watched = append(entry.Watched, xdsTypeShortName(typeURL))
+		}
+		proxy.RUnlock()
+		sort.Strings(entry.Watched)
+		clients = append(clients, entry)
+	}
+	sort.SliceStable(clients, func(i, j int) bool { return clients[i].NodeID < clients[j].NodeID })
+	return clients
+}
+
+// guiXDSClientsByIP indexes live ADS streams by every IP their node reported, so
+// a pod row can be joined to the stream it actually holds open.
+func (s *Server) guiXDSClientsByIP() map[string]guiWorkload {
+	byIP := make(map[string]guiWorkload)
+	for _, conn := range s.XDSServer.AllClients() {
+		proxy := conn.Proxy()
+		if proxy == nil {
+			continue
+		}
+
+		entry := guiWorkload{
+			Connected: true,
+			NodeID:    proxy.ID,
+			NodeType:  string(proxy.Type),
+		}
+		if at := conn.ConnectedAt(); !at.IsZero() {
+			utc := at.UTC()
+			entry.ConnectedAt = &utc
+		}
+
+		proxy.RLock()
+		for typeURL := range proxy.WatchedResources {
+			entry.Watched = append(entry.Watched, xdsTypeShortName(typeURL))
+		}
+		proxy.RUnlock()
+		sort.Strings(entry.Watched)
+
+		for _, ip := range proxy.IPAddresses {
+			if ip != "" {
+				byIP[ip] = entry
+			}
+		}
+	}
+	return byIP
+}
+
+// guiSidecarContainer returns the dxplane inbound sidecar in a pod, or nil when
+// the pod is not part of the data plane.
+func guiSidecarContainer(pod corev1.Pod) *corev1.Container {
+	for i := range pod.Spec.Containers {
+		if pod.Spec.Containers[i].Name == inject.ProxylessGRPCInboundContainerName {
+			return &pod.Spec.Containers[i]
+		}
+	}
+	return nil
+}
+
+// guiSidecarAddresses reads the listener and upstream dxplane was started with.
+// The sidecar takes both as `--listen`/`--upstream` flags, so the running
+// configuration is readable from the pod spec without contacting the pod.
+func guiSidecarAddresses(container corev1.Container) (inbound, upstream string) {
+	args := container.Args
+	for i := 0; i < len(args); i++ {
+		var flag, value string
+		if eq := strings.Index(args[i], "="); eq > 0 {
+			flag, value = args[i][:eq], args[i][eq+1:]
+		} else if i+1 < len(args) {
+			flag, value = args[i], args[i+1]
+		} else {
+			continue
+		}
+		switch flag {
+		case "--listen", "-listen":
+			inbound = value
+		case "--upstream", "-upstream":
+			upstream = value
+		}
+	}
+	if inbound == "" {
+		for _, port := range container.Ports {
+			if port.ContainerPort > 0 {
+				inbound = ":" + strconv.Itoa(int(port.ContainerPort))
+				break
+			}
+		}
+	}
+	return inbound, upstream
+}
+
+func guiContainerEnv(container corev1.Container, name string) string {
+	for _, env := range container.Env {
+		if env.Name == name {
+			return env.Value
+		}
+	}
+	return ""
+}
+
+// guiActiveRootCert mirrors proxylessGRPCWorkloadController.activeRootCert so
+// the console compares workload secrets against the same root the issuer uses.
+func (s *Server) guiActiveRootCert() []byte {
+	authority := s.RA
+	if authority == nil {
+		if s.CA == nil {
+			return nil
+		}
+		if s.CA.GetCAKeyCertBundle() == nil {
+			return nil
+		}
+		return s.CA.GetCAKeyCertBundle().GetRootCertPem()
+	}
+	if authority.GetCAKeyCertBundle() == nil {
+		return nil
+	}
+	return authority.GetCAKeyCertBundle().GetRootCertPem()
+}
+
+// guiWorkloadSecretState reads the per-workload secret dubbod itself generates.
+// That secret holds the exact runtime config and certificate the sidecar is
+// running with, so the mTLS mode and certificate expiry reported here are what
+// is actually in force — not a restatement of the policy dubbod intended.
+func (s *Server) guiWorkloadSecretState(ctx context.Context, pod corev1.Pod, activeRoot []byte) (modes []string, expiresAt *time.Time, rootActive bool, problem string) {
+	name := inject.ProxylessGRPCSecretNameForMeta(pod.ObjectMeta)
+	secret, err := s.kubeClient.Kube().CoreV1().Secrets(pod.Namespace).Get(ctx, name, metav1.GetOptions{})
+	if err != nil {
+		return nil, nil, false, fmt.Sprintf("workload secret %s not readable: %v", name, err)
+	}
+
+	if raw := secret.Data[inject.ProxylessGRPCConfigFileName]; len(raw) > 0 {
+		var runtime struct {
+			Services []struct {
+				Ports []struct {
+					MTLSMode string `json:"mtlsMode"`
+				} `json:"ports"`
+			} `json:"services"`
+		}
+		if err := json.Unmarshal(raw, &runtime); err != nil {
+			problem = fmt.Sprintf("runtime config in %s is not parseable: %v", name, err)
+		} else {
+			seen := sets.New[string]()
+			for _, svc := range runtime.Services {
+				for _, port := range svc.Ports {
+					if mode := strings.TrimSpace(port.MTLSMode); mode != "" {
+						seen.Insert(mode)
+					}
+				}
+			}
+			modes = seen.UnsortedList()
+			sort.Strings(modes)
+		}
+	} else {
+		problem = fmt.Sprintf("workload secret %s carries no runtime config", name)
+	}
+
+	if chain := secret.Data[constants.CertChainFilename]; len(chain) > 0 {
+		if at, err := util.ParseCertAndGetExpiryTimestamp(chain); err == nil {
+			utc := at.UTC()
+			expiresAt = &utc
+		} else if problem == "" {
+			problem = fmt.Sprintf("workload certificate is not parseable: %v", err)
+		}
+	} else if problem == "" {
+		problem = "workload secret carries no certificate chain"
+	}
+
+	// A workload still holding a superseded root will keep failing handshakes
+	// once the old root is retired, so surface the mismatch rather than the
+	// reassuring "cert is valid until X".
+	rootActive = len(activeRoot) > 0 && bytes.Equal(secret.Data[constants.CACertNamespaceConfigMapDataName], activeRoot)
+
+	return modes, expiresAt, rootActive, problem
+}
+
+// buildGUIDataPlane lists the pods carrying the proxyless gRPC sidecar and joins
+// each to its ADS stream. Gateway pods are excluded — they are reported
+// separately as the external data plane.
+func (s *Server) buildGUIDataPlane() ([]guiWorkload, map[string]int) {
+	workloads := make([]guiWorkload, 0)
+	candidates := make(map[string]int)
+	if s.kubeClient == nil {
+		return workloads, candidates
+	}
+
+	pods, err := s.kubeClient.Kube().CoreV1().Pods(metav1.NamespaceAll).List(context.TODO(), metav1.ListOptions{})
+	if err != nil {
+		log.Warnf("gui: listing data plane pods: %v", err)
+		return workloads, candidates
+	}
+
+	clients := s.guiXDSClientsByIP()
+	activeRoot := s.guiActiveRootCert()
+	for _, pod := range pods.Items {
+		if pod.Labels[guiGatewayNameLabel] == guiGatewayNameValue {
+			continue
+		}
+
+		// Finished pods are not part of the running data plane and would skew
+		// the injected ratio.
+		if pod.Status.Phase == corev1.PodSucceeded || pod.Status.Phase == corev1.PodFailed {
+			continue
+		}
+		candidates[pod.Namespace]++
+
+		sidecar := guiSidecarContainer(pod)
+		if sidecar == nil {
+			continue
+		}
+
+		sidecarReady := false
+		for _, status := range pod.Status.ContainerStatuses {
+			if status.Name == sidecar.Name {
+				sidecarReady = status.Ready
+			}
+		}
+
+		inbound, upstream := guiSidecarAddresses(*sidecar)
+		workload := guiWorkload{
+			Name:           pod.Name,
+			Namespace:      pod.Namespace,
+			IP:             pod.Status.PodIP,
+			Phase:          string(pod.Status.Phase),
+			Ready:          podReady(pod),
+			SidecarReady:   sidecarReady,
+			ServiceAccount: pod.Spec.ServiceAccountName,
+			Image:          sidecar.Image,
+			Inbound:        inbound,
+			Upstream:       upstream,
+			XDSAddress:     guiContainerEnv(*sidecar, "XDS_ADDRESS"),
+		}
+		for _, status := range pod.Status.ContainerStatuses {
+			if status.Name == sidecar.Name {
+				workload.Restarts = status.RestartCount
+			}
+		}
+		workload.MTLSModes, workload.CertExpiresAt, workload.CertRootActive, workload.ConfigError =
+			s.guiWorkloadSecretState(context.TODO(), pod, activeRoot)
+		if client, ok := clients[pod.Status.PodIP]; ok {
+			workload.Connected = client.Connected
+			workload.NodeID = client.NodeID
+			workload.NodeType = client.NodeType
+			workload.ConnectedAt = client.ConnectedAt
+			workload.Watched = client.Watched
+		}
+		workloads = append(workloads, workload)
+	}
+
+	sort.SliceStable(workloads, func(i, j int) bool {
+		if workloads[i].Namespace != workloads[j].Namespace {
+			return workloads[i].Namespace < workloads[j].Namespace
+		}
+		return workloads[i].Name < workloads[j].Name
+	})
+
+	// Only namespaces that actually run part of the data plane are interesting;
+	// the rest of the cluster is not something dubbod is failing to inject.
+	injectedNamespaces := sets.New[string]()
+	for _, workload := range workloads {
+		injectedNamespaces.Insert(workload.Namespace)
+	}
+	for namespace := range candidates {
+		if !injectedNamespaces.Contains(namespace) {
+			delete(candidates, namespace)
+		}
+	}
+
+	return workloads, candidates
 }
 
 func (s *Server) buildGUIGatewayInstances() []guiDubbodInstance {
@@ -634,7 +1026,7 @@ func (s *Server) buildGUIGatewayInstances() []guiDubbodInstance {
 
 	if s.kubeClient != nil {
 		deployments, err := s.kubeClient.Kube().AppsV1().Deployments("").List(context.TODO(), metav1.ListOptions{
-			LabelSelector: "app.kubernetes.io/name=dxgate,app.kubernetes.io/managed-by=dubbod",
+			LabelSelector: guiGatewaySelector,
 		})
 		if err == nil && len(deployments.Items) > 0 {
 			for _, deployment := range deployments.Items {
@@ -663,6 +1055,86 @@ func guiGatewayInstanceFromDeployment(deployment appsv1.Deployment) guiDubbodIns
 		ReadyReplicas:   ready,
 		DesiredReplicas: desired,
 	}
+}
+
+// buildGUIRoutes flattens the HTTPRoutes in the config store into the shape the
+// console draws. Matches are rendered as the operator wrote them so a rule in
+// the UI can be grepped for in `kubectl get httproute -o yaml`.
+func (s *Server) buildGUIRoutes() []guiRoute {
+	routes := make([]guiRoute, 0)
+	if s.environment.ConfigStore == nil {
+		return routes
+	}
+
+	for _, cfg := range s.environment.List(gvk.HTTPRoute, "") {
+		spec, ok := cfg.Spec.(*sigsk8siogatewayapiapisv1.HTTPRouteSpec)
+		if !ok {
+			continue
+		}
+
+		entry := guiRoute{Name: cfg.Name, Namespace: cfg.Namespace}
+		for _, parent := range spec.ParentRefs {
+			entry.Parents = append(entry.Parents, string(parent.Name))
+		}
+		for _, hostname := range spec.Hostnames {
+			entry.Hostnames = append(entry.Hostnames, string(hostname))
+		}
+
+		for _, rule := range spec.Rules {
+			out := guiRouteRule{Match: guiRouteMatch(rule.Matches)}
+			for _, backend := range rule.BackendRefs {
+				item := guiRouteBackend{Name: string(backend.Name)}
+				if backend.Port != nil {
+					item.Port = *backend.Port
+				}
+				if backend.Weight != nil {
+					item.Weight = *backend.Weight
+				}
+				out.Backends = append(out.Backends, item)
+			}
+			entry.Rules = append(entry.Rules, out)
+		}
+		routes = append(routes, entry)
+	}
+
+	sort.SliceStable(routes, func(i, j int) bool {
+		if routes[i].Namespace != routes[j].Namespace {
+			return routes[i].Namespace < routes[j].Namespace
+		}
+		return routes[i].Name < routes[j].Name
+	})
+
+	return routes
+}
+
+// guiRouteMatch renders the match conditions of one rule; an empty match set is
+// Gateway API's "match everything", which reads better as an explicit path.
+func guiRouteMatch(matches []sigsk8siogatewayapiapisv1.HTTPRouteMatch) string {
+	if len(matches) == 0 {
+		return "/"
+	}
+
+	parts := make([]string, 0, len(matches))
+	for _, match := range matches {
+		segment := ""
+		if match.Path != nil && match.Path.Value != nil {
+			segment = *match.Path.Value
+			if match.Path.Type != nil && *match.Path.Type == sigsk8siogatewayapiapisv1.PathMatchPathPrefix {
+				segment += "*"
+			}
+		}
+		for _, header := range match.Headers {
+			segment = strings.TrimSpace(segment + " " + string(header.Name) + "=" + header.Value)
+		}
+		if match.Method != nil {
+			segment = strings.TrimSpace(string(*match.Method) + " " + segment)
+		}
+		if segment == "" {
+			segment = "/"
+		}
+		parts = append(parts, segment)
+	}
+	return strings.Join(parts, " | ")
 }
 
 func (s *Server) buildGUIRegistries() []guiRegistry {
@@ -762,7 +1234,10 @@ func (s *Server) buildGUIServices() []guiService {
 			continue
 		}
 
+		mode, fromPolicy := s.guiServiceMTLSMode(service)
 		items = append(items, guiService{
+			MTLSMode:        mode,
+			MTLSFromPolicy:  fromPolicy,
 			Name:            service.Attributes.Name,
 			Hostname:        string(service.Hostname),
 			Namespace:       service.Attributes.Namespace,
@@ -786,6 +1261,45 @@ func (s *Server) buildGUIServices() []guiService {
 	})
 
 	return items
+}
+
+// guiServiceMTLSMode resolves the inbound mTLS mode callers of this service will
+// meet. When no PeerAuthentication selects the workload the effective mode is
+// UNKNOWN, and the sidecar falls back to PERMISSIVE
+// (cmd/app/grpc_inbound.go effectiveMTLSMode) — reporting that fallback rather
+// than "strict" keeps the console from claiming an encryption guarantee the data
+// plane is not making.
+func (s *Server) guiServiceMTLSMode(service *discoverymodel.Service) (mode string, fromPolicy bool) {
+	push := s.environment.PushContext()
+	if push == nil || push.AuthenticationPolicies == nil {
+		return grpcInboundFallbackMTLSMode, false
+	}
+
+	strongest := discoverymodel.MTLSUnknown
+	for _, port := range service.Ports {
+		if port == nil {
+			continue
+		}
+		effective := push.AuthenticationPolicies.EffectiveMutualTLSMode(
+			service.Attributes.Namespace, nil, uint32(port.Port))
+		if effective == discoverymodel.MTLSUnknown {
+			continue
+		}
+		// Report the weakest mode any port allows: that is what an attacker gets.
+		if strongest == discoverymodel.MTLSUnknown || effective < strongest {
+			strongest = effective
+		}
+	}
+
+	switch strongest {
+	case discoverymodel.MTLSDisable:
+		return "DISABLE", true
+	case discoverymodel.MTLSPermissive:
+		return "PERMISSIVE", true
+	case discoverymodel.MTLSStrict:
+		return "STRICT", true
+	}
+	return grpcInboundFallbackMTLSMode, false
 }
 
 func (s *Server) countConfigs(kind config.GroupVersionKind) int {
@@ -828,7 +1342,11 @@ func serviceExposure(service *discoverymodel.Service) string {
 	case service.MeshExternal:
 		return "mesh-external"
 	case service.Attributes.Type != "":
-		return strings.ToLower(service.Attributes.Type)
+		// Verbatim `Service.spec.type` (ClusterIP, NodePort, LoadBalancer,
+		// ExternalName) so the column matches what kubectl prints. The cases
+		// below are resolution modes, not Kubernetes types, and stay lowercase
+		// to keep that distinction visible.
+		return service.Attributes.Type
 	case service.Resolution == discoverymodel.Passthrough:
 		return "passthrough"
 	case service.Resolution == discoverymodel.DNSLB || service.Resolution == discoverymodel.DNSRoundRobinLB:

@@ -16,6 +16,7 @@ Dubbo’s control plane provides an abstraction layer over the underlying cluste
 Dubbo component composition:
 
 - **dubbod** — Dubbo xDS control plane. It provides service discovery, configuration and certificate issuance.
+- **dxplane** — Dubbo xDS data plane.
 - **dxgate** — Dubbo delegated gateway for Gateway API.
 
 ## Repositories
@@ -33,6 +34,10 @@ Projects are distributed across the code directory repositories:
 - [dubbod](./dubbod) — The main code directory for the Dubbo control plane.
 
 - [operator](./operator). — Provides user friendly options for operating the service mesh.
+
+- [dxgate](https://github.com/kdubbo/dxgate) — 
+
+- [dxplane](https://github.com/kdubbo/dxplane) —
 
 ## Contributing
 
