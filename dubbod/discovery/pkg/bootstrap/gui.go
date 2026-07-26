@@ -1085,7 +1085,7 @@ func (s *Server) buildGUIRoutes() []guiRoute {
 			for _, backend := range rule.BackendRefs {
 				item := guiRouteBackend{Name: string(backend.Name)}
 				if backend.Port != nil {
-					item.Port = int32(*backend.Port)
+					item.Port = *backend.Port
 				}
 				if backend.Weight != nil {
 					item.Weight = *backend.Weight
