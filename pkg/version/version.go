@@ -137,6 +137,11 @@ func init() {
 		BasedOnDubbo: basedOndubbo,
 	}
 
+	// Info is what /version, the dubbod_info metric, the xDS bootstrap and the
+	// console all read. Leaving it at its zero value made every one of them
+	// report "--" no matter what -ldflags the build passed in.
+	Info = Build
+
 	Cobra = BuildVersion{
 		Version:       buildVersion,
 		GitRevision:   buildGitRevision,

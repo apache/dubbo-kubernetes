@@ -6,3 +6,12 @@ at The Apache Software Foundation (http://dubbo.apache.org/).
 
 For additional information about the Apache Software Foundation, please see
 <http://www.apache.org/>.
+
+This product bundles the following third-party JavaScript in
+dubbod/gui/resources/data/vendor.js, embedded into the dubbod binary so the
+console requires no CDN access:
+
+  - preact (https://github.com/preactjs/preact), Copyright (c) The Preact
+    Authors, licensed under the MIT License.
+  - htm (https://github.com/developit/htm), Copyright (c) Jason Miller,
+    licensed under the Apache License, Version 2.0.

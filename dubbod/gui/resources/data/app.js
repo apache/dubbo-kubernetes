@@ -16,21 +16,19 @@
  */
 
 /**
- * Dubbo control plane console (Preact no-build).
+ * Dubbo control plane console.
  *
- * Data contract: see dubbod/gui/DESIGN.md. Everything rendered here maps to
- * api/overview, api/logs or api/metrics; modules whose backend feed does not
- * exist yet render an explicit capability gate instead of demo data.
+ * Every value on screen comes from api/overview, api/metrics or api/logs —
+ * there is no demo/mock path and no widget for a metric this build does not
+ * export. See architecture/gui/DESIGN.md for the field-by-field mapping.
  */
 
-import { mockOverview, mockLogs, mockMetrics } from "./mock.js";
+import { html, render, useState, useEffect, useMemo, useRef, useCallback } from "./runtime.js";
+import { t, LANGUAGES, getLanguage, setLanguage } from "./i18n.js";
 import {
-  Sparkline, TrendChart, BucketBars, BreakdownBars,
-  bucketQuantile, fmtNumber, fmtDuration,
+  BreakdownBars, StageFlow,
+  histStats, fmtDuration,
 } from "./charts.js";
-
-const html = window.html;
-const { useState, useEffect, useMemo, useRef, useCallback } = window;
 
 const CONFIG = (() => {
   const el = document.getElementById("dubbod-gui-config");
@@ -43,21 +41,6 @@ const API = {
   metrics: new URL("api/metrics", document.baseURI).toString(),
 };
 
-// --- mock mode --------------------------------------------------------------
-
-const mockKey = "dubbod-gui-mock";
-const initMock = () => {
-  const param = new URLSearchParams(location.search).get("mock");
-  if (param === "1") { try { localStorage.setItem(mockKey, "1"); } catch (_) {} return true; }
-  if (param === "0") { try { localStorage.removeItem(mockKey); } catch (_) {} return false; }
-  try { return localStorage.getItem(mockKey) === "1"; } catch (_) { return false; }
-};
-let MOCK = initMock();
-const setMock = (on) => {
-  try { on ? localStorage.setItem(mockKey, "1") : localStorage.removeItem(mockKey); } catch (_) {}
-  location.search = on ? "?mock=1" : "";
-};
-
 const getJSON = async (url) => {
   const res = await fetch(url);
   const body = await res.json().catch(() => null);
@@ -65,10 +48,7 @@ const getJSON = async (url) => {
   return body;
 };
 
-const fetchOverview = () => (MOCK ? Promise.resolve(mockOverview()) : getJSON(API.overview));
-const fetchMetrics = () => (MOCK ? Promise.resolve(mockMetrics()) : getJSON(API.metrics));
 const fetchLogs = (target) => {
-  if (MOCK) return Promise.resolve(mockLogs(target));
   const url = new URL(API.logs);
   url.searchParams.set("kind", target.kind);
   url.searchParams.set("namespace", target.namespace || "");
@@ -84,21 +64,23 @@ const getTheme = () => document.documentElement.dataset.theme || "auto";
 const applyTheme = (mode) => {
   if (mode === "auto") {
     delete document.documentElement.dataset.theme;
-    try { localStorage.removeItem(themeKey); } catch (_) {}
+    try { localStorage.removeItem(themeKey); } catch (_) { /* storage unavailable */ }
   } else {
     document.documentElement.dataset.theme = mode;
-    try { localStorage.setItem(themeKey, mode); } catch (_) {}
+    try { localStorage.setItem(themeKey, mode); } catch (_) { /* storage unavailable */ }
   }
 };
 
 // --- routing ----------------------------------------------------------------
 
-const LEGACY_ROUTES = { home: "overview", mesh: "services", meshgateway: "gateways", configuration: "config" };
-const ROUTES = [
-  "overview", "metrics", "logs",
-  "services", "gateways", "registries", "config",
-  "traffic", "events", "runtime",
-];
+const ROUTES = ["overview", "services", "pipeline", "logs", "topology", "configuration"];
+// Older builds shipped a page per resource kind plus placeholder pages; those
+// URLs now land on the page that absorbed them.
+const LEGACY_ROUTES = {
+  home: "overview", mesh: "services", meshgateway: "overview", runtime: "configuration",
+  gateways: "overview", registries: "overview", config: "overview",
+  traffic: "overview", events: "overview", alerts: "overview", metrics: "pipeline",
+};
 const parseRoute = () => {
   let hash = (location.hash || "").replace(/^#\/?/, "");
   hash = LEGACY_ROUTES[hash] || hash;
@@ -108,46 +90,34 @@ const parseRoute = () => {
 // --- metric helpers ---------------------------------------------------------
 
 const family = (snapshot, name) => snapshot?.families?.find((f) => f.name === name);
-const firstValue = (snapshot, name) => family(snapshot, name)?.metrics?.[0]?.value ?? null;
+const firstSample = (snapshot, name) => family(snapshot, name)?.metrics?.[0] ?? null;
 const labeledValues = (snapshot, name, label) => {
   const out = new Map();
   for (const m of family(snapshot, name)?.metrics || []) {
-    out.set(m.labels?.[label] ?? "", (out.get(m.labels?.[label] ?? "") || 0) + (m.value || 0));
+    const key = m.labels?.[label] ?? "";
+    out.set(key, (out.get(key) || 0) + (m.value || 0));
   }
   return out;
 };
-const totalValue = (snapshot, name) =>
-  (family(snapshot, name)?.metrics || []).reduce((a, m) => a + (m.value || 0), 0);
+const breakdown = (snapshot, name, label) =>
+  [...labeledValues(snapshot, name, label).entries()]
+    .map(([key, value]) => ({ label: key || "(unlabeled)", value }))
+    .sort((a, b) => b.value - a.value);
 
-const HISTORY_MAX = 720;
+// --- shared components ------------------------------------------------------
 
-// --- shared components --------------------------------------------------------
-
-const STATUS_LABEL = { ok: "healthy", warn: "degraded", err: "unhealthy", off: "offline", unknown: "unknown" };
-const Dot = ({ status }) => html`<span class=${`dot status-${status}`} aria-hidden="true" />`;
+// Default chip text when a caller supplies no children.
 const StatusChip = ({ status, children }) => html`
-  <span class=${`chip chip-${status}`}><${Dot} status=${status} />${children ?? STATUS_LABEL[status]}</span>
+  <span class=${`chip chip-${status}`}>${children ?? t("status." + status)}</span>
 `;
 
 const Eyebrow = ({ children }) => html`<div class="eyebrow">${children}</div>`;
+// A section can carry only an aside — dropping the heading should not leave an
+// empty h2 holding the row open.
 const SectionTitle = ({ children, aside }) => html`
-  <div class="section-head">
-    <h2 class="section-title">${children}</h2>
+  <div class=${`section-head ${children ? "" : "is-titleless"}`}>
+    ${children && html`<h2 class="section-title">${children}</h2>`}
     ${aside && html`<div class="section-aside">${aside}</div>`}
-  </div>
-`;
-
-const StatTile = ({ label, value, hint, status, spark, sparkColor, onClick }) => html`
-  <div class=${`tile ${onClick ? "tile-click" : ""}`} onClick=${onClick} role=${onClick ? "button" : undefined} tabIndex=${onClick ? 0 : undefined}>
-    <div class="tile-top">
-      <span class="tile-label">${label}</span>
-      ${status && html`<${Dot} status=${status} />`}
-    </div>
-    <div class="tile-value">${value}</div>
-    <div class="tile-foot">
-      ${hint && html`<span class="tile-hint">${hint}</span>`}
-      ${spark && html`<${Sparkline} points=${spark} colorVar=${sparkColor || "--series-1"} />`}
-    </div>
   </div>
 `;
 
@@ -160,28 +130,18 @@ const EmptyState = ({ title, children }) => html`
 
 const ErrorBanner = ({ error, onRetry }) => html`
   <div class="banner banner-err" role="alert">
-    <span class="banner-text">Request failed: ${error}</span>
-    ${onRetry && html`<button class="btn btn-small" onClick=${onRetry}>Retry</button>`}
+    <span class="banner-text">${t("error.request")}: ${error}</span>
+    ${onRetry && html`<button class="btn btn-small" onClick=${onRetry}>${t("action.retry")}</button>`}
   </div>
 `;
 
 const Skeleton = ({ h = 120 }) => html`<div class="skeleton" style=${{ height: `${h}px` }} />`;
 
-const CapabilityGate = ({ title, purpose, missing, wouldShow }) => html`
-  <div class="gate">
-    <div class="gate-mark">CAPABILITY NOT CONNECTED</div>
-    <h2 class="gate-title">${title}</h2>
-    <p class="gate-purpose">${purpose}</p>
-    <div class="gate-block">
-      <div class="gate-block-label">Would display</div>
-      <ul>${wouldShow.map((w) => html`<li key=${w}>${w}</li>`)}</ul>
-    </div>
-    <div class="gate-block gate-block-missing">
-      <div class="gate-block-label">Required backend feed</div>
-      <p>${missing}</p>
-    </div>
-    <p class="gate-foot">This module intentionally renders no demo data. The full capability ledger lives in <span class="mono">dubbod/gui/DESIGN.md</span>.</p>
-  </div>
+const RefreshButton = ({ onRefresh, refreshing }) => html`
+  <button class="btn btn-ghost btn-small" onClick=${onRefresh} disabled=${refreshing}
+    title=${t("action.refresh.title")}>
+    ${refreshing ? t("action.refreshing") : t("action.refresh")}
+  </button>
 `;
 
 const Field = ({ label, children, mono }) => html`
@@ -191,11 +151,13 @@ const Field = ({ label, children, mono }) => html`
   </div>
 `;
 
-const copyText = (text) => { try { navigator.clipboard?.writeText(text); } catch (_) {} };
+const copyText = (text) => {
+  try { navigator.clipboard?.writeText(text); } catch (_) { /* clipboard blocked */ }
+};
 
-// --- drawer -------------------------------------------------------------------
+// --- entity drawer ----------------------------------------------------------
 
-const Drawer = ({ item, onClose, onOpenLogs, navigate }) => {
+const Drawer = ({ item, onClose, onOpenLogs }) => {
   useEffect(() => {
     const onKey = (e) => { if (e.key === "Escape") onClose(); };
     window.addEventListener("keydown", onKey);
@@ -213,67 +175,96 @@ const Drawer = ({ item, onClose, onOpenLogs, navigate }) => {
             <${Eyebrow}>${type}</${Eyebrow}>
             <div class="drawer-title">${item.title}</div>
           </div>
-          <button class="btn btn-ghost" onClick=${onClose} aria-label="Close">✕</button>
+          <button class="btn btn-ghost" onClick=${onClose} aria-label=${t("action.close")}>✕</button>
         </div>
         <div class="drawer-body">
           ${item.status && html`<div class="drawer-status"><${StatusChip} status=${item.status} /></div>`}
 
           ${type === "service" && html`
-            <${Field} label="Hostname" mono>${data.hostname}</${Field}>
-            <${Field} label="Namespace">${data.namespace}</${Field}>
-            <${Field} label="Registry">${data.registry}</${Field}>
-            <${Field} label="Ports" mono>${data.ports}</${Field}>
-            <${Field} label="Exposure">${data.exposure}</${Field}>
-            <${Field} label="Default address" mono>${data.defaultAddress || "–"}</${Field}>
-            <${Field} label="Service accounts">${data.serviceAccounts}</${Field}>
-            <${Field} label="Mesh external">${data.meshExternal ? "yes" : "no"}</${Field}>
-            <div class="drawer-gaps">
-              <span class="chip chip-gate">endpoint list n/a</span>
-              <span class="chip chip-gate">request metrics n/a</span>
-            </div>
+            <${Field} label=${t("drawer.hostname")} mono>${data.hostname}</${Field}>
+            <${Field} label=${t("col.namespace")}>${data.namespace}</${Field}>
+            <${Field} label=${t("col.registry")}>${data.registry}</${Field}>
+            <${Field} label=${t("col.ports")} mono>${data.ports}</${Field}>
+            <${Field} label=${t("col.exposure")}>${data.exposure}</${Field}>
+            <${Field} label=${t("col.clusterAddress")} mono>${data.defaultAddress || "–"}</${Field}>
+            <${Field} label=${t("drawer.serviceAccounts")}>${data.serviceAccounts}</${Field}>
+            <${Field} label=${t("drawer.meshExternal")}>${data.meshExternal ? "yes" : "no"}</${Field}>
             <div class="drawer-actions">
-              <button class="btn" onClick=${() => copyText(data.hostname)}>Copy hostname</button>
+              <button class="btn" onClick=${() => copyText(data.hostname)}>${t("drawer.copyHostname")}</button>
             </div>
           `}
 
           ${type === "gateway" && html`
-            <${Field} label="Deployment" mono>${data.name}</${Field}>
-            <${Field} label="Gateway">${data.gatewayName || "–"}</${Field}>
-            <${Field} label="Namespace">${data.namespace}</${Field}>
-            <${Field} label="Gateway class">${data.gatewayClass || "–"}</${Field}>
-            <${Field} label="Replicas" mono>${data.readyReplicas || 0} / ${data.desiredReplicas || 0} ready</${Field}>
+            <${Field} label=${t("col.deployment")} mono>${data.name}</${Field}>
+            <${Field} label=${t("col.gateway")}>${data.gatewayName || "–"}</${Field}>
+            <${Field} label=${t("col.namespace")}>${data.namespace}</${Field}>
+            <${Field} label=${t("drawer.gatewayClass")}>${data.gatewayClass || "–"}</${Field}>
+            <${Field} label=${t("col.replicas")} mono>${data.readyReplicas || 0} / ${data.desiredReplicas || 0} ready</${Field}>
             <div class="drawer-actions">
-              <button class="btn" onClick=${() => onOpenLogs({ kind: "gateway", name: data.name, namespace: data.namespace })}>View logs</button>
+              <button class="btn" onClick=${() => onOpenLogs({ kind: "gateway", name: data.name, namespace: data.namespace })}>${t("drawer.viewLogs")}</button>
             </div>
           `}
 
           ${type === "registry" && html`
-            <${Field} label="Provider">${data.provider}</${Field}>
-            <${Field} label="Cluster" mono>${data.cluster}</${Field}>
-            <${Field} label="Sync">${data.synced ? "synced" : "syncing"}</${Field}>
+            <${Field} label=${t("drawer.provider")}>${data.provider}</${Field}>
+            <${Field} label=${t("drawer.cluster")} mono>${data.cluster}</${Field}>
+            <${Field} label=${t("drawer.informerSync")}>${data.synced ? t("drawer.synced") : t("drawer.syncing")}</${Field}>
           `}
 
-          ${type === "controlplane" && html`
-            <${Field} label="Version" mono>${data.version || "–"}</${Field}>
-            <${Field} label="Namespace">${data.namespace}</${Field}>
-            ${(data.instances || []).map((i) => html`
-              <div class="drawer-row" key=${i.name}>
-                <${Dot} status=${i.isReady ? "ok" : "err"} />
-                <span class="mono drawer-row-main">${i.name}</span>
-                <span class="mono drawer-row-side">${i.ip}</span>
+          ${type === "node" && html`
+            <${Field} label=${t("drawer.kind")}>
+              ${data.kind === "gateway" ? t("drawer.kind.gateway") : data.kind === "controlplane" ? t("drawer.kind.controlPlane") : t("drawer.kind.service")}
+            </${Field}>
+            ${data.kind === "controlplane" && html`
+              <${Field} label=${t("drawer.pods")}>${data.pods}</${Field}>
+              <${Field} label=${t("drawer.role")}>${t("drawer.controlPlane.role")}</${Field}>
+            `}
+            <${Field} label=${t("col.namespace")}>${data.namespace || "–"}</${Field}>
+            ${data.ports && html`<${Field} label=${t("col.ports")} mono>${data.ports}</${Field}>`}
+            ${data.mtlsMode && html`
+              <${Field} label=${t("drawer.inboundMTLS")}>
+                ${data.mtlsMode} — ${data.mtlsFromPolicy ? t("drawer.mtls.fromPolicy") : t("drawer.mtls.fallback")}
+              </${Field}>
+            `}
+            <${Field} label=${t("drawer.reachedBy")}>${t("drawer.reachedBy.value", data.edgesIn)}</${Field}>
+            ${data.edgesOut.length === 0
+              ? html`<${Field} label=${t("drawer.forwardsTo")}>${t("drawer.forwardsTo.none")}</${Field}>`
+              : html`
+                <div class="drawer-subhead">${t("drawer.forwardsTo")}</div>
+                ${data.edgesOut.map((e, i) => html`
+                  <div class="drawer-row" key=${i}>
+                    <span class="mono drawer-row-main">${e.match} → ${e.to}${e.port ? ":" + e.port : ""}</span>
+                    <span class="drawer-row-side">${e.share != null ? e.share + "%" : e.route}</span>
+                  </div>
+                `)}
+              `}
+          `}
+
+          ${type === "namespace" && html`
+            <${Field} label=${t("drawer.injectedPods")}>
+              ${t("drawer.injectedPods.value", data.injected, data.candidates)}${data.injected === data.candidates ? "" : t("drawer.injectedPods.gap")}
+            </${Field}>
+            <${Field} label=${t("drawer.inboundProxy")} mono>${data.inbound || "–"}</${Field}>
+            <${Field} label=${t("drawer.mtlsPerPort")}>
+              ${(data.mtlsModes || []).join(" · ") || t("drawer.mtlsPerPort.none")}
+            </${Field}>
+            <${Field} label=${t("drawer.soonestExpiry")}>
+              ${data.soonestExpiry ? new Date(data.soonestExpiry).toLocaleString() : t("drawer.soonestExpiry.none")}
+            </${Field}>
+            <${Field} label=${t("drawer.trustRoot")}>
+              ${data.rootStale === 0 ? t("drawer.trustRoot.ok") : t("drawer.trustRoot.stale", data.rootStale)}
+            </${Field}>
+            ${data.configError && html`<${Field} label=${t("drawer.problem")}>${data.configError}</${Field}>`}
+
+            <div class="drawer-subhead">${t("drawer.pods")}</div>
+            ${(data.pods || []).map((w) => html`
+              <div class="drawer-row" key=${w.name}>
+                <span class="mono drawer-row-main">${w.name}</span>
+                <span class="drawer-row-side">
+                  ${w.sidecarReady ? t("state.accepting") : t("state.notReady")}${w.restarts > 0 ? ` · ${w.restarts} restarts` : ""}
+                </span>
               </div>
             `)}
-            <div class="drawer-actions">
-              <button class="btn" onClick=${() => onOpenLogs({ kind: "dubbod", name: "dubbod", namespace: data.namespace })}>View logs</button>
-              <button class="btn btn-ghost" onClick=${() => { onClose(); navigate("metrics"); }}>Open metrics</button>
-            </div>
-          `}
-
-          ${type === "config" && html`
-            <${Field} label="Kind" mono>${data.kind}</${Field}>
-            <${Field} label="Count">${data.count}</${Field}>
-            <${Field} label="Purpose">${data.description}</${Field}>
-            <div class="drawer-gaps"><span class="chip chip-gate">per-resource listing n/a</span></div>
           `}
         </div>
       </aside>
@@ -281,10 +272,16 @@ const Drawer = ({ item, onClose, onOpenLogs, navigate }) => {
   `;
 };
 
-// --- logs drawer (modal over any page) ----------------------------------------
+// --- logs panel -------------------------------------------------------------
 
 // Gateway (dxgate) logs arrive with ANSI color codes; strip them for display.
 const stripAnsi = (text) => text.replace(/\u001b\[[0-9;]*m/g, "");
+
+// The API asks Kubernetes for timestamps, but dubbod and dxgate already stamp
+// every line themselves. Drop the outer one when a second timestamp follows it;
+// that is worth ~30 columns in the log panel.
+const dedupeTimestamp = (line) =>
+  line.replace(/^\d{4}-\d{2}-\d{2}T[\d:.]+Z\s+(?=\d{4}-\d{2}-\d{2}T)/, "");
 
 const levelOf = (line) => {
   const m = line.match(/\b(error|erro|warn|warning|info|debug)\b/i);
@@ -316,7 +313,7 @@ const LogsPanel = ({ state, onClose, onReload }) => {
 
   const pods = state.data?.pods || [];
   const filterLines = (raw) => {
-    const lines = stripAnsi(raw || "").split("\n").filter(Boolean);
+    const lines = stripAnsi(raw || "").split("\n").filter(Boolean).map(dedupeTimestamp);
     return lines.filter((l) => {
       if (level !== "all" && levelOf(l) !== level) return false;
       if (query && !l.toLowerCase().includes(query.toLowerCase())) return false;
@@ -342,23 +339,23 @@ const LogsPanel = ({ state, onClose, onReload }) => {
           </div>
           <div class="drawer-head-actions">
             <select class="input" value=${tail} onChange=${(e) => { setTail(e.target.value); onReload(Number(e.target.value)); }}>
-              ${[200, 500, 1000, 2000].map((n) => html`<option key=${n} value=${n}>tail ${n}</option>`)}
+              ${[200, 500, 1000, 2000].map((n) => html`<option key=${n} value=${n}>${t("logs.tail", n)}</option>`)}
             </select>
-            <button class="btn btn-ghost" onClick=${() => onReload(Number(tail))} title="Refresh">↻</button>
-            <button class="btn btn-ghost" onClick=${download} title="Download">↓</button>
-            <button class="btn btn-ghost" onClick=${onClose} aria-label="Close">✕</button>
+            <button class="btn btn-ghost" onClick=${() => onReload(Number(tail))} title=${t("logs.reload")}>↻</button>
+            <button class="btn btn-ghost" onClick=${download} title=${t("logs.download")}>↓</button>
+            <button class="btn btn-ghost" onClick=${onClose} aria-label=${t("action.close")}>✕</button>
           </div>
         </div>
         <div class="log-controls">
-          <input class="input log-search" placeholder="Search in logs…" value=${query} onInput=${(e) => setQuery(e.target.value)} />
+          <input class="input log-search" placeholder=${t("logs.search")} value=${query} onInput=${(e) => setQuery(e.target.value)} />
           ${["all", "info", "warn", "error"].map((lv) => html`
-            <button key=${lv} class=${`chip chip-toggle ${level === lv ? "is-on" : ""}`} onClick=${() => setLevel(lv)}>${lv}</button>
+            <button key=${lv} class=${`chip chip-toggle ${level === lv ? "is-on" : ""}`} onClick=${() => setLevel(lv)}>${t("logs.level." + lv)}</button>
           `)}
         </div>
         <div class="drawer-body log-body">
           ${state.loading && html`<${Skeleton} h=${160} />`}
           ${state.error && html`<${ErrorBanner} error=${state.error} onRetry=${() => onReload(Number(tail))} />`}
-          ${!state.loading && !state.error && pods.length === 0 && html`<${EmptyState} title="No pods found" />`}
+          ${!state.loading && !state.error && pods.length === 0 && html`<${EmptyState} title=${t("logs.noPods")} />`}
           ${!state.loading && !state.error && pods.map((p) => {
             const lines = filterLines(p.logs);
             return html`
@@ -367,11 +364,15 @@ const LogsPanel = ({ state, onClose, onReload }) => {
                   <span class="mono log-pod-name">${p.name}</span>
                   <span class="mono log-pod-container">${p.container}</span>
                   <${StatusChip} status=${p.ready ? "ok" : "warn"}>${p.phase || "unknown"}</${StatusChip}>
-                  <span class="log-pod-count">${lines.length} lines</span>
+                  <span class="log-pod-count">${t("logs.lines", lines.length)}</span>
                 </div>
-                ${p.error && html`<div class="log-line log-error">${p.error}</div>`}
+                ${p.error && html`
+                  <div class="banner banner-err">
+                    <span class="banner-text">${t("logs.refused")} ${p.error}</span>
+                  </div>
+                `}
                 <div class="log-pre">
-                  ${lines.length === 0 && !p.error && html`<div class="log-line log-muted">No lines match.</div>`}
+                  ${lines.length === 0 && !p.error && html`<div class="log-line log-muted">${t("logs.noMatch")}</div>`}
                   ${lines.map((l, i) => html`<${LogLine} key=${i} line=${l} query=${query} />`)}
                 </div>
               </section>
@@ -383,144 +384,176 @@ const LogsPanel = ({ state, onClose, onReload }) => {
   `;
 };
 
-// --- pages --------------------------------------------------------------------
+// --- overview ---------------------------------------------------------------
 
-const healthRollup = (data) => {
-  const flags = Object.values(data.status || {});
-  const readyFlags = flags.filter(Boolean).length;
-  const registriesOK = (data.registries || []).every((r) => r.synced);
-  const gatewaysOK = (data.gatewayInstances || []).every((g) => g.isReady);
-  const instancesOK = (data.instances || []).some((i) => i.isReady);
-  if (!instancesOK || readyFlags === 0) return "err";
-  if (readyFlags < flags.length || !registriesOK || !gatewaysOK) return "warn";
-  return "ok";
+// Roll the injected pods up per namespace: the pod list itself lives in the
+// drawer, the table answers "is this namespace's data plane healthy".
+const byNamespace = (workloads, podTotals = {}) => {
+  const rows = new Map();
+  for (const w of workloads) {
+    const row = rows.get(w.namespace) || {
+      namespace: w.namespace, injected: 0, accepting: 0, restarts: 0,
+      rootStale: 0, modes: new Set(), soonestExpiry: null, configError: "", pods: [],
+    };
+    row.injected += 1;
+    if (w.sidecarReady) row.accepting += 1;
+    row.restarts += w.restarts || 0;
+    if (w.certExpiresAt && !w.certRootActive) row.rootStale += 1;
+    for (const mode of w.mtlsModes || []) row.modes.add(mode);
+    if (w.certExpiresAt) {
+      const at = new Date(w.certExpiresAt).getTime();
+      if (row.soonestExpiry == null || at < row.soonestExpiry) row.soonestExpiry = at;
+    }
+    if (w.configError && !row.configError) row.configError = w.configError;
+    row.inbound = w.inbound && w.upstream ? `${w.inbound} → ${w.upstream}` : row.inbound || "";
+    row.pods.push(w);
+    rows.set(w.namespace, row);
+  }
+  return [...rows.values()]
+    .map((r) => ({
+      ...r,
+      mtlsModes: [...r.modes].sort(),
+      // Falls back to the injected count so the ratio never reads below 100%
+      // just because the pod total was unavailable.
+      candidates: Math.max(podTotals[r.namespace] ?? r.injected, r.injected),
+    }))
+    .sort((a, b) => a.namespace.localeCompare(b.namespace));
 };
 
-const SYNC_ITEMS = [
-  ["xdsServerReady", "xDS server"],
-  ["cachesSynced", "Caches"],
-  ["servicesSynced", "Services"],
-  ["configSynced", "Config"],
-  ["proxylessSynced", "Proxyless"],
-  ["injectorReady", "Injector"],
-  ["validationReady", "Validation"],
-];
+// The sidecar enforces one mTLS mode per service port. dubbod generated that
+// config, so the modes shown here are the ones actually in force.
+const mtlsCell = (row) => {
+  if (row.configError) return html`<${StatusChip} status="err">${t("state.unknown")}</${StatusChip}>`;
+  const modes = row.mtlsModes || [];
+  if (modes.length === 0) return html`<span class="cell-muted">${t("state.meshDefault")}</span>`;
+  const worst = modes.includes("DISABLE") ? "err" : modes.includes("PERMISSIVE") ? "warn" : "ok";
+  return html`<${StatusChip} status=${worst}>${modes.join(" · ")}</${StatusChip}>`;
+};
 
-const SyncRail = ({ status }) => html`
-  <div class="rail" role="list">
-    ${SYNC_ITEMS.map(([key, label]) => {
-      const ok = !!(status && status[key]);
-      return html`
-        <div class=${`rail-seg ${ok ? "is-ok" : "is-pending"}`} role="listitem" key=${key}>
-          <div class="rail-bar" />
-          <div class="rail-label">${label}</div>
-          <div class="rail-state">${ok ? "Ready" : "Pending"}</div>
-        </div>
-      `;
-    })}
-  </div>
-`;
+// Certificates are reissued well before expiry, so a short remaining life is the
+// signal that rotation has stopped working.
+const certCell = (row) => {
+  if (row.soonestExpiry == null) return html`<${StatusChip} status="err">${t("state.none")}</${StatusChip}>`;
+  const msLeft = row.soonestExpiry - Date.now();
+  const status = msLeft <= 0 ? "err" : msLeft / 3600000 < 2 ? "warn" : "ok";
+  return html`<${StatusChip} status=${status}>${msLeft <= 0 ? t("state.expired") : t("state.left", fmtDuration(msLeft / 1000))}</${StatusChip}>`;
+};
 
-const OverviewPage = ({ data, openDrawer, openLogs, navigate, history }) => {
-  const counts = data.counts || {};
-  const health = healthRollup(data);
-  const gateways = data.gatewayInstances || [];
-  const registries = data.registries || [];
+const OverviewPage = ({ data, openDrawer, onRefresh, refreshing }) => {
   const instances = data.instances || [];
-  const ready = instances.filter((i) => i.isReady).length;
-  const gwReady = gateways.filter((g) => g.isReady).length;
-  const regSynced = registries.filter((r) => r.synced).length;
-  const policies = (counts.peerAuthentications || 0) + (counts.requestAuthentications || 0) + (counts.authorizationPolicies || 0);
-  const connSpark = history.map((h) => ({ t: h.t, v: h.connections })).filter((p) => p.v != null);
+  const namespaces = byNamespace(data.dataPlane || [], data.dataPlanePods || {});
+  const gateways = data.gatewayInstances || [];
+
 
   return html`
     <div class="page">
       <div class="page-head">
-        <div>
-          <${Eyebrow}>observe / overview</${Eyebrow}>
-          <h1 class="page-title">Mesh overview</h1>
-        </div>
-        <${StatusChip} status=${health}>control plane ${STATUS_LABEL[health]}</${StatusChip}>
+        <h1 class="page-title">${t("overview.title")}</h1>
+        <${RefreshButton} onRefresh=${onRefresh} refreshing=${refreshing} />
       </div>
 
       <section class="section">
-        <${SectionTitle}>Control plane readiness</${SectionTitle}>
-        <${SyncRail} status=${data.status} />
-      </section>
+        <${SectionTitle}>${t("overview.controlPlane")}</${SectionTitle}>
 
-      <section class="tile-grid">
-        <${StatTile} label="Mesh services" value=${fmtNumber(counts.services)} hint="in injected namespaces" onClick=${() => navigate("services")} />
-        <${StatTile} label="xDS connections" value=${fmtNumber(counts.xdsConnections)} spark=${connSpark} onClick=${() => navigate("metrics")} />
-        <${StatTile} label="Control plane" value=${`${ready}/${instances.length}`} hint="instances ready" status=${ready === instances.length && ready > 0 ? "ok" : ready > 0 ? "warn" : "err"}
-          onClick=${() => openDrawer({ type: "controlplane", title: "dubbod", status: statusOfInstances(instances), data: { instances, version: data.version, namespace: data.namespace } })} />
-        <${StatTile} label="Gateways" value=${`${gwReady}/${gateways.length}`} hint="deployments ready" status=${gateways.length === 0 ? "unknown" : gwReady === gateways.length ? "ok" : "warn"} onClick=${() => navigate("gateways")} />
-        <${StatTile} label="Registries" value=${`${regSynced}/${registries.length}`} hint="synced" status=${registries.length === 0 ? "unknown" : regSynced === registries.length ? "ok" : "warn"} onClick=${() => navigate("registries")} />
-        <${StatTile} label="Routes & policies" value=${fmtNumber((counts.httpRoutes || 0) + policies)} hint=${`${counts.httpRoutes || 0} routes · ${policies} policies`} onClick=${() => navigate("config")} />
-      </section>
-
-      <div class="grid-2">
-        <section class="section">
-          <${SectionTitle} aside=${html`<button class="btn btn-ghost btn-small" onClick=${() => openLogs({ kind: "dubbod", name: "dubbod", namespace: instances[0]?.namespace || data.namespace, title: "dubbod" })}>logs</button>`}>Control plane instances</${SectionTitle}>
+        ${instances.length === 0 && html`
+          <${EmptyState} title=${t("empty.noDubbodPods")}>
+            ${t("empty.noDubbodPods.body.before")} <span class="mono">app=dubbod</span>
+            ${t("empty.noDubbodPods.body.after")} <span class="mono">${data.namespace}</span>
+          </${EmptyState}>
+        `}
+        ${instances.length > 0 && html`
           <div class="table-wrap">
             <table class="table">
-              <thead><tr><th>Pod</th><th>IP</th><th>State</th></tr></thead>
+              <thead><tr><th>${t("col.pod")}</th><th>${t("col.podIP")}</th><th>${t("col.namespace")}</th><th>${t("col.state")}</th></tr></thead>
               <tbody>
                 ${instances.map((i) => html`
                   <tr key=${i.name}>
-                    <td class="mono cell-strong">${i.name}</td>
+                    <td class="mono cell-strong">${i.name || "–"}</td>
                     <td class="mono cell-muted">${i.ip || "–"}</td>
-                    <td><${StatusChip} status=${i.isReady ? "ok" : "err"}>${i.isReady ? "ready" : "not ready"}</${StatusChip}></td>
+                    <td class="cell-muted">${i.namespace}</td>
+                    <td><${StatusChip} status=${i.isReady ? "ok" : "err"}>${i.isReady ? t("state.ready") : t("state.notReady")}</${StatusChip}></td>
                   </tr>
                 `)}
               </tbody>
             </table>
           </div>
-        </section>
-
-        <section class="section">
-          <${SectionTitle}>Registries</${SectionTitle}>
-          ${registries.length === 0 && html`<${EmptyState} title="No registries connected" />`}
-          ${registries.length > 0 && html`
-            <div class="table-wrap">
-              <table class="table">
-                <thead><tr><th>Provider</th><th>Cluster</th><th>Sync</th></tr></thead>
-                <tbody>
-                  ${registries.map((r) => html`
-                    <tr key=${`${r.provider}/${r.cluster}`} class="row-click" onClick=${() => openDrawer({ type: "registry", title: r.provider, status: r.synced ? "ok" : "warn", data: r })}>
-                      <td class="cell-strong">${r.provider}</td>
-                      <td class="mono cell-muted">${r.cluster}</td>
-                      <td><${StatusChip} status=${r.synced ? "ok" : "warn"}>${r.synced ? "synced" : "syncing"}</${StatusChip}></td>
-                    </tr>
-                  `)}
-                </tbody>
-              </table>
-            </div>
-          `}
-        </section>
-      </div>
+        `}
+      </section>
 
       <section class="section">
-        <${SectionTitle}>Managed gateways</${SectionTitle}>
+        <${SectionTitle}>${t("overview.dataPlane")}</${SectionTitle}>
+
+        ${namespaces.length === 0 && html`
+          <${EmptyState} title=${t("empty.noInjected")}>
+            ${t("empty.noInjected.body.before")} <span class="mono">dubbo-injection=enabled</span>
+            ${t("empty.noInjected.body.after")}
+          </${EmptyState}>
+        `}
+        ${namespaces.length > 0 && html`
+          <div class="table-wrap">
+            <table class="table">
+              <thead>
+                <tr><th>${t("col.namespace")}</th><th>${t("col.injected")}</th><th>${t("col.inboundL4")}</th><th>${t("col.mtls")}</th><th>${t("col.certificate")}</th><th>${t("col.trustRoot")}</th><th>${t("col.restarts")}</th></tr>
+              </thead>
+              <tbody>
+                ${namespaces.map((ns) => html`
+                  <tr key=${ns.namespace} class="row-click"
+                    onClick=${() => openDrawer({ type: "namespace", title: ns.namespace, data: ns })}>
+                    <td class="cell-strong">${ns.namespace}</td>
+                    <td class=${`mono ${ns.injected === ns.candidates ? "" : "cell-warn"}`}>${ns.injected}/${ns.candidates}</td>
+                    <td>
+                      <${StatusChip} status=${ns.accepting === ns.injected ? "ok" : "err"}>
+                        ${ns.accepting === ns.injected
+                          ? t("state.accepting")
+                          : t("state.notAccepting", ns.injected - ns.accepting, ns.injected)}
+                      </${StatusChip}>
+                    </td>
+                    <td>${mtlsCell(ns)}</td>
+                    <td>${certCell(ns)}</td>
+                    <td>
+                      <${StatusChip} status=${ns.rootStale === 0 ? "ok" : "warn"}>
+                        ${ns.rootStale === 0 ? t("state.current") : t("state.superseded", ns.rootStale)}
+                      </${StatusChip}>
+                    </td>
+                    <td class=${`mono ${ns.restarts > 0 ? "cell-warn" : "cell-muted"}`}>${ns.restarts}</td>
+                  </tr>
+                `)}
+              </tbody>
+            </table>
+          </div>
+        `}
+      </section>
+
+      <section class="section">
+        <${SectionTitle}>${t("overview.externalDataPlane")}</${SectionTitle}>
+
         ${gateways.length === 0 && html`
-          <${EmptyState} title="No managed gateway deployments">
-            Create a Gateway resource with <span class="mono">gatewayClassName: dubbo</span> and the control plane will provision its deployment here.
+          <${EmptyState} title=${t("empty.noGateways")}>
+            ${t("empty.noGateways.body.before")} <span class="mono">gatewayClassName: dubbo</span>
+            ${t("empty.noGateways.body.after")} <span class="mono">dxgate</span> ${t("empty.noGateways.body.tail")}
           </${EmptyState}>
         `}
         ${gateways.length > 0 && html`
           <div class="table-wrap">
             <table class="table">
-              <thead><tr><th>Deployment</th><th>Gateway</th><th>Namespace</th><th>Class</th><th>Replicas</th><th>State</th></tr></thead>
+              <thead>
+                <tr><th>${t("col.deployment")}</th><th>${t("col.gateway")}</th><th>${t("col.namespace")}</th><th>${t("col.class")}</th><th>${t("col.replicas")}</th><th>${t("col.state")}</th></tr>
+              </thead>
               <tbody>
-                ${gateways.map((g) => html`
-                  <tr key=${`${g.namespace}/${g.name}`} class="row-click" onClick=${() => openDrawer({ type: "gateway", title: g.name, status: g.isReady ? "ok" : (g.readyReplicas || 0) === 0 ? "err" : "warn", data: g })}>
-                    <td class="mono cell-strong">${g.name}</td>
-                    <td class="cell-muted">${g.gatewayName || "–"}</td>
-                    <td class="cell-muted">${g.namespace}</td>
-                    <td class="cell-muted">${g.gatewayClass || "–"}</td>
-                    <td class="mono">${g.readyReplicas || 0}/${g.desiredReplicas || 0}</td>
-                    <td><${StatusChip} status=${g.isReady ? "ok" : (g.readyReplicas || 0) === 0 ? "err" : "warn"} /></td>
-                  </tr>
-                `)}
+                ${gateways.map((g) => {
+                  const status = g.isReady ? "ok" : (g.readyReplicas || 0) === 0 ? "err" : "warn";
+                  return html`
+                    <tr key=${`${g.namespace}/${g.name}`} class="row-click"
+                      onClick=${() => openDrawer({ type: "gateway", title: g.name, status, data: g })}>
+                      <td class="mono cell-strong">${g.name}</td>
+                      <td class="cell-muted">${g.gatewayName || "–"}</td>
+                      <td class="cell-muted">${g.namespace}</td>
+                      <td class="cell-muted">${g.gatewayClass || "–"}</td>
+                      <td class="mono">${g.readyReplicas || 0}/${g.desiredReplicas || 0}</td>
+                      <td><${StatusChip} status=${status} /></td>
+                    </tr>
+                  `;
+                })}
               </tbody>
             </table>
           </div>
@@ -530,13 +563,9 @@ const OverviewPage = ({ data, openDrawer, openLogs, navigate, history }) => {
   `;
 };
 
-const statusOfInstances = (instances) => {
-  const ready = instances.filter((i) => i.isReady).length;
-  if (instances.length === 0 || ready === 0) return "err";
-  return ready === instances.length ? "ok" : "warn";
-};
+// --- services ---------------------------------------------------------------
 
-const ServicesPage = ({ data, openDrawer }) => {
+const ServicesPage = ({ data, openDrawer, onRefresh, refreshing }) => {
   const [query, setQuery] = useState("");
   const [namespace, setNamespace] = useState("");
   const [registry, setRegistry] = useState("");
@@ -563,48 +592,49 @@ const ServicesPage = ({ data, openDrawer }) => {
   return html`
     <div class="page">
       <div class="page-head">
-        <div>
-          <${Eyebrow}>mesh / services</${Eyebrow}>
-          <h1 class="page-title">Services</h1>
-          <div class="page-sub">${filtered.length} of ${services.length} mesh services · <span class="chip chip-gate">request metrics n/a</span></div>
-        </div>
+        <h1 class="page-title">${t("services.title")}</h1>
+        <${RefreshButton} onRefresh=${onRefresh} refreshing=${refreshing} />
       </div>
 
       <div class="filters">
-        <input class="input" placeholder="Filter by name, host or namespace…" value=${query} onInput=${(e) => setQuery(e.target.value)} />
+        <input class="input" placeholder=${t("services.filter")} value=${query} onInput=${(e) => setQuery(e.target.value)} />
         <select class="input" value=${namespace} onChange=${(e) => setNamespace(e.target.value)}>
-          <option value="">All namespaces</option>
+          <option value="">${t("services.allNamespaces")}</option>
           ${namespaces.map((ns) => html`<option key=${ns} value=${ns}>${ns}</option>`)}
         </select>
         <select class="input" value=${registry} onChange=${(e) => setRegistry(e.target.value)}>
-          <option value="">All registries</option>
+          <option value="">${t("services.allRegistries")}</option>
           ${registries.map((r) => html`<option key=${r} value=${r}>${r}</option>`)}
         </select>
+        <span class="filters-count">${t("services.shown", filtered.length)}</span>
       </div>
 
       ${services.length === 0 && html`
-        <${EmptyState} title="No mesh services discovered">
-          Label a namespace with <span class="mono">dubbo-injection=enabled</span> to bring its services into the mesh.
+        <${EmptyState} title=${t("empty.noServices")}>
+          ${t("empty.noServices.body.before")} <span class="mono">dubbo-injection=enabled</span>
+          ${t("empty.noServices.body.after")}
         </${EmptyState}>
       `}
       ${services.length > 0 && filtered.length === 0 && html`
-        <${EmptyState} title="No services match this filter">Clear the filters to see all ${services.length} services.</${EmptyState}>
+        <${EmptyState} title=${t("empty.noServicesMatch")}>${t("empty.noServicesMatch.body", services.length)}</${EmptyState}>
       `}
       ${filtered.length > 0 && html`
         <div class="table-wrap">
           <table class="table table-wide">
             <thead>
               <tr>
-                <${Th} k="name">Service</${Th}>
-                <${Th} k="namespace">Namespace</${Th}>
-                <${Th} k="registry">Registry</${Th}>
-                <th>Ports</th>
-                <${Th} k="exposure">Exposure</${Th}>
+                <${Th} k="name">${t("col.service")}</${Th}>
+                <${Th} k="namespace">${t("col.namespace")}</${Th}>
+                <${Th} k="registry">${t("col.registry")}</${Th}>
+                <th>${t("col.ports")}</th>
+                <th>${t("col.clusterAddress")}</th>
+                <${Th} k="exposure">${t("col.exposure")}</${Th}>
               </tr>
             </thead>
             <tbody>
               ${filtered.map((s) => html`
-                <tr key=${s.hostname} class="row-click" onClick=${() => openDrawer({ type: "service", title: s.name || s.hostname, status: "unknown", data: s })}>
+                <tr key=${s.hostname} class="row-click"
+                  onClick=${() => openDrawer({ type: "service", title: s.name || s.hostname, data: s })}>
                   <td>
                     <div class="cell-strong">${s.name || s.hostname}</div>
                     <div class="mono cell-host">${s.hostname}</div>
@@ -612,6 +642,7 @@ const ServicesPage = ({ data, openDrawer }) => {
                   <td><span class="chip">${s.namespace || "default"}</span></td>
                   <td class="cell-muted">${s.registry}</td>
                   <td class="mono cell-muted">${s.ports}</td>
+                  <td class="mono cell-muted">${s.defaultAddress || "–"}</td>
                   <td><span class=${`chip ${s.meshExternal ? "chip-warn" : "chip-ok"}`}>${s.exposure}</span></td>
                 </tr>
               `)}
@@ -623,357 +654,592 @@ const ServicesPage = ({ data, openDrawer }) => {
   `;
 };
 
-const GatewaysPage = ({ data, openDrawer, openLogs }) => {
-  const counts = data.counts || {};
-  const gateways = data.gatewayInstances || [];
-  return html`
-    <div class="page">
-      <div class="page-head">
-        <div>
-          <${Eyebrow}>mesh / gateways</${Eyebrow}>
-          <h1 class="page-title">Gateways</h1>
-          <div class="page-sub">North–south entry points provisioned by the control plane.</div>
-        </div>
-      </div>
-      <section class="tile-grid tile-grid-3">
-        <${StatTile} label="Gateways" value=${fmtNumber(counts.gateways)} hint="Gateway resources" />
-        <${StatTile} label="Gateway classes" value=${fmtNumber(counts.gatewayClasses)} />
-        <${StatTile} label="HTTP routes" value=${fmtNumber(counts.httpRoutes)} hint="attached routing rules" />
-      </section>
-      ${gateways.length === 0 && html`
-        <${EmptyState} title="No gateways configured">
-          Create a Gateway resource with <span class="mono">gatewayClassName: dubbo</span> to provision one.
-        </${EmptyState}>
-      `}
-      ${gateways.length > 0 && html`
-        <div class="table-wrap">
-          <table class="table">
-            <thead><tr><th>Deployment</th><th>Gateway</th><th>Namespace</th><th>Replicas</th><th>State</th><th></th></tr></thead>
-            <tbody>
-              ${gateways.map((g) => html`
-                <tr key=${`${g.namespace}/${g.name}`} class="row-click" onClick=${() => openDrawer({ type: "gateway", title: g.name, status: g.isReady ? "ok" : (g.readyReplicas || 0) === 0 ? "err" : "warn", data: g })}>
-                  <td class="mono cell-strong">${g.name}</td>
-                  <td class="cell-muted">${g.gatewayName || "–"}</td>
-                  <td class="cell-muted">${g.namespace}</td>
-                  <td class="mono">${g.readyReplicas || 0}/${g.desiredReplicas || 0}</td>
-                  <td><${StatusChip} status=${g.isReady ? "ok" : (g.readyReplicas || 0) === 0 ? "err" : "warn"} /></td>
-                  <td><button class="btn btn-ghost btn-small" onClick=${(e) => { e.stopPropagation(); openLogs({ kind: "gateway", name: g.name, namespace: g.namespace, title: g.name }); }}>logs</button></td>
-                </tr>
-              `)}
-            </tbody>
-          </table>
-        </div>
-      `}
-    </div>
-  `;
-};
+// --- config push pipeline ---------------------------------------------------
 
-const RegistriesPage = ({ data, openDrawer }) => {
-  const registries = data.registries || [];
-  return html`
-    <div class="page">
-      <div class="page-head">
-        <div>
-          <${Eyebrow}>mesh / registries</${Eyebrow}>
-          <h1 class="page-title">Registries</h1>
-          <div class="page-sub">Service discovery backends feeding this control plane.</div>
-        </div>
-      </div>
-      ${registries.length === 0 && html`<${EmptyState} title="No registries connected" />`}
-      ${registries.length > 0 && html`
-        <div class="table-wrap">
-          <table class="table">
-            <thead><tr><th>Provider</th><th>Cluster</th><th>Sync</th></tr></thead>
-            <tbody>
-              ${registries.map((r) => html`
-                <tr key=${`${r.provider}/${r.cluster}`} class="row-click" onClick=${() => openDrawer({ type: "registry", title: r.provider, status: r.synced ? "ok" : "warn", data: r })}>
-                  <td class="cell-strong">${r.provider}</td>
-                  <td class="mono cell-muted">${r.cluster}</td>
-                  <td><${StatusChip} status=${r.synced ? "ok" : "warn"}>${r.synced ? "synced" : "syncing"}</${StatusChip}></td>
-                </tr>
-              `)}
-            </tbody>
-          </table>
-        </div>
-      `}
-    </div>
-  `;
-};
+/**
+ * Every stage below is a histogram dubbod actually exports. The order is the
+ * real code path a config change travels: a watch fires, the update is
+ * debounced into a batch, a PushContext is built, each proxy is queued, the
+ * generated config is written to the wire, and the proxy acknowledges.
+ */
+// The first two stages run on every config change; the last two only produce
+// samples once a proxy is connected, so an idle control plane legitimately shows
+// them empty. dubbod_proxy_convergence_time is deliberately absent: it is
+// registered but has no Record() call site anywhere in the tree, so a stage for
+// it could only ever say "no samples".
+const PIPELINE_STAGES = [
+  { key: "debounce", label: "stage.debounce", metric: "dubbod_debounce_time",
+    idleHint: "stage.idle.noConfigChange" },
+  { key: "pushcontext", label: "stage.pushcontext", metric: "dubbod_pushcontext_init_seconds",
+    idleHint: "stage.idle.noPushContext" },
+  { key: "queue", label: "stage.queue", metric: "dubbod_proxy_queue_time",
+    idleHint: "stage.idle.needsProxy" },
+  { key: "send", label: "stage.send", metric: "dubbod_xds_send_time",
+    idleHint: "stage.idle.needsProxy" },
+];
 
-const ConfigPage = ({ data, openDrawer }) => html`
-  <div class="page">
-    <div class="page-head">
-      <div>
-        <${Eyebrow}>mesh / config</${Eyebrow}>
-        <h1 class="page-title">Configuration</h1>
-        <div class="page-sub">Gateway API and policy resources in scope · <span class="chip chip-gate">per-resource listing n/a</span></div>
-      </div>
-    </div>
-    <div class="table-wrap">
-      <table class="table">
-        <thead><tr><th>Kind</th><th>Count</th><th>Purpose</th></tr></thead>
-        <tbody>
-          ${(data.configKinds || []).map((k) => html`
-            <tr key=${k.kind} class="row-click" onClick=${() => openDrawer({ type: "config", title: k.kind, data: k })}>
-              <td class="mono cell-strong">${k.kind}</td>
-              <td><span class=${`count ${k.count > 0 ? "is-set" : ""}`}>${k.count}</span></td>
-              <td class="cell-muted">${k.description}</td>
-            </tr>
-          `)}
-        </tbody>
-      </table>
-    </div>
-  </div>
-`;
+const PipelinePage = ({ snapshot, error, retry, onRefresh, refreshing }) => {
+  const stages = PIPELINE_STAGES.map((s) => ({ ...s, stats: histStats(firstSample(snapshot, s.metric)) }));
+  const timedStages = stages.filter((s) => s.stats && s.stats.mean != null);
+  const endToEnd = timedStages.reduce((a, s) => a + s.stats.mean, 0);
 
-const MetricsPage = ({ history, interval, setInterval, paused, setPaused, error, retry }) => {
-  const last = history[history.length - 1];
-  const snapshot = last?.snapshot;
+  const inbound = snapshot ? breakdown(snapshot, "dubbod_inbound_updates", "type") : [];
+  const triggers = snapshot ? breakdown(snapshot, "dubbod_push_triggers", "type") : [];
 
-  const seriesOf = (extract, name) => ({
-    name,
-    points: history.map((h) => ({ t: h.t, v: extract(h) })).filter((p) => p.v != null),
-  });
-
-  const rateSeries = (label) => {
-    const points = [];
-    for (let i = 1; i < history.length; i++) {
-      const prev = history[i - 1].pushes.get(label);
-      const cur = history[i].pushes.get(label);
-      const dt = (history[i].t - history[i - 1].t) / 1000;
-      if (prev != null && cur != null && dt > 0 && cur >= prev) {
-        points.push({ t: history[i].t, v: (cur - prev) / dt });
-      }
-    }
-    return { name: label, points };
-  };
-
-  const pushTypes = last ? [...last.pushes.keys()] : [];
-  const preferred = ["cds", "eds", "lds", "rds"].filter((t) => pushTypes.includes(t));
-  const mainTypes = preferred.length > 0
-    ? preferred
-    : pushTypes.sort((a, b) => (last.pushes.get(b) || 0) - (last.pushes.get(a) || 0)).slice(0, 4);
-  const buckets = snapshot ? family(snapshot, "dubbod_xds_push_time")?.metrics?.[0]?.buckets : null;
-  const p50 = bucketQuantile(buckets, 0.5);
-  const p95 = bucketQuantile(buckets, 0.95);
-  const p99 = bucketQuantile(buckets, 0.99);
-  const triggers = snapshot ? [...labeledValues(snapshot, "dubbod_push_triggers", "type").entries()].map(([label, value]) => ({ label: label || "(none)", value })).sort((a, b) => b.value - a.value) : [];
-  const errors = snapshot
-    ? (totalValue(snapshot, "dubbod_total_xds_internal_errors") + totalValue(snapshot, "dubbod_total_xds_rejects"))
-    : null;
-  const version = snapshot ? family(snapshot, "dubbod_info")?.metrics?.[0]?.labels?.version : null;
 
   return html`
     <div class="page">
       <div class="page-head">
         <div>
-          <${Eyebrow}>observe / metrics</${Eyebrow}>
-          <h1 class="page-title">Control plane metrics</h1>
-          <div class="page-sub">
-            Live from <span class="mono">api/metrics</span> · trends buffer since page open ·
-            <span class="chip chip-gate" title="No TSDB behind this GUI; longer ranges need a Prometheus-backed query API.">history beyond session n/a</span>
-          </div>
+          <h1 class="page-title">${t("pipeline.title")}</h1>
         </div>
-        <div class="page-actions">
-          <select class="input" value=${interval} onChange=${(e) => setInterval(Number(e.target.value))}>
-            ${[5, 10, 30, 60].map((s) => html`<option key=${s} value=${s}>every ${s}s</option>`)}
-          </select>
-          <button class=${`btn ${paused ? "" : "btn-ghost"}`} onClick=${() => setPaused(!paused)}>${paused ? "Resume" : "Pause"}</button>
-        </div>
+        <${RefreshButton} onRefresh=${onRefresh} refreshing=${refreshing} />
       </div>
 
       ${error && html`<${ErrorBanner} error=${error} onRetry=${retry} />`}
-      ${!snapshot && !error && html`<${Skeleton} h=${260} />`}
+      ${!snapshot && !error && html`<${Skeleton} h=${280} />`}
 
       ${snapshot && html`
-        <section class="tile-grid">
-          <${StatTile} label="Uptime" value=${fmtDuration(firstValue(snapshot, "dubbod_uptime_seconds"))}
-            hint=${version && /\d/.test(String(version)) ? `v${String(version).split("-")[0]}` : ""} />
-          <${StatTile} label="xDS connections" value=${fmtNumber(last.connections)} spark=${history.map((h) => ({ t: h.t, v: h.connections })).filter((p) => p.v != null)} />
-          <${StatTile} label="Known services" value=${fmtNumber(firstValue(snapshot, "dubbod_services"))} spark=${history.map((h) => ({ t: h.t, v: h.services })).filter((p) => p.v != null)} sparkColor="--series-2" />
-          <${StatTile} label="xDS pushes (total)" value=${fmtNumber(last.pushTotal)} />
-          <${StatTile} label="xDS errors + rejects" value=${fmtNumber(errors)} status=${errors > 0 ? "warn" : "ok"} />
-          <${StatTile} label="Push P95" value=${p95 != null ? fmtDuration(p95) : "–"} hint="from live histogram" />
-        </section>
-
         <section class="section">
-          <${SectionTitle}>xDS push rate <span class="unit">pushes/s by type</span></${SectionTitle}>
-          <${TrendChart} series=${mainTypes.map(rateSeries)} format=${(v) => v.toFixed(2)}
-            emptyHint="Collecting samples — rates appear after two polls." />
+          <${SectionTitle} aside=${timedStages.length > 0 && html`
+            <span class="section-count">${t("pipeline.meanEndToEnd", fmtDuration(endToEnd))}</span>
+          `}>${t("pipeline.pushPath")}</${SectionTitle}>
+          <${StageFlow} stages=${stages} />
         </section>
 
         <div class="grid-2">
           <section class="section">
-            <${SectionTitle}>Push duration distribution
-              <span class="unit">
-                P50 ${p50 != null ? fmtDuration(p50) : "–"} · P95 ${p95 != null ? fmtDuration(p95) : "–"} · P99 ${p99 != null ? fmtDuration(p99) : "–"}
-              </span>
-            </${SectionTitle}>
-            <${BucketBars} buckets=${buckets} />
+            <${SectionTitle}>${t("pipeline.inboundUpdates")} <span class="unit">${t("pipeline.inboundUpdates.unit")}</span></${SectionTitle}>
+            <${BreakdownBars} items=${inbound} />
           </section>
           <section class="section">
-            <${SectionTitle}>Push triggers <span class="unit">cumulative</span></${SectionTitle}>
+            <${SectionTitle}>${t("pipeline.pushTriggers")} <span class="unit">${t("pipeline.pushTriggers.unit")}</span></${SectionTitle}>
             <${BreakdownBars} items=${triggers} />
           </section>
         </div>
 
+      `}
+    </div>
+  `;
+};
+
+// --- logs -------------------------------------------------------------------
+
+const LogsPage = ({ data, openLogs, onRefresh, refreshing }) => {
+  const targets = [
+    {
+      kind: "dubbod", role: t("logs.role.controlPlane"), name: "dubbod",
+      namespace: (data.instances || [])[0]?.namespace || data.namespace,
+      replicas: (data.instances || []).length,
+    },
+    ...(data.gatewayInstances || []).map((g) => ({
+      kind: "gateway", role: t("logs.role.externalDataPlane"), name: g.name,
+      namespace: g.namespace, replicas: g.readyReplicas || 0,
+    })),
+  ];
+
+  return html`
+    <div class="page">
+      <div class="page-head">
+        <h1 class="page-title">${t("logs.title")}</h1>
+        <${RefreshButton} onRefresh=${onRefresh} refreshing=${refreshing} />
+      </div>
+
+      <div class="table-wrap">
+        <table class="table">
+          <thead><tr><th>${t("col.deployment")}</th><th>${t("col.role")}</th><th>${t("col.namespace")}</th><th>${t("col.pods")}</th></tr></thead>
+          <tbody>
+            ${targets.map((t) => html`
+              <tr key=${`${t.kind}/${t.namespace}/${t.name}`} class="row-click"
+                onClick=${() => openLogs({ ...t, title: t.name })}>
+                <td class="mono cell-strong">${t.name}</td>
+                <td class="cell-muted">${t.role}</td>
+                <td class="cell-muted">${t.namespace}</td>
+                <td class="mono cell-muted">${t.replicas}</td>
+              </tr>
+            `)}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  `;
+};
+
+// --- topology ---------------------------------------------------------------
+
+// Drawn as a badge on the node ring. A closed shackle means every caller must
+// present a certificate; an open one means the port still takes plaintext; no
+// shackle at all means inbound mTLS is off.
+// Drawn on a 24x24 grid so the shackle stays legible at node scale: closed =
+// every caller must present a certificate, open = the port still takes
+// plaintext, absent = inbound mTLS is off.
+const MTLS_LOCK = {
+  STRICT: { shackle: "M8 10.5V7.5a4 4 0 0 1 8 0v3", status: "ok", label: "mtls.strict.label" },
+  PERMISSIVE: { shackle: "M8 10.5V7.5a4 4 0 0 1 7.4-2.1", status: "warn", label: "mtls.permissive.label" },
+  DISABLE: { shackle: "", status: "err", label: "mtls.disable.label" },
+};
+
+const LOCK_BODY = { x: 5, y: 10, w: 14, h: 10, r: 2 };
+
+const LockGlyph = ({ mode, x = 0, y = 0, fromPolicy }) => {
+  const spec = MTLS_LOCK[mode];
+  if (!spec) return null;
+  return html`
+    <g class=${`lock lock-${spec.status}`} transform=${`translate(${x}, ${y})`}>
+      <title>${t(spec.label)} · ${fromPolicy ? t("mtls.source.policy") : t("mtls.source.fallback")}</title>
+      <circle class="lock-halo" cx="12" cy="13" r="12" />
+      <rect x=${LOCK_BODY.x} y=${LOCK_BODY.y} width=${LOCK_BODY.w} height=${LOCK_BODY.h} rx=${LOCK_BODY.r} />
+      ${spec.shackle && html`<path d=${spec.shackle} />`}
+    </g>
+  `;
+};
+
+/**
+ * Service graph in the Kiali idiom: round nodes, labels underneath, curved
+ * edges, drag / zoom / pan, click for detail.
+ *
+ * Nodes are everything the control plane serves config for — managed gateways
+ * plus every mesh service. Edges come from HTTPRoutes: a route names a parent
+ * (a Gateway for north-south, a Service for east-west) and the backends each
+ * rule forwards to. Services no route mentions still get a node, because a
+ * workload that is in the mesh but unreachable is exactly what an operator
+ * needs to see.
+ *
+ * Edges carry the route match and traffic weight — both configuration. Kiali
+ * additionally animates edges at the observed request rate and colours them by
+ * error rate; dubbod exposes no request-level telemetry, so those channels are
+ * deliberately left unused rather than driven by invented numbers.
+ */
+const GRAPH_SCOPES = [
+  { id: "north-south", label: "topology.scope.northSouth" },
+  { id: "east-west", label: "topology.scope.eastWest" },
+  { id: "control-plane", label: "topology.scope.controlPlane" },
+];
+
+const buildServiceGraph = (data, scope) => {
+  const services = data.services || [];
+  const gateways = (data.gatewayInstances || []).filter((g) => g.gatewayName);
+  const routes = data.routes || [];
+
+  const nodes = new Map();
+  const put = (id, extra) => {
+    const node = nodes.get(id) || { id, name: id, edgesOut: [], edgesIn: 0 };
+    nodes.set(id, Object.assign(node, extra));
+    return nodes.get(id);
+  };
+
+  const meta = new Map();
+  for (const g of gateways) {
+    meta.set(g.gatewayName, { kind: "gateway", namespace: g.namespace, ready: g.isReady });
+  }
+  for (const svc of services) {
+    meta.set(svc.name, {
+      kind: "service", namespace: svc.namespace, ports: svc.ports,
+      mtlsMode: svc.mtlsMode, mtlsFromPolicy: svc.mtlsFromPolicy,
+    });
+  }
+  // Only nodes this view is about get drawn. Rendering every service in every
+  // view stacks the unrelated ones into a column that dwarfs the actual paths.
+  const enter = (id) => put(id, meta.get(id) || { kind: "service" });
+  if (scope === "control-plane") for (const id of meta.keys()) enter(id);
+
+  const gatewayNames = new Set(gateways.map((g) => g.gatewayName));
+  // A route attached to a Gateway is ingress; one attached to a Service is
+  // traffic between meshed workloads.
+  const inScope = (parent) =>
+    scope === "control-plane" ||
+    (scope === "north-south" ? gatewayNames.has(parent) : !gatewayNames.has(parent));
+
+  for (const r of routes) {
+    for (const parent of r.parents || []) {
+      if (!inScope(parent)) continue;
+      const from = enter(parent);
+      for (const rule of r.rules || []) {
+        const total = (rule.backends || []).reduce((a, b) => a + (b.weight || 0), 0);
+        const split = (rule.backends || []).length > 1;
+        for (const b of rule.backends || []) {
+          enter(b.name).edgesIn += 1;
+          from.edgesOut.push({
+            to: b.name, match: rule.match, port: b.port, route: r.name,
+            share: split && total > 0 ? Math.round(((b.weight || 0) / total) * 100) : null,
+          });
+        }
+      }
+    }
+  }
+
+  // The control plane carries no application traffic, so it is a separate layer
+  // rather than another hop on a call path: dashed edges mean "programs this
+  // node", solid edges mean "forwards requests to".
+  if (scope === "control-plane") {
+    const gatewayDeployments = data.gatewayInstances || [];
+    const streaming = new Set();
+    for (const client of data.xdsClients || []) {
+      // Node IDs are pod names; a pod belongs to the deployment it is prefixed
+      // with, which for a managed gateway maps back to its Gateway resource.
+      const podName = (client.nodeId || "").split(".")[0];
+      for (const g of gatewayDeployments) {
+        if (g.gatewayName && podName.startsWith(g.name)) streaming.add(g.gatewayName);
+      }
+      for (const svc of services) {
+        if (podName.startsWith(svc.name + "-")) streaming.add(svc.name);
+      }
+    }
+
+    const cp = put("dubbod", {
+      kind: "controlplane",
+      namespace: data.namespace,
+      pods: (data.instances || []).length,
+    });
+    for (const node of [...nodes.values()]) {
+      if (node.kind === "controlplane") continue;
+      cp.edgesOut.push({ to: node.id, config: true, streaming: streaming.has(node.id) });
+    }
+  }
+
+  // Layer by longest path from an entry point so callers sit left of callees.
+  const layer = new Map();
+  const assign = (id, depth, seen) => {
+    if (seen.has(id) || (layer.get(id) ?? -1) >= depth) return;
+    layer.set(id, depth);
+    const next = new Set(seen).add(id);
+    for (const e of nodes.get(id)?.edgesOut || []) assign(e.to, depth + 1, next);
+  };
+  for (const node of nodes.values()) if (node.edgesIn === 0) assign(node.id, 0, new Set());
+  for (const node of nodes.values()) if (!layer.has(node.id)) assign(node.id, 0, new Set());
+
+  const columns = [];
+  for (const node of nodes.values()) {
+    const depth = layer.get(node.id) || 0;
+    (columns[depth] = columns[depth] || []).push(node);
+  }
+  for (const col of columns) {
+    col.sort((a, b) => (b.edgesOut.length - a.edgesOut.length) || a.name.localeCompare(b.name));
+  }
+  const omitted = [...meta.keys()].filter((id) => !nodes.has(id));
+  return { nodes, columns, omitted };
+};
+
+const R = 26;            // node radius
+const COL_GAP = 210;     // horizontal spacing between layers
+const ROW_GAP = 104;     // vertical spacing within a layer
+
+const ServiceGraph = ({ data, onSelect, scope }) => {
+  const { nodes, columns, omitted } = useMemo(() => buildServiceGraph(data, scope), [data, scope]);
+  const [moved, setMoved] = useState({});
+  const [hover, setHover] = useState(null);
+  const [view, setView] = useState({ zoom: 1, x: 0, y: 0 });
+  const drag = useRef(null);
+  const pan = useRef(null);
+  const svgRef = useRef(null);
+
+  const layout = useMemo(() => {
+    const rows = Math.max(...columns.map((c) => c.length), 1);
+    const width = Math.max((columns.length - 1) * COL_GAP + R * 2, 200);
+    const height = Math.max((rows - 1) * ROW_GAP + R * 2, 160);
+    const base = new Map();
+    columns.forEach((col, ci) => {
+      const colHeight = (col.length - 1) * ROW_GAP;
+      col.forEach((node, ri) => {
+        base.set(node.id, {
+          x: R + ci * COL_GAP,
+          y: R + (height - R * 2 - colHeight) / 2 + ri * ROW_GAP,
+        });
+      });
+    });
+    return { base, width, height };
+  }, [columns]);
+
+  const at = (id) => moved[id] || layout.base.get(id) || { x: 0, y: 0 };
+
+  const toGraph = (event) => {
+    const svg = svgRef.current;
+    const rect = svg.getBoundingClientRect();
+    const vb = svg.viewBox.baseVal;
+    return {
+      x: vb.x + ((event.clientX - rect.left) / rect.width) * vb.width,
+      y: vb.y + ((event.clientY - rect.top) / rect.height) * vb.height,
+    };
+  };
+
+  const onNodeDown = (event, id) => {
+    event.stopPropagation();
+    const p = toGraph(event);
+    const start = at(id);
+    drag.current = { id, dx: p.x - start.x, dy: p.y - start.y, moved: false };
+    event.currentTarget.setPointerCapture(event.pointerId);
+  };
+  const onCanvasDown = (event) => {
+    pan.current = { x: event.clientX, y: event.clientY, ox: view.x, oy: view.y };
+  };
+  const onMove = (event) => {
+    if (drag.current) {
+      const p = toGraph(event);
+      drag.current.moved = true;
+      setMoved((prev) => ({ ...prev, [drag.current.id]: { x: p.x - drag.current.dx, y: p.y - drag.current.dy } }));
+      return;
+    }
+    if (pan.current) {
+      const scale = layout.width / (svgRef.current?.getBoundingClientRect().width || 1) / view.zoom;
+      setView((v) => ({
+        ...v,
+        x: pan.current.ox - (event.clientX - pan.current.x) * scale,
+        y: pan.current.oy - (event.clientY - pan.current.y) * scale,
+      }));
+    }
+  };
+  const onNodeUp = (node) => {
+    const wasDrag = drag.current?.moved;
+    drag.current = null;
+    if (!wasDrag) onSelect(node);
+  };
+  const onWheel = (event) => {
+    event.preventDefault();
+    setView((v) => ({ ...v, zoom: Math.min(2.6, Math.max(0.45, v.zoom * (event.deltaY < 0 ? 1.12 : 0.89))) }));
+  };
+
+  const edges = [];
+  for (const node of nodes.values()) {
+    for (const e of node.edgesOut) {
+      if (!nodes.has(e.to)) continue;
+      const a = at(node.id);
+      const b = at(e.to);
+      const dist = Math.hypot(b.x - a.x, b.y - a.y) || 1;
+      // Stop the line on the circle edge so the arrowhead touches the ring.
+      const ux = (b.x - a.x) / dist;
+      const uy = (b.y - a.y) / dist;
+      const x1 = a.x + ux * R;
+      const y1 = a.y + uy * R;
+      const x2 = b.x - ux * (R + 9);
+      const y2 = b.y - uy * (R + 9);
+      const bow = Math.max(26, Math.abs(x2 - x1) / 2.4);
+      edges.push({
+        ...e, from: node.id,
+        d: `M${x1},${y1} C${x1 + bow},${y1} ${x2 - bow},${y2} ${x2},${y2}`,
+        lx: (x1 + x2) / 2, ly: (y1 + y2) / 2,
+      });
+    }
+  }
+
+  const related = hover
+    ? new Set([hover, ...edges.filter((e) => e.from === hover || e.to === hover).flatMap((e) => [e.from, e.to])])
+    : null;
+
+  const pad = 70;
+  const vw = (layout.width + pad * 2) / view.zoom;
+  const vh = (layout.height + pad * 2) / view.zoom;
+
+  if (nodes.size === 0) {
+    return html`
+      <${EmptyState} title=${scope === "north-south" ? t("topology.empty.northSouth") : t("topology.empty.eastWest")}>
+        ${scope === "north-south" ? t("topology.empty.northSouth.body") : t("topology.empty.eastWest.body")}
+      </${EmptyState}>
+    `;
+  }
+
+  return html`
+    <div class="graph-board">
+      <div class="graph-tools">
+        <button class="btn btn-ghost btn-small" onClick=${() => setView((v) => ({ ...v, zoom: Math.min(2.6, v.zoom * 1.2) }))} title=${t("topology.zoomIn")}>+</button>
+        <button class="btn btn-ghost btn-small" onClick=${() => setView((v) => ({ ...v, zoom: Math.max(0.45, v.zoom / 1.2) }))} title=${t("topology.zoomOut")}>−</button>
+        <button class="btn btn-ghost btn-small" onClick=${() => { setView({ zoom: 1, x: 0, y: 0 }); setMoved({}); }} title=${t("topology.reset.title")}>${t("topology.reset")}</button>
+      </div>
+
+      <svg ref=${svgRef} class="graph"
+        viewBox=${`${-pad + view.x} ${-pad + view.y} ${vw} ${vh}`}
+        onPointerDown=${onCanvasDown} onPointerMove=${onMove}
+        onPointerUp=${() => { pan.current = null; }}
+        onPointerLeave=${() => { pan.current = null; drag.current = null; setHover(null); }}
+        onWheel=${onWheel}
+        role="img" aria-label=${t("topology.aria")}>
+        <defs>
+          <marker id="gedge" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6.5" markerHeight="6.5" orient="auto">
+            <path d="M0,0 L10,5 L0,10 z" class="graph-arrow" />
+          </marker>
+        </defs>
+
+        ${edges.map((e) => html`
+          <g key=${`${e.from}-${e.to}-${e.match || "config"}`}
+            class=${`graph-edge ${e.config ? (e.streaming ? "is-xds" : "is-config") : ""} ${related && !(related.has(e.from) && related.has(e.to)) ? "is-dim" : ""}`}>
+            <path d=${e.d} marker-end="url(#gedge)" />
+            ${!e.config && html`
+              <text x=${e.lx} y=${e.ly - 8} text-anchor="middle" class="graph-edge-label">
+                ${e.match}${e.share != null ? ` · ${e.share}%` : ""}
+              </text>
+            `}
+          </g>
+        `)}
+
+        ${[...nodes.values()].map((node) => {
+          const p = at(node.id);
+          const isGw = node.kind === "gateway";
+          const isolated = node.kind !== "controlplane" && node.edgesIn === 0 && node.edgesOut.length === 0;
+          return html`
+            <g key=${node.id}
+              class=${`graph-node ${isGw ? "is-gateway" : ""} ${node.kind === "controlplane" ? "is-cp" : ""} ${isolated ? "is-isolated" : ""} ${related && !related.has(node.id) ? "is-dim" : ""}`}
+              transform=${`translate(${p.x}, ${p.y})`}
+              onPointerDown=${(e) => onNodeDown(e, node.id)}
+              onPointerUp=${() => onNodeUp(node)}
+              onMouseEnter=${() => setHover(node.id)}
+              onMouseLeave=${() => setHover(null)}
+              tabIndex="0">
+              ${node.kind === "controlplane"
+                ? html`<rect x=${-R - 6} y=${-R + 6} width=${(R + 6) * 2} height=${(R - 6) * 2} rx="6" />`
+                : isGw
+                  ? html`<rect x=${-R} y=${-R} width=${R * 2} height=${R * 2} rx="7" transform="rotate(45)" />`
+                  : html`<circle r=${R} />`}
+              ${node.mtlsMode && html`
+                <${LockGlyph} mode=${node.mtlsMode} fromPolicy=${node.mtlsFromPolicy} x=${R - 14} y=${-R - 10} />
+              `}
+              <text y=${R + 17} text-anchor="middle" class="graph-node-name">${node.name}</text>
+              <text y=${R + 30} text-anchor="middle" class="graph-node-sub">${node.namespace || ""}</text>
+              ${isGw && html`<text y="4" text-anchor="middle" class="graph-node-tag">GW</text>`}
+              ${node.kind === "controlplane" && html`<text y="4" text-anchor="middle" class="graph-node-tag">CP</text>`}
+            </g>
+          `;
+        })}
+      </svg>
+
+      ${omitted.length > 0 && html`
+        <div class="graph-omitted">
+          ${t("topology.omitted", omitted.length)}
+          <span class="mono">${omitted.join(", ")}</span>
+        </div>
+      `}
+    </div>
+  `;
+};
+
+const TopologyPage = ({ data, openDrawer, onRefresh, refreshing }) => {
+  const routes = data.routes || [];
+  const services = data.services || [];
+  const [scope, setScope] = useState("north-south");
+  const streaming = (data.xdsClients || []).length;
+
+  return html`
+    <div class="page page-flush">
+      <div class="page-head">
+        <h1 class="page-title">${t("topology.title")}</h1>
+        <div class="page-actions">
+          <select class="input" value=${scope} onChange=${(e) => setScope(e.target.value)}>
+            ${GRAPH_SCOPES.map((v) => html`<option key=${v.id} value=${v.id}>${t(v.label)}</option>`)}
+          </select>
+          <${RefreshButton} onRefresh=${onRefresh} refreshing=${refreshing} />
+        </div>
+      </div>
+
+      ${services.length === 0 && html`
+        <${EmptyState} title=${t("topology.empty.noServices")}>
+          ${t("topology.empty.noServices.body.before")} <span class="mono">dubbo-injection=enabled</span>
+          ${t("topology.empty.noServices.body.after")}
+        </${EmptyState}>
+      `}
+      ${services.length > 0 && html`
         <section class="section">
-          <${SectionTitle}>xDS connections <span class="unit">gauge</span></${SectionTitle}>
-          <${TrendChart} series=${[seriesOf((h) => h.connections, "connections")]} format=${fmtNumber} />
+          <${SectionTitle} aside=${html`
+            <span class="legend">
+              <span class="legend-item"><svg class="lock lock-ok" viewBox="2 3 20 19"><rect x="5" y="10" width="14" height="10" rx="2"/><path d="M8 10.5V7.5a4 4 0 0 1 8 0v3"/></svg>${t("topology.legend.required")}</span>
+              <span class="legend-item"><svg class="lock lock-warn" viewBox="2 3 20 19"><rect x="5" y="10" width="14" height="10" rx="2"/><path d="M8 10.5V7.5a4 4 0 0 1 7.4-2.1"/></svg>${t("topology.legend.plaintext")}</span>
+              <span class="legend-item"><svg class="lock lock-err" viewBox="2 3 20 19"><rect x="5" y="10" width="14" height="10" rx="2"/></svg>${t("topology.legend.off")}</span>
+              ${scope === "control-plane" && html`
+                <span class="legend-item"><span class="legend-line is-xds"></span>${t("topology.legend.stream")}</span>
+                <span class="legend-item"><span class="legend-line is-config"></span>${t("topology.legend.configOnly")}</span>
+              `}
+              <span class="section-count">
+                ${scope === "control-plane"
+                  ? t("topology.streams", streaming)
+                  : t("topology.routes", routes.length)}
+              </span>
+            </span>
+          `} />
+          <${ServiceGraph} data=${data} scope=${scope}
+            onSelect=${(node) => openDrawer({ type: "node", title: node.name, data: node })} />
         </section>
       `}
     </div>
   `;
 };
 
-const LogsPage = ({ data, openLogs }) => {
-  const targets = [
-    { kind: "dubbod", name: "dubbod", namespace: (data.instances || [])[0]?.namespace || data.namespace, title: "dubbod (control plane)" },
-    ...(data.gatewayInstances || []).map((g) => ({ kind: "gateway", name: g.name, namespace: g.namespace, title: `${g.name} (gateway)` })),
-  ];
-  return html`
-    <div class="page">
-      <div class="page-head">
-        <div>
-          <${Eyebrow}>observe / logs</${Eyebrow}>
-          <h1 class="page-title">Logs</h1>
-          <div class="page-sub">
-            Tail pod logs from control plane and gateway deployments ·
-            <span class="chip chip-gate" title="Workload/application log search needs a log aggregation backend.">workload log search n/a</span>
-          </div>
-        </div>
-      </div>
-      <div class="log-targets">
-        ${targets.map((t) => html`
-          <button key=${`${t.kind}/${t.namespace}/${t.name}`} class="log-target" onClick=${() => openLogs(t)}>
-            <span class="log-target-kind">${t.kind}</span>
-            <span class="log-target-name mono">${t.name}</span>
-            <span class="log-target-ns">${t.namespace}</span>
-            <span class="log-target-open">open →</span>
-          </button>
-        `)}
-      </div>
-    </div>
-  `;
-};
+// --- configuration ----------------------------------------------------------
 
-const RuntimePage = ({ data }) => {
+const ConfigurationPage = ({ data, onRefresh, refreshing, lang, onLanguage }) => {
   const server = data.server || {};
   const [theme, setTheme] = useState(getTheme());
+  // Only addresses something outside this page has to dial. The GUI base path
+  // and listener are already in the address bar, the overview API is what this
+  // page itself is calling, and the version endpoint just repeats the version
+  // printed above — none of them tell an operator anything they cannot see.
   const rows = [
-    ["GUI base path", server.guiPath],
-    ["GUI HTTP address", server.httpAddress],
-    ["gRPC (xDS)", server.grpcAddress],
-    ["Secure gRPC", server.secureGrpcAddress],
-    ["Overview API", server.overviewPath],
-    ["Prometheus metrics", server.metricsPath],
-    ["Version endpoint", server.versionPath],
-    ["Readiness", server.readyPath],
+    [t("config.grpc"), server.grpcAddress],
+    [t("config.secureGrpc"), server.secureGrpcAddress],
+    [t("config.metrics"), server.metricsPath],
+    [t("config.ready"), server.readyPath],
   ];
   return html`
     <div class="page">
       <div class="page-head">
         <div>
-          <${Eyebrow}>system / runtime</${Eyebrow}>
-          <h1 class="page-title">Runtime</h1>
-          <div class="page-sub mono">${data.version}</div>
+          <h1 class="page-title">${t("config.title")}</h1>
         </div>
-      </div>
-      <div class="grid-2">
-        <section class="section">
-          <${SectionTitle}>Instance</${SectionTitle}>
-          <${Field} label="Cluster" mono>${data.clusterId}</${Field}>
-          <${Field} label="Namespace" mono>${data.namespace}</${Field}>
-          <${Field} label="Pod" mono>${data.podName || "–"}</${Field}>
-          <${Field} label="Trust domain" mono>${data.mesh?.trustDomain || "–"}</${Field}>
-          <${Field} label="Root namespace" mono>${data.mesh?.rootNamespace || "–"}</${Field}>
-          <${Field} label="Discovery address" mono>${data.mesh?.discoveryAddress || "–"}</${Field}>
-        </section>
-        <section class="section">
-          <${SectionTitle}>Endpoints</${SectionTitle}>
-          ${rows.map(([label, value]) => html`
-            <div class="field field-row" key=${label}>
-              <div class="field-label">${label}</div>
-              <div class="field-value mono field-copy" title="Click to copy" onClick=${() => value && copyText(value)}>${value || "–"}</div>
-            </div>
-          `)}
-        </section>
+        <${RefreshButton} onRefresh=${onRefresh} refreshing=${refreshing} />
       </div>
       <section class="section">
-        <${SectionTitle}>Console preferences</${SectionTitle}>
-        <div class="pref-row">
-          <div>
-            <div class="cell-strong">Theme</div>
-            <div class="cell-muted">Follows the OS unless overridden.</div>
+        ${rows.map(([label, value]) => html`
+          <div class="field field-row" key=${label}>
+            <div class="field-label">${label}</div>
+            <div class="field-value mono field-copy" title=${t("config.copy")} onClick=${() => value && copyText(value)}>${value || "–"}</div>
           </div>
+        `)}
+      </section>
+      <section class="section">
+        <${SectionTitle}>${t("config.preferences")}</${SectionTitle}>
+        <div class="pref-row">
+          <div class="cell-strong">${t("config.theme")}</div>
           <div class="seg">
             ${["auto", "light", "dark"].map((m) => html`
-              <button key=${m} class=${`seg-item ${theme === m ? "is-on" : ""}`} onClick=${() => { applyTheme(m); setTheme(m); }}>${m}</button>
+              <button key=${m} class=${`seg-item ${theme === m ? "is-on" : ""}`} onClick=${() => { applyTheme(m); setTheme(m); }}>${t("config.theme." + m)}</button>
             `)}
           </div>
         </div>
         <div class="pref-row">
-          <div>
-            <div class="cell-strong">Mock data</div>
-            <div class="cell-muted">Development only. Payloads mirror the real API contract exactly (see <span class="mono">mock.js</span>).</div>
+          <div class="cell-strong">${t("config.language")}</div>
+          <div class="seg">
+            ${LANGUAGES.map((l) => html`
+              <button key=${l.id} class=${`seg-item ${lang === l.id ? "is-on" : ""}`}
+                onClick=${() => onLanguage(l.id)}>${l.label}</button>
+            `)}
           </div>
-          <button class=${`btn ${MOCK ? "" : "btn-ghost"}`} onClick=${() => setMock(!MOCK)}>${MOCK ? "Disable mock" : "Enable mock"}</button>
         </div>
       </section>
     </div>
   `;
 };
 
-const GATED = {
-  traffic: {
-    title: "Traffic",
-    purpose: "Per-service and per-edge request analytics: RPS, success rate, error breakdown, latency percentiles, protocol split and drill-down to slow calls.",
-    missing: "Request-level telemetry from proxyless gRPC workloads — a metrics ingestion path (scrape or OTLP) aggregated by service pair. The xds-api wire protocol carries no per-request stats today.",
-    wouldShow: ["RPS / error-rate / P95 per service and per edge", "status-code and protocol breakdowns", "time-range comparison and anomaly flags"],
-  },
-  events: {
-    title: "Events",
-    purpose: "Timeline of mesh-relevant Kubernetes events: push failures, gateway provisioning, injector activity, config rejections — each linked to its resource.",
-    missing: "An api/events feed backed by a Kubernetes events informer (or an internal event store) scoped to mesh resources.",
-    wouldShow: ["chronological event stream with severity", "affected-resource links into services/gateways", "filters by kind, namespace, and reason"],
-  },
-};
-
-// --- shell ---------------------------------------------------------------------
+// --- shell ------------------------------------------------------------------
 
 const NAV = [
-  { group: "Observe", items: [
-    { id: "overview", label: "Overview" },
-    { id: "metrics", label: "Metrics" },
-    { id: "logs", label: "Logs" },
+  { group: t("nav.mesh"), items: [
+    { id: "overview", label: t("nav.overview") },
+    { id: "services", label: t("nav.services") },
   ]},
-  { group: "Mesh", items: [
-    { id: "services", label: "Services" },
-    { id: "gateways", label: "Gateways" },
-    { id: "registries", label: "Registries" },
-    { id: "config", label: "Config" },
+  { group: t("nav.observe"), items: [
+    { id: "pipeline", label: t("nav.pipeline") },
+    { id: "logs", label: t("nav.logs") },
+    { id: "topology", label: t("nav.topology") },
   ]},
-  { group: "Planned", items: [
-    { id: "traffic", label: "Traffic", gated: true },
-    { id: "events", label: "Events", gated: true },
-  ]},
-  { group: "System", items: [
-    { id: "runtime", label: "Runtime" },
+  { group: t("nav.system"), items: [
+    { id: "configuration", label: t("nav.configuration") },
   ]},
 ];
 
 const NavIcon = ({ id }) => {
   const paths = {
     overview: html`<path d="M3 12h5V3H3zM10 21h5v-9h-5zM17 8h4V3h-4zM3 21h5v-6H3zM10 9h5V3h-5zM17 21h4V11h-4z"/>`,
-    metrics: html`<path d="M3 20h18M6 16l4-6 4 3 5-8" fill="none"/>`,
-    logs: html`<path d="M4 5h16M4 10h16M4 15h10M4 20h7" fill="none"/>`,
     services: html`<circle cx="12" cy="12" r="8.5" fill="none"/><circle cx="12" cy="12" r="3"/>`,
-    gateways: html`<path d="M4 21V8l8-5 8 5v13M9 21v-6h6v6" fill="none"/>`,
-    registries: html`<ellipse cx="12" cy="5.5" rx="8" ry="2.8" fill="none"/><path d="M4 5.5v13c0 1.6 3.6 2.9 8 2.9s8-1.3 8-2.9v-13M4 12c0 1.6 3.6 2.9 8 2.9s8-1.3 8-2.9" fill="none"/>`,
-    config: html`<circle cx="12" cy="12" r="3" fill="none"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M19.1 4.9L17 7M7 17l-2.1 2.1" fill="none"/>`,
-    traffic: html`<path d="M3 17c4 0 4-10 9-10s5 10 9 10" fill="none"/>`,
-    events: html`<circle cx="12" cy="12" r="8.5" fill="none"/><path d="M12 7v5l3.5 2" fill="none"/>`,
-    runtime: html`<rect x="4" y="4" width="16" height="16" rx="2" fill="none"/><path d="M9 9h6v6H9z" fill="none"/>`,
+    pipeline: html`<path d="M3 20h18M6 16l4-6 4 3 5-8" fill="none"/>`,
+    logs: html`<path d="M4 5h16M4 10h16M4 15h10M4 20h7" fill="none"/>`,
+    topology: html`<circle cx="5" cy="12" r="2.5" fill="none"/><circle cx="19" cy="6" r="2.5" fill="none"/><circle cx="19" cy="18" r="2.5" fill="none"/><path d="M7.5 11 16.6 6.9M7.5 13l9.1 4.1" fill="none"/>`,
+    configuration: html`<rect x="4" y="4" width="16" height="16" rx="2" fill="none"/><path d="M9 9h6v6H9z" fill="none"/>`,
   };
   return html`<svg viewBox="0 0 24 24" class="nav-icon" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">${paths[id] || paths.overview}</svg>`;
 };
@@ -985,17 +1251,22 @@ const App = () => {
   const [drawer, setDrawer] = useState(null);
   const [logsState, setLogsState] = useState(null);
 
-  // Metrics polling with a session ring buffer.
-  const [metricsInterval, setMetricsInterval] = useState(10);
-  const [metricsPaused, setMetricsPaused] = useState(false);
   const [metricsError, setMetricsError] = useState(null);
-  const [history, setHistory] = useState([]);
+  const [refreshing, setRefreshing] = useState(false);
+  const [lang, setLang] = useState(getLanguage());
+
+  // Copy is resolved at render time, so re-rendering the tree is what applies a
+  // language change; nothing else needs to know about it.
+  const onLanguage = useCallback((next) => {
+    setLanguage(next);
+    setLang(next);
+  }, []);
+  const [metrics, setMetrics] = useState(null);
 
   const navigate = useCallback((id) => {
     setRoute(id);
-    history_replace(id);
+    window.history.replaceState(null, "", `#/${id}`);
   }, []);
-  const history_replace = (id) => { window.history.replaceState(null, "", `#/${id}`); };
 
   useEffect(() => {
     const onHash = () => setRoute(parseRoute());
@@ -1005,8 +1276,7 @@ const App = () => {
 
   const loadOverview = useCallback(async () => {
     try {
-      const json = await fetchOverview();
-      setData(json);
+      setData(await getJSON(API.overview));
       setOverviewError(null);
     } catch (e) {
       setOverviewError(e.message || String(e));
@@ -1021,38 +1291,35 @@ const App = () => {
 
   const pollMetrics = useCallback(async () => {
     try {
-      const snapshot = await fetchMetrics();
+      setMetrics(await getJSON(API.metrics));
       setMetricsError(null);
-      setHistory((prev) => {
-        const entry = {
-          t: Date.now(),
-          snapshot,
-          connections: firstValue(snapshot, "dubbod_xds"),
-          services: firstValue(snapshot, "dubbod_services"),
-          pushes: labeledValues(snapshot, "dubbod_xds_pushes", "type"),
-          pushTotal: totalValue(snapshot, "dubbod_xds_pushes"),
-        };
-        const next = [...prev, entry];
-        return next.length > HISTORY_MAX ? next.slice(next.length - HISTORY_MAX) : next;
-      });
     } catch (e) {
       setMetricsError(e.message || String(e));
     }
   }, []);
 
   useEffect(() => {
-    if (metricsPaused) return;
     pollMetrics();
-    const timer = window.setInterval(pollMetrics, metricsInterval * 1000);
+    const timer = window.setInterval(pollMetrics, 15000);
     return () => window.clearInterval(timer);
-  }, [metricsInterval, metricsPaused, pollMetrics]);
+  }, [pollMetrics]);
+
+  // One control per page: pull both feeds so the button means the same thing
+  // everywhere, and hold the disabled state long enough to be visible.
+  const refresh = useCallback(async () => {
+    setRefreshing(true);
+    try {
+      await Promise.all([loadOverview(), pollMetrics()]);
+    } finally {
+      setRefreshing(false);
+    }
+  }, [loadOverview, pollMetrics]);
 
   const openLogs = useCallback(async (target, tail = 200) => {
     const next = { ...target, tail, title: target.title || target.name, loading: true, data: null, error: null };
     setLogsState(next);
     try {
-      const payload = await fetchLogs({ ...target, tail });
-      setLogsState({ ...next, loading: false, data: payload });
+      setLogsState({ ...next, loading: false, data: await fetchLogs({ ...target, tail }) });
     } catch (e) {
       setLogsState({ ...next, loading: false, error: e.message || String(e) });
     }
@@ -1063,7 +1330,6 @@ const App = () => {
       <div class="app">
         <aside class="sidebar" />
         <main class="main">
-          <header class="topbar" />
           <div class="content">
             <${Skeleton} h=${64} /><div style=${{ height: "16px" }} />
             <${Skeleton} h=${140} /><div style=${{ height: "16px" }} />
@@ -1080,24 +1346,22 @@ const App = () => {
         <main class="main main-solo">
           <div class="content content-center">
             <${ErrorBanner} error=${overviewError} onRetry=${loadOverview} />
-            <p class="cell-muted">The console needs <span class="mono">api/overview</span> to render. You can also inspect the UI with <a href="?mock=1">mock data</a>.</p>
+            <p class="cell-muted">
+              ${t("error.noOverview.before")} <span class="mono">api/overview</span>${t("error.noOverview.after")}
+            </p>
           </div>
         </main>
       </div>
     `;
   }
 
-  const updatedAt = data.updatedAt ? new Date(data.updatedAt).toLocaleTimeString() : null;
-  const health = healthRollup(data);
-
-  const pageProps = { data, openDrawer: setDrawer, openLogs, navigate, history };
+  const pageProps = { data, openDrawer: setDrawer, openLogs, navigate, onRefresh: refresh, refreshing, lang, onLanguage };
 
   return html`
     <div class="app">
       <aside class="sidebar">
         <div class="brand">
-          <img class="brand-logo" src="./dubbo-logo.png" alt="" />
-          <span class="brand-name">${CONFIG.product || "Dubbo"}<span class="brand-sub">console</span></span>
+          <span class="brand-name">Dubbod GUI</span>
         </div>
         <nav class="nav">
           ${NAV.map((group) => html`
@@ -1105,63 +1369,35 @@ const App = () => {
               <div class="nav-group-label">${group.group}</div>
               ${group.items.map((item) => html`
                 <button key=${item.id} type="button"
-                  class=${`nav-item ${route === item.id ? "is-active" : ""} ${item.gated ? "is-gated" : ""}`}
+                  class=${`nav-item ${route === item.id ? "is-active" : ""}`}
                   onClick=${() => navigate(item.id)} aria-current=${route === item.id ? "page" : undefined}>
                   <${NavIcon} id=${item.id} />
                   <span>${item.label}</span>
-                  ${item.gated && html`<span class="nav-gate" title="Backend capability not connected yet">n/a</span>`}
                 </button>
               `)}
             </div>
           `)}
         </nav>
-        ${data.version && html`<div class="sidebar-foot mono" title=${data.version}>${data.version}</div>`}
       </aside>
 
       <main class="main">
-        <header class="topbar">
-          <div class="topbar-context">
-            <span class="topbar-kv">cluster <span class="mono">${data.clusterId || "–"}</span></span>
-            <span class="topbar-kv">ns <span class="mono">${data.namespace || "–"}</span></span>
-            ${data.mesh?.trustDomain && html`<span class="topbar-kv topbar-kv-wide">trust <span class="mono">${data.mesh.trustDomain}</span></span>`}
-          </div>
-          <div class="topbar-status">
-            ${MOCK && html`<span class="chip chip-mock">MOCK DATA</span>`}
-            ${overviewError && html`<span class="chip chip-err" title=${overviewError}>stale — retrying</span>`}
-            ${updatedAt && !overviewError && html`<span class="topbar-updated">updated ${updatedAt}</span>`}
-            <${Dot} status=${overviewError ? "warn" : health} />
-            <span class="topbar-live">${overviewError ? "reconnecting" : "live"}</span>
-          </div>
-        </header>
-
         <div class="content" key=${route}>
           ${route === "overview" && html`<${OverviewPage} ...${pageProps} />`}
-          ${route === "metrics" && html`
-            <${MetricsPage} history=${history} interval=${metricsInterval} setInterval=${setMetricsInterval}
-              paused=${metricsPaused} setPaused=${setMetricsPaused} error=${metricsError} retry=${pollMetrics} />
+          ${route === "services" && html`<${ServicesPage} ...${pageProps} />`}
+          ${route === "pipeline" && html`
+            <${PipelinePage} snapshot=${metrics} error=${metricsError} retry=${pollMetrics}
+              onRefresh=${refresh} refreshing=${refreshing} />
           `}
           ${route === "logs" && html`<${LogsPage} ...${pageProps} />`}
-          ${route === "services" && html`<${ServicesPage} ...${pageProps} />`}
-          ${route === "gateways" && html`<${GatewaysPage} ...${pageProps} />`}
-          ${route === "registries" && html`<${RegistriesPage} ...${pageProps} />`}
-          ${route === "config" && html`<${ConfigPage} ...${pageProps} />`}
-          ${route === "runtime" && html`<${RuntimePage} ...${pageProps} />`}
-          ${GATED[route] && html`<div class="page"><${CapabilityGate} ...${GATED[route]} /></div>`}
+          ${route === "topology" && html`<${TopologyPage} ...${pageProps} />`}
+          ${route === "configuration" && html`<${ConfigurationPage} ...${pageProps} />`}
         </div>
       </main>
 
-      <${Drawer} item=${drawer} onClose=${() => setDrawer(null)} onOpenLogs=${(t) => { setDrawer(null); openLogs(t); }} navigate=${navigate} />
+      <${Drawer} item=${drawer} onClose=${() => setDrawer(null)} onOpenLogs=${(t) => { setDrawer(null); openLogs(t); }} />
       <${LogsPanel} state=${logsState} onClose=${() => setLogsState(null)} onReload=${(tail) => openLogs(logsState, tail)} />
     </div>
   `;
 };
 
-const checkAndRender = () => {
-  if (window.render && window.html) {
-    window.render(window.html`<${App} />`, document.getElementById("root"));
-  } else {
-    setTimeout(checkAndRender, 50);
-  }
-};
-
-checkAndRender();
+render(html`<${App} />`, document.getElementById("root"));
