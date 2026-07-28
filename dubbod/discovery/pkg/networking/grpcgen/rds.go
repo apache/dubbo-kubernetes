@@ -417,6 +417,7 @@ func buildRoutesFromGatewayHTTPRoute(httpRoutes []config.Config, hostName host.N
 					routeAction.Timeout = timeout
 				}
 			}
+			routeAction.RetryPolicy = gatewayAPIRetryPolicy(rule.Retry, rule.Timeouts)
 
 			builtRoute := &route.Route{
 				Match: routeMatch,
@@ -432,6 +433,48 @@ func buildRoutesFromGatewayHTTPRoute(httpRoutes []config.Config, hostName host.N
 	}
 
 	return allRoutes
+}
+
+func gatewayAPIRetryPolicy(retry *sigsk8siogatewayapiapisv1.HTTPRouteRetry, timeouts *sigsk8siogatewayapiapisv1.HTTPRouteTimeouts) *route.RetryPolicy {
+	if retry == nil {
+		return nil
+	}
+
+	attempts := uint32(1)
+	if retry.Attempts != nil {
+		if *retry.Attempts <= 0 {
+			return nil
+		}
+		attempts = uint32(*retry.Attempts)
+	}
+
+	retryOn := []string{"connect-failure", "reset"}
+	statusCodes := make([]uint32, 0, len(retry.Codes))
+	for _, code := range retry.Codes {
+		if code < 400 || code > 599 {
+			continue
+		}
+		statusCodes = append(statusCodes, uint32(code))
+	}
+	if len(statusCodes) > 0 {
+		retryOn = append(retryOn, "retriable-status-codes")
+	}
+
+	policy := &route.RetryPolicy{
+		RetryOn:              strings.Join(retryOn, ","),
+		NumRetries:           wrapperspb.UInt32(attempts),
+		RetriableStatusCodes: statusCodes,
+	}
+	if timeouts != nil {
+		policy.PerTryTimeout = gatewayAPIDurationToProto(timeouts.BackendRequest)
+	}
+	if base := gatewayAPIDurationToProto(retry.Backoff); base != nil && base.AsDuration() > 0 {
+		policy.RetryBackOff = &route.RetryPolicy_RetryBackOff{
+			BaseInterval: base,
+			MaxInterval:  durationpb.New(10 * base.AsDuration()),
+		}
+	}
+	return policy
 }
 
 func gatewayAPIDurationToProto(duration *sigsk8siogatewayapiapisv1.Duration) *durationpb.Duration {

@@ -54,7 +54,7 @@ require (
 	github.com/heroku/color v0.0.6
 	github.com/kdubbo/api v0.0.0-20260713105721-558a18fe4f33
 	github.com/kdubbo/client-go v0.0.0-20260713105923-9a87feab8d96
-	github.com/kdubbo/xds-api v0.0.0-20260722141036-e1ddf72d7580
+	github.com/kdubbo/xds-api v0.0.0-20260728021336-34287e74f6f2
 	github.com/moby/moby/client v0.4.1
 	github.com/moby/term v0.5.2
 	github.com/ory/viper v1.7.5
@@ -72,7 +72,7 @@ require (
 	golang.org/x/term v0.45.0
 	golang.org/x/time v0.15.0
 	gomodules.xyz/jsonpatch/v2 v2.5.0
-	google.golang.org/grpc v1.80.0
+	google.golang.org/grpc v1.82.1
 	google.golang.org/protobuf v1.36.11
 	gopkg.in/yaml.v3 v3.0.1
 	helm.sh/helm/v3 v3.18.6
@@ -265,7 +265,7 @@ require (
 	golang.org/x/oauth2 v0.36.0 // indirect
 	golang.org/x/sync v0.22.0 // indirect
 	golang.org/x/text v0.40.0 // indirect
-	google.golang.org/genproto/googleapis/api v0.0.0-20260406210006-6f92a3bedf2d // indirect
+	google.golang.org/genproto/googleapis/api v0.0.0-20260414002931-afd174a4e478 // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20260427160629-7cedc36a6bc4 // indirect
 	gopkg.in/evanphx/json-patch.v4 v4.13.0 // indirect
 	gopkg.in/inf.v0 v0.9.1 // indirect

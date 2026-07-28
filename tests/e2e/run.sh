@@ -126,9 +126,10 @@ if [[ "${IMAGE}" != "${UPGRADE_FROM_IMAGE}" ]]; then
 fi
 
 log "installing Gateway API CRDs"
-# Pin to the sigs.k8s.io/gateway-api version in go.mod.
+# Pin to the sigs.k8s.io/gateway-api version in go.mod. HTTPRoute retry is an
+# Extended feature carried by the experimental CRD bundle.
 GATEWAY_API_VERSION="${GATEWAY_API_VERSION:-v1.4.1}"
-"${KUBECTL[@]}" apply -f "https://github.com/kubernetes-sigs/gateway-api/releases/download/${GATEWAY_API_VERSION}/standard-install.yaml"
+"${KUBECTL[@]}" apply --server-side -f "https://github.com/kubernetes-sigs/gateway-api/releases/download/${GATEWAY_API_VERSION}/experimental-install.yaml"
 
 log "installing base chart (CRDs)"
 helm upgrade --install dubbo-base "${ROOT}/manifests/charts/base" \

@@ -135,6 +135,56 @@ func TestBuildHTTPRouteSetsGatewayAPIRequestTimeout(t *testing.T) {
 	}
 }
 
+func TestBuildHTTPRouteSetsGatewayAPIRetryPolicy(t *testing.T) {
+	cfg := newServiceAttachedHTTPRouteConfig("reviews-retry", "moviereview", "reviews", 9080)
+	spec := cfg.Spec.(*gatewayv1.HTTPRouteSpec)
+	spec.Rules[0].Timeouts = &gatewayv1.HTTPRouteTimeouts{
+		Request:        ptrTo(gatewayv1.Duration("2s")),
+		BackendRequest: ptrTo(gatewayv1.Duration("250ms")),
+	}
+	spec.Rules[0].Retry = &gatewayv1.HTTPRouteRetry{
+		Codes:    []gatewayv1.HTTPRouteRetryStatusCode{500, 503},
+		Attempts: ptrTo(3),
+		Backoff:  ptrTo(gatewayv1.Duration("100ms")),
+	}
+	push := newRDSTestPushContext(t, []config.Config{cfg}, []*model.Service{
+		newRDSTestService("reviews", "moviereview", "reviews.moviereview.svc.cluster.local", 9080),
+		newRDSTestService("reviews-v1", "moviereview", "reviews-v1.moviereview.svc.cluster.local", 9080),
+		newRDSTestService("reviews-v2", "moviereview", "reviews-v2.moviereview.svc.cluster.local", 9080),
+	})
+
+	rc := buildHTTPRoute(
+		&model.Proxy{ID: "moviepage.moviereview", Type: model.Proxyless},
+		push,
+		"outbound|9080||reviews.moviereview.svc.cluster.local",
+	)
+	if rc == nil {
+		t.Fatal("buildHTTPRoute() returned nil")
+	}
+	retry := rc.VirtualHosts[0].Routes[0].GetRoute().GetRetryPolicy()
+	if retry == nil {
+		t.Fatal("retry policy = nil")
+	}
+	if got := retry.GetRetryOn(); got != "connect-failure,reset,retriable-status-codes" {
+		t.Fatalf("retry_on = %q", got)
+	}
+	if got := retry.GetNumRetries().GetValue(); got != 3 {
+		t.Fatalf("num_retries = %d, want 3", got)
+	}
+	if got := retry.GetRetriableStatusCodes(); !reflect.DeepEqual(got, []uint32{500, 503}) {
+		t.Fatalf("retriable_status_codes = %v", got)
+	}
+	if got := retry.GetPerTryTimeout().AsDuration(); got != 250*time.Millisecond {
+		t.Fatalf("per_try_timeout = %v, want 250ms", got)
+	}
+	if got := retry.GetRetryBackOff().GetBaseInterval().AsDuration(); got != 100*time.Millisecond {
+		t.Fatalf("retry backoff base = %v, want 100ms", got)
+	}
+	if got := retry.GetRetryBackOff().GetMaxInterval().AsDuration(); got != time.Second {
+		t.Fatalf("retry backoff max = %v, want 1s", got)
+	}
+}
+
 func newRDSTestPushContext(t *testing.T, configs []config.Config, services []*model.Service) *model.PushContext {
 	t.Helper()
 
