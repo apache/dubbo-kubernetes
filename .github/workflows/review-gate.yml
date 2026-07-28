@@ -91,7 +91,10 @@ jobs:
                   name: 'lgtm',
                 });
               } catch (error) {
-                if (error.status !== 404) throw error;
+                // Fork-triggered pull_request_target tokens may not be allowed
+                // to mutate labels. The commit status below is authoritative.
+                if (![403, 404].includes(error.status)) throw error;
+                core.info(`lgtm label removal skipped: ${error.message}`);
               }
             }
 
