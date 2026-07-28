@@ -51,6 +51,7 @@ import (
 	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/types/known/anypb"
+	"google.golang.org/protobuf/types/known/durationpb"
 	"google.golang.org/protobuf/types/known/structpb"
 )
 
@@ -101,7 +102,17 @@ type xdsRouteSnapshot struct {
 	Host         string           `json:"host"`
 	Port         int              `json:"port"`
 	Timeout      string           `json:"timeout,omitempty"`
+	Retry        *xdsRetryPolicy  `json:"retry,omitempty"`
 	Destinations []xdsDestination `json:"destinations"`
+}
+
+type xdsRetryPolicy struct {
+	Attempts      uint32   `json:"attempts"`
+	RetryOn       string   `json:"retryOn"`
+	StatusCodes   []uint32 `json:"statusCodes,omitempty"`
+	PerTryTimeout string   `json:"perTryTimeout,omitempty"`
+	Backoff       string   `json:"backoff,omitempty"`
+	MaxBackoff    string   `json:"maxBackoff,omitempty"`
 }
 
 type sampleADSClient struct {
@@ -118,6 +129,7 @@ type sampleADSClient struct {
 	subs          map[string][]string
 	route         map[string]uint32
 	routeTimeout  time.Duration
+	routeRetry    *xdsRetryPolicy
 	endpoints     map[string][]xdsEndpoint
 	clusterTLS    map[string]*tlsv1.UpstreamTlsContext
 	updates       chan struct{}
@@ -427,13 +439,14 @@ func (c *sampleADSClient) handleResponse(resp *discovery.DiscoveryResponse) erro
 			return c.subscribe(v1.RouteType, routeNames)
 		}
 	case v1.RouteType:
-		weights, clusters, timeout, err := routeWeightsFromRoutes(resp.Resources, c.path, c.requestHeaders)
+		weights, clusters, timeout, retry, err := routeWeightsFromRoutes(resp.Resources, c.path, c.requestHeaders)
 		if err != nil {
 			return err
 		}
 		c.mu.Lock()
 		c.route = weights
 		c.routeTimeout = timeout
+		c.routeRetry = retry
 		c.mu.Unlock()
 		c.notify()
 		if len(clusters) > 0 {
@@ -512,6 +525,7 @@ func (c *sampleADSClient) readySnapshot(expected map[string]uint32) (xdsRouteSna
 	if c.routeTimeout > 0 {
 		snapshot.Timeout = c.routeTimeout.String()
 	}
+	snapshot.Retry = cloneRetryPolicy(c.routeRetry)
 	for clusterName, weight := range c.route {
 		if weight == 0 {
 			continue
@@ -570,12 +584,12 @@ func routeNamesFromListeners(resources []*anypb.Any) ([]string, error) {
 	return sortedUnique(out), nil
 }
 
-func routeWeightsFromRoutes(resources []*anypb.Any, requestPath string, requestHeaders http.Header) (map[string]uint32, []string, time.Duration, error) {
+func routeWeightsFromRoutes(resources []*anypb.Any, requestPath string, requestHeaders http.Header) (map[string]uint32, []string, time.Duration, *xdsRetryPolicy, error) {
 	weights := map[string]uint32{}
 	for _, resource := range resources {
 		rc := &routev1.RouteConfiguration{}
 		if err := proto.Unmarshal(resource.Value, rc); err != nil {
-			return nil, nil, 0, err
+			return nil, nil, 0, nil, err
 		}
 		for _, vh := range rc.GetVirtualHosts() {
 			for _, rt := range vh.GetRoutes() {
@@ -584,11 +598,11 @@ func routeWeightsFromRoutes(resources []*anypb.Any, requestPath string, requestH
 				}
 				action := rt.GetRoute()
 				addRouteActionWeights(weights, action)
-				return weights, sortedWeightClusterNames(weights), routeActionTimeout(action), nil
+				return weights, sortedWeightClusterNames(weights), routeActionTimeout(action), routeActionRetryPolicy(action), nil
 			}
 		}
 	}
-	return weights, sortedWeightClusterNames(weights), 0, nil
+	return weights, sortedWeightClusterNames(weights), 0, nil, nil
 }
 
 func routeActionTimeout(action *routev1.RouteAction) time.Duration {
@@ -596,6 +610,53 @@ func routeActionTimeout(action *routev1.RouteAction) time.Duration {
 		return 0
 	}
 	return action.GetTimeout().AsDuration()
+}
+
+func routeActionRetryPolicy(action *routev1.RouteAction) *xdsRetryPolicy {
+	if action == nil || action.GetRetryPolicy() == nil {
+		return nil
+	}
+	policy := action.GetRetryPolicy()
+	retry := &xdsRetryPolicy{
+		Attempts:    1,
+		RetryOn:     policy.GetRetryOn(),
+		StatusCodes: append([]uint32(nil), policy.GetRetriableStatusCodes()...),
+	}
+	if policy.GetNumRetries() != nil {
+		retry.Attempts = policy.GetNumRetries().GetValue()
+	}
+	if timeout := positiveProtoDuration(policy.GetPerTryTimeout()); timeout > 0 {
+		retry.PerTryTimeout = timeout.String()
+	}
+	if backoff := policy.GetRetryBackOff(); backoff != nil {
+		if base := positiveProtoDuration(backoff.GetBaseInterval()); base > 0 {
+			retry.Backoff = base.String()
+		}
+		if maximum := positiveProtoDuration(backoff.GetMaxInterval()); maximum > 0 {
+			retry.MaxBackoff = maximum.String()
+		}
+	}
+	return retry
+}
+
+func positiveProtoDuration(value *durationpb.Duration) time.Duration {
+	if value == nil {
+		return 0
+	}
+	duration := value.AsDuration()
+	if duration <= 0 {
+		return 0
+	}
+	return duration
+}
+
+func cloneRetryPolicy(policy *xdsRetryPolicy) *xdsRetryPolicy {
+	if policy == nil {
+		return nil
+	}
+	cloned := *policy
+	cloned.StatusCodes = append([]uint32(nil), policy.StatusCodes...)
+	return &cloned
 }
 
 func addRouteActionWeights(weights map[string]uint32, action *routev1.RouteAction) {
@@ -787,43 +848,16 @@ func runSampleRequestsWithOutput(ctx context.Context, adsClient *sampleADSClient
 				}
 			}
 		}
-		destination, endpoint, err := picker.Next()
-		if err != nil {
-			return nil, err
-		}
-		httpClient, scheme, err := clients.clientForDestination(destination)
-		if err != nil {
-			return nil, err
-		}
 		requestCtx := ctx
-		cancel := func() {}
+		cancelRequest := func() {}
 		if timeout, ok := routeTimeoutDuration(snapshot.Timeout); ok {
-			requestCtx, cancel = context.WithTimeout(ctx, timeout)
+			requestCtx, cancelRequest = context.WithTimeout(ctx, timeout)
 		}
-		req, err := http.NewRequestWithContext(requestCtx, http.MethodGet,
-			fmt.Sprintf("%s://%s%s", scheme, net.JoinHostPort(endpoint.Address, strconv.Itoa(int(endpoint.Port))), adsClient.path), nil)
+		line, err := runSampleRequest(requestCtx, adsClient, clients, picker, snapshot)
+		cancelRequest()
 		if err != nil {
-			cancel()
 			return nil, err
 		}
-		req.Host = snapshot.Host
-		for name, values := range adsClient.requestHeaders {
-			for _, value := range values {
-				req.Header.Add(name, value)
-			}
-		}
-		resp, err := httpClient.Do(req)
-		if err != nil {
-			cancel()
-			return nil, err
-		}
-		body, readErr := io.ReadAll(resp.Body)
-		_ = resp.Body.Close()
-		cancel()
-		if readErr != nil {
-			return nil, readErr
-		}
-		line := strings.TrimSpace(string(body))
 		output = append(output, line+"\n")
 		if writer != nil {
 			fmt.Fprintln(writer, line)
@@ -841,6 +875,142 @@ func runSampleRequestsWithOutput(ctx context.Context, adsClient *sampleADSClient
 		}
 	}
 	return output, nil
+}
+
+func runSampleRequest(ctx context.Context, adsClient *sampleADSClient, clients *sampleRequestClients, picker *smoothWeightedPicker, snapshot xdsRouteSnapshot) (string, error) {
+	retry := snapshot.Retry
+	maxRetries := uint32(0)
+	if retry != nil {
+		maxRetries = retry.Attempts
+	}
+
+	var lastErr error
+	for attempt := uint32(0); attempt <= maxRetries; attempt++ {
+		destination, endpoint, err := picker.Next()
+		if err != nil {
+			return "", err
+		}
+		httpClient, scheme, err := clients.clientForDestination(destination)
+		if err != nil {
+			return "", err
+		}
+
+		attemptCtx := ctx
+		cancelAttempt := func() {}
+		if timeout, ok := retryDuration(retry, func(policy *xdsRetryPolicy) string { return policy.PerTryTimeout }); ok {
+			attemptCtx, cancelAttempt = context.WithTimeout(ctx, timeout)
+		}
+		req, err := http.NewRequestWithContext(attemptCtx, http.MethodGet,
+			fmt.Sprintf("%s://%s%s", scheme, net.JoinHostPort(endpoint.Address, strconv.Itoa(int(endpoint.Port))), adsClient.path), nil)
+		if err != nil {
+			cancelAttempt()
+			return "", err
+		}
+		req.Host = snapshot.Host
+		for name, values := range adsClient.requestHeaders {
+			for _, value := range values {
+				req.Header.Add(name, value)
+			}
+		}
+
+		resp, requestErr := httpClient.Do(req)
+		if requestErr != nil {
+			cancelAttempt()
+			lastErr = requestErr
+			if attempt < maxRetries && retryAllowsTransportFailure(retry) {
+				if err := waitRetryBackoff(ctx, retry, attempt); err != nil {
+					return "", err
+				}
+				continue
+			}
+			return "", requestErr
+		}
+
+		body, readErr := io.ReadAll(resp.Body)
+		_ = resp.Body.Close()
+		cancelAttempt()
+		if readErr != nil {
+			lastErr = readErr
+			if attempt < maxRetries && retryOnIncludes(retry, "reset") {
+				if err := waitRetryBackoff(ctx, retry, attempt); err != nil {
+					return "", err
+				}
+				continue
+			}
+			return "", readErr
+		}
+		if attempt < maxRetries && retryStatusConfigured(retry, uint32(resp.StatusCode)) {
+			lastErr = fmt.Errorf("upstream returned retryable status %d", resp.StatusCode)
+			if err := waitRetryBackoff(ctx, retry, attempt); err != nil {
+				return "", err
+			}
+			continue
+		}
+		return strings.TrimSpace(string(body)), nil
+	}
+	return "", lastErr
+}
+
+func retryAllowsTransportFailure(policy *xdsRetryPolicy) bool {
+	return retryOnIncludes(policy, "connect-failure") || retryOnIncludes(policy, "reset")
+}
+
+func retryOnIncludes(policy *xdsRetryPolicy, condition string) bool {
+	if policy == nil {
+		return false
+	}
+	for _, value := range strings.Split(policy.RetryOn, ",") {
+		if strings.TrimSpace(value) == condition {
+			return true
+		}
+	}
+	return false
+}
+
+func retryStatusConfigured(policy *xdsRetryPolicy, status uint32) bool {
+	if policy == nil || !retryOnIncludes(policy, "retriable-status-codes") {
+		return false
+	}
+	for _, configured := range policy.StatusCodes {
+		if configured == status {
+			return true
+		}
+	}
+	return false
+}
+
+func waitRetryBackoff(ctx context.Context, policy *xdsRetryPolicy, retryIndex uint32) error {
+	base, ok := retryDuration(policy, func(value *xdsRetryPolicy) string { return value.Backoff })
+	if !ok {
+		return nil
+	}
+	maximum, hasMaximum := retryDuration(policy, func(value *xdsRetryPolicy) string { return value.MaxBackoff })
+	delay := base
+	for i := uint32(0); i < retryIndex && (!hasMaximum || delay < maximum); i++ {
+		if delay > time.Duration(1<<62) {
+			delay = time.Duration(1 << 62)
+			break
+		}
+		delay *= 2
+	}
+	if hasMaximum && delay > maximum {
+		delay = maximum
+	}
+	timer := time.NewTimer(delay)
+	defer timer.Stop()
+	select {
+	case <-ctx.Done():
+		return ctx.Err()
+	case <-timer.C:
+		return nil
+	}
+}
+
+func retryDuration(policy *xdsRetryPolicy, field func(*xdsRetryPolicy) string) (time.Duration, bool) {
+	if policy == nil {
+		return 0, false
+	}
+	return routeTimeoutDuration(field(policy))
 }
 
 func routeTimeoutDuration(value string) (time.Duration, bool) {

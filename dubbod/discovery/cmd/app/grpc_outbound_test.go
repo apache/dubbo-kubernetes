@@ -24,8 +24,10 @@ import (
 	"net/http/httptest"
 	neturl "net/url"
 	"os"
+	"slices"
 	"strconv"
 	"strings"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -296,6 +298,164 @@ func TestRunSampleRequestsUsesRouteTimeout(t *testing.T) {
 	}
 }
 
+func TestRunSampleRequestsRetriesConfiguredStatus(t *testing.T) {
+	var requests atomic.Int32
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		if requests.Add(1) == 1 {
+			w.WriteHeader(http.StatusServiceUnavailable)
+			_, _ = w.Write([]byte("retry"))
+			return
+		}
+		_, _ = w.Write([]byte("ok"))
+	}))
+	defer server.Close()
+
+	endpoint := endpointForServer(t, server)
+	snapshot := xdsRouteSnapshot{
+		Host: "reviews.moviereview.svc.cluster.local",
+		Port: 9080,
+		Retry: &xdsRetryPolicy{
+			Attempts:    2,
+			RetryOn:     "connect-failure,reset,retriable-status-codes",
+			StatusCodes: []uint32{503},
+			Backoff:     "1ms",
+			MaxBackoff:  "10ms",
+		},
+		Destinations: []xdsDestination{{
+			Cluster:   "outbound|9080|v1|reviews.moviereview.svc.cluster.local",
+			Host:      "reviews.moviereview.svc.cluster.local",
+			Weight:    100,
+			Endpoints: []xdsEndpoint{endpoint},
+		}},
+	}
+	client := &sampleADSClient{
+		host:           snapshot.Host,
+		port:           snapshot.Port,
+		path:           "/",
+		route:          map[string]uint32{snapshot.Destinations[0].Cluster: 100},
+		routeRetry:     cloneRetryPolicy(snapshot.Retry),
+		endpoints:      map[string][]xdsEndpoint{snapshot.Destinations[0].Cluster: {endpoint}},
+		clusterTLS:     map[string]*tlsv1.UpstreamTlsContext{},
+		requestHeaders: http.Header{},
+	}
+
+	output, err := runSampleRequestsWithOutput(context.Background(), client, snapshot, 1, 0, time.Second, nil)
+	if err != nil {
+		t.Fatalf("runSampleRequestsWithOutput() error = %v", err)
+	}
+	if requests.Load() != 2 {
+		t.Fatalf("requests = %d, want 2", requests.Load())
+	}
+	if len(output) != 1 || strings.TrimSpace(output[0]) != "ok" {
+		t.Fatalf("output = %v, want ok", output)
+	}
+}
+
+func TestRunSampleRequestsRetriesConnectionFailureOnNextEndpoint(t *testing.T) {
+	goodServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		_, _ = w.Write([]byte("recovered"))
+	}))
+	defer goodServer.Close()
+
+	unusedListener, err := net.Listen("tcp", "127.0.0.1:0")
+	if err != nil {
+		t.Fatalf("net.Listen() error = %v", err)
+	}
+	badAddress := unusedListener.Addr().(*net.TCPAddr)
+	_ = unusedListener.Close()
+
+	goodEndpoint := endpointForServer(t, goodServer)
+	badEndpoint := xdsEndpoint{Address: badAddress.IP.String(), Port: uint32(badAddress.Port)}
+	snapshot := xdsRouteSnapshot{
+		Host: "reviews.moviereview.svc.cluster.local",
+		Port: 9080,
+		Retry: &xdsRetryPolicy{
+			Attempts: 1,
+			RetryOn:  "connect-failure,reset",
+		},
+		Destinations: []xdsDestination{{
+			Cluster: "outbound|9080|v1|reviews.moviereview.svc.cluster.local",
+			Host:    "reviews.moviereview.svc.cluster.local",
+			Weight:  100,
+			Endpoints: []xdsEndpoint{
+				badEndpoint,
+				goodEndpoint,
+			},
+		}},
+	}
+	client := &sampleADSClient{
+		host:           snapshot.Host,
+		port:           snapshot.Port,
+		path:           "/",
+		route:          map[string]uint32{snapshot.Destinations[0].Cluster: 100},
+		routeRetry:     cloneRetryPolicy(snapshot.Retry),
+		endpoints:      map[string][]xdsEndpoint{snapshot.Destinations[0].Cluster: {badEndpoint, goodEndpoint}},
+		clusterTLS:     map[string]*tlsv1.UpstreamTlsContext{},
+		requestHeaders: http.Header{},
+	}
+
+	output, err := runSampleRequestsWithOutput(context.Background(), client, snapshot, 1, 0, time.Second, nil)
+	if err != nil {
+		t.Fatalf("runSampleRequestsWithOutput() error = %v", err)
+	}
+	if len(output) != 1 || strings.TrimSpace(output[0]) != "recovered" {
+		t.Fatalf("output = %v, want recovered", output)
+	}
+}
+
+func TestRunSampleRequestsRetriesPerTryTimeoutWithinTotalBudget(t *testing.T) {
+	var requests atomic.Int32
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		if requests.Add(1) == 1 {
+			time.Sleep(50 * time.Millisecond)
+			_, _ = w.Write([]byte("late"))
+			return
+		}
+		_, _ = w.Write([]byte("recovered"))
+	}))
+	defer server.Close()
+
+	endpoint := endpointForServer(t, server)
+	snapshot := xdsRouteSnapshot{
+		Host:    "reviews.moviereview.svc.cluster.local",
+		Port:    9080,
+		Timeout: "500ms",
+		Retry: &xdsRetryPolicy{
+			Attempts:      1,
+			RetryOn:       "connect-failure,reset",
+			PerTryTimeout: "5ms",
+		},
+		Destinations: []xdsDestination{{
+			Cluster:   "outbound|9080|v1|reviews.moviereview.svc.cluster.local",
+			Host:      "reviews.moviereview.svc.cluster.local",
+			Weight:    100,
+			Endpoints: []xdsEndpoint{endpoint},
+		}},
+	}
+	client := &sampleADSClient{
+		host:           snapshot.Host,
+		port:           snapshot.Port,
+		path:           "/",
+		route:          map[string]uint32{snapshot.Destinations[0].Cluster: 100},
+		routeTimeout:   500 * time.Millisecond,
+		routeRetry:     cloneRetryPolicy(snapshot.Retry),
+		endpoints:      map[string][]xdsEndpoint{snapshot.Destinations[0].Cluster: {endpoint}},
+		clusterTLS:     map[string]*tlsv1.UpstreamTlsContext{},
+		requestHeaders: http.Header{},
+	}
+
+	output, err := runSampleRequestsWithOutput(context.Background(), client, snapshot, 1, 0, time.Second, nil)
+	if err != nil {
+		t.Fatalf("runSampleRequestsWithOutput() error = %v", err)
+	}
+	if requests.Load() != 2 {
+		t.Fatalf("requests = %d, want 2", requests.Load())
+	}
+	if len(output) != 1 || strings.TrimSpace(output[0]) != "recovered" {
+		t.Fatalf("output = %v, want recovered", output)
+	}
+}
+
 func TestRouteWeightsFromRoutesFiltersHeaderMatchedRoute(t *testing.T) {
 	resources := []*anypb.Any{mustAnyRouteConfig(t, &routev1.RouteConfiguration{
 		VirtualHosts: []*routev1.VirtualHost{{
@@ -325,7 +485,7 @@ func TestRouteWeightsFromRoutesFiltersHeaderMatchedRoute(t *testing.T) {
 		}},
 	})}
 
-	weights, _, _, err := routeWeightsFromRoutes(resources, "/", http.Header{"End-User": []string{"terminal-user"}})
+	weights, _, _, _, err := routeWeightsFromRoutes(resources, "/", http.Header{"End-User": []string{"terminal-user"}})
 	if err != nil {
 		t.Fatalf("routeWeightsFromRoutes() error = %v", err)
 	}
@@ -333,7 +493,7 @@ func TestRouteWeightsFromRoutesFiltersHeaderMatchedRoute(t *testing.T) {
 		t.Fatalf("terminal-user weights = %v, want v1=100 only", weights)
 	}
 
-	weights, _, _, err = routeWeightsFromRoutes(resources, "/", nil)
+	weights, _, _, _, err = routeWeightsFromRoutes(resources, "/", nil)
 	if err != nil {
 		t.Fatalf("routeWeightsFromRoutes() fallback error = %v", err)
 	}
@@ -341,6 +501,47 @@ func TestRouteWeightsFromRoutesFiltersHeaderMatchedRoute(t *testing.T) {
 		weights["outbound|9080|v2|reviews.moviereview.svc.cluster.local"] != 20 ||
 		weights["outbound|9080|v3|reviews.moviereview.svc.cluster.local"] != 80 {
 		t.Fatalf("fallback weights = %v, want v2=20 and v3=80", weights)
+	}
+}
+
+func TestRouteWeightsFromRoutesReadsRetryPolicy(t *testing.T) {
+	action := weightedRouteAction(map[string]uint32{
+		"outbound|9080|v1|reviews.moviereview.svc.cluster.local": 100,
+	})
+	action.Route.RetryPolicy = &routev1.RetryPolicy{
+		RetryOn:              "connect-failure,reset,retriable-status-codes",
+		NumRetries:           wrapperspb.UInt32(3),
+		PerTryTimeout:        durationpb.New(250 * time.Millisecond),
+		RetriableStatusCodes: []uint32{500, 503},
+		RetryBackOff: &routev1.RetryPolicy_RetryBackOff{
+			BaseInterval: durationpb.New(100 * time.Millisecond),
+			MaxInterval:  durationpb.New(time.Second),
+		},
+	}
+	resources := []*anypb.Any{mustAnyRouteConfig(t, &routev1.RouteConfiguration{
+		VirtualHosts: []*routev1.VirtualHost{{
+			Routes: []*routev1.Route{{
+				Match:  &routev1.RouteMatch{PathSpecifier: &routev1.RouteMatch_Prefix{Prefix: "/"}},
+				Action: action,
+			}},
+		}},
+	})}
+
+	_, _, _, retry, err := routeWeightsFromRoutes(resources, "/", nil)
+	if err != nil {
+		t.Fatalf("routeWeightsFromRoutes() error = %v", err)
+	}
+	if retry == nil {
+		t.Fatal("retry = nil")
+	}
+	if retry.Attempts != 3 || retry.RetryOn != "connect-failure,reset,retriable-status-codes" {
+		t.Fatalf("retry = %#v", retry)
+	}
+	if !slices.Equal(retry.StatusCodes, []uint32{500, 503}) {
+		t.Fatalf("status codes = %v", retry.StatusCodes)
+	}
+	if retry.PerTryTimeout != "250ms" || retry.Backoff != "100ms" || retry.MaxBackoff != "1s" {
+		t.Fatalf("retry durations = %#v", retry)
 	}
 }
 
@@ -364,7 +565,7 @@ func TestRouteWeightsFromRoutesReadsRequestTimeout(t *testing.T) {
 		}},
 	})}
 
-	weights, _, timeout, err := routeWeightsFromRoutes(resources, "/reviews", nil)
+	weights, _, timeout, _, err := routeWeightsFromRoutes(resources, "/reviews", nil)
 	if err != nil {
 		t.Fatalf("routeWeightsFromRoutes() error = %v", err)
 	}

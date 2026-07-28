@@ -25,7 +25,18 @@ spec:
     name: nginx
     port: 80
   rules:
-  - backendRefs:
+  - retry:
+      attempts: 3
+      codes:
+      - 500
+      - 502
+      - 503
+      - 504
+      backoff: 100ms
+    timeouts:
+      request: 5s
+      backendRequest: 1s
+    backendRefs:
     - name: nginx-v1
       port: 80
       weight: 50
