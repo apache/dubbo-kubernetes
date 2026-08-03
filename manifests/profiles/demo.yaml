@@ -13,9 +13,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# The demo profile installs the full control plane plus the complete
-# observability stack (Prometheus, Grafana, tracing, OpenTelemetry collector).
-# It is intended for evaluation and demos, not production.
+# The demo profile installs the full control plane for evaluation and demos.
+# Optional observability components must be enabled explicitly.
 apiVersion: install.dubbo.apache.org/v1alpha1
 kind: DubboOperator
 metadata:
@@ -26,14 +25,6 @@ spec:
     base:
       enabled: true
     dubbod:
-      enabled: true
-    prometheus:
-      enabled: true
-    grafana:
-      enabled: true
-    tracing:
-      enabled: true
-    otelCollector:
       enabled: true
   values:
     global: {}

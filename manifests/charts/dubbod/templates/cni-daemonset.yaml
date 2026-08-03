@@ -14,30 +14,16 @@
 # limitations under the License.
 
 {{- $defaults := .Values._internal_default_values_not_set | default dict }}
-{{- $defaultGlobal := $defaults.global | default dict }}
-{{- $defaultProxyless := $defaultGlobal.proxyless | default dict }}
-{{- $defaultCNI := $defaultProxyless.cni | default dict }}
-{{- $global := .Values.global | default dict }}
-{{- $proxyless := $global.proxyless | default dict }}
-{{- $cni := $proxyless.cni | default dict }}
-{{- $enabled := false }}
-{{- if hasKey $defaultCNI "enabled" }}
-{{- $enabled = $defaultCNI.enabled }}
-{{- end }}
-{{- if hasKey $cni "enabled" }}
-{{- $enabled = $cni.enabled }}
-{{- end }}
-{{- if $enabled }}
-{{- $image := coalesce $cni.image $defaultCNI.image (printf "ghcr.io/apache/dubbo-kubernetes/dubbod:%s" .Chart.AppVersion) }}
-{{- $binDir := coalesce $cni.binDir $defaultCNI.binDir "/opt/cni/bin" }}
-{{- $confDir := coalesce $cni.confDir $defaultCNI.confDir "/etc/cni/net.d" }}
-{{- $stateDir := coalesce $cni.stateDir $defaultCNI.stateDir "/var/run/dubbo-cni" }}
-{{- $grpcInboundPort := int (coalesce $cni.grpcInboundPort $defaultCNI.grpcInboundPort 15080) }}
-{{- $managedLabel := coalesce $cni.managedLabel $defaultCNI.managedLabel "proxyless.dubbo.apache.org/managed" }}
-{{- $managedLabelValue := coalesce $cni.managedLabelValue $defaultCNI.managedLabelValue "true" }}
-{{- $iptablesPath := coalesce $cni.iptablesPath $defaultCNI.iptablesPath "iptables" }}
-{{- $ipsetPath := coalesce $cni.ipsetPath $defaultCNI.ipsetPath "ipset" }}
-{{- $refreshInterval := coalesce $cni.refreshInterval $defaultCNI.refreshInterval "1m" }}
+{{- $image := coalesce .Values.image $defaults.image (printf "ghcr.io/apache/dubbo-kubernetes/dubbod:%s" .Chart.AppVersion) }}
+{{- $binDir := "/opt/cni/bin" }}
+{{- $confDir := "/etc/cni/net.d" }}
+{{- $stateDir := "/var/run/dubbo-cni" }}
+{{- $grpcInboundPort := 15080 }}
+{{- $managedLabel := "proxyless.dubbo.apache.org/managed" }}
+{{- $managedLabelValue := "true" }}
+{{- $iptablesPath := "iptables" }}
+{{- $ipsetPath := "ipset" }}
+{{- $refreshInterval := "1m" }}
 apiVersion: apps/v1
 kind: DaemonSet
 metadata:
@@ -124,4 +110,3 @@ spec:
           hostPath:
             path: {{ $stateDir | quote }}
             type: DirectoryOrCreate
-{{- end }}

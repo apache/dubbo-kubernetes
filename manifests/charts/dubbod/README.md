@@ -26,7 +26,7 @@ control-plane/CNI image when using a mirror or a locally loaded image:
 ```bash
 helm upgrade --install dubbod ./dubbod-${VERSION}.tgz \
   --namespace dubbo-system \
-  --set-string global.proxyless.cni.image=registry.example.com/dubbod:${VERSION}
+  --set-string image=registry.example.com/dubbod:${VERSION}
 ```
 
 ## Uninstalling the Chart

@@ -20,25 +20,13 @@ _internal_default_values_not_set:
   # a PodDisruptionBudget (minAvailable: 1) is created automatically then.
   replicaCount: 1
 
+  # Shared control-plane/CNI image. An empty value resolves to
+  # ghcr.io/apache/dubbo-kubernetes/dubbod:<Chart.appVersion>.
+  image: ""
+
   global:
     proxy:
       clusterDomain: "cluster.local"
-
-    proxyless:
-      cni:
-        enabled: true
-        # Shared control-plane/CNI image. An empty value resolves to
-        # ghcr.io/apache/dubbo-kubernetes/dubbod:<Chart.appVersion>.
-        image: ""
-        binDir: "/opt/cni/bin"
-        confDir: "/etc/cni/net.d"
-        stateDir: "/var/run/dubbo-cni"
-        grpcInboundPort: 15080
-        managedLabel: "proxyless.dubbo.apache.org/managed"
-        managedLabelValue: "true"
-        iptablesPath: "iptables"
-        ipsetPath: "ipset"
-        refreshInterval: "1m"
 
     statusPort: 26020
 

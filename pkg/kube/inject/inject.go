@@ -212,6 +212,9 @@ func getProxyImage(values map[string]any, defaultImage string) string {
 	if values == nil {
 		return defaultImage
 	}
+	if image, ok := values["image"].(string); ok && image != "" {
+		return image
+	}
 
 	if global, ok := values["global"].(map[string]any); ok {
 		if proxy, ok := global["proxy"].(map[string]any); ok {

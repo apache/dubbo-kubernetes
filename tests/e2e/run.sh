@@ -26,7 +26,6 @@
 #   DUBBOD_REPLICAS control plane replicas      (default: 2, exercises HA)
 #   UPGRADE_FROM_VERSION previous release to install before upgrading (default: 0.4.3)
 #   UPGRADE_FROM_CHART   local previous chart path; skips release download
-#   UPGRADE_FROM_IMAGE   image expected by the previous chart (default: kdubbo/dubbod:debug)
 #   SKIP_BUILD      set to 1 to reuse an already-built ${IMAGE}
 #   KEEP_CLUSTER    set to 1 to keep the kind cluster after the run
 #   KIND            path to the kind binary      (default: kind)
@@ -40,7 +39,6 @@ IMAGE="${IMAGE:-kdubbo/dubbod:debug}"
 DUBBOD_REPLICAS="${DUBBOD_REPLICAS:-2}"
 UPGRADE_FROM_VERSION="${UPGRADE_FROM_VERSION:-0.4.3}"
 UPGRADE_FROM_CHART="${UPGRADE_FROM_CHART:-}"
-UPGRADE_FROM_IMAGE="${UPGRADE_FROM_IMAGE:-kdubbo/dubbod:debug}"
 SYSTEM_NS="dubbo-system"
 APP_NS="e2e"
 KUBECTL=(kubectl --context "kind-${CLUSTER_NAME}")
@@ -105,11 +103,6 @@ if [[ "${SKIP_BUILD:-0}" != "1" ]]; then
   docker build -f "${ROOT}/dubbod/discovery/docker/dockerfile.dubbod" -t "${IMAGE}" "${ROOT}"
 fi
 
-if [[ "${IMAGE}" != "${UPGRADE_FROM_IMAGE}" ]]; then
-  log "tagging ${IMAGE} as ${UPGRADE_FROM_IMAGE} for the previous chart"
-  docker tag "${IMAGE}" "${UPGRADE_FROM_IMAGE}"
-fi
-
 if ! "${KIND}" get clusters 2>/dev/null | grep -qx "${CLUSTER_NAME}"; then
   log "creating kind cluster ${CLUSTER_NAME}"
   KIND_CREATE_ARGS=(create cluster --name "${CLUSTER_NAME}" --wait 120s)
@@ -121,9 +114,6 @@ fi
 
 log "loading ${IMAGE} into kind"
 "${KIND}" load docker-image "${IMAGE}" --name "${CLUSTER_NAME}"
-if [[ "${IMAGE}" != "${UPGRADE_FROM_IMAGE}" ]]; then
-  "${KIND}" load docker-image "${UPGRADE_FROM_IMAGE}" --name "${CLUSTER_NAME}"
-fi
 
 log "installing Gateway API CRDs"
 # Pin to the sigs.k8s.io/gateway-api version in go.mod. HTTPRoute retry is an
@@ -139,20 +129,20 @@ helm upgrade --install dubbo-base "${ROOT}/manifests/charts/base" \
 install_dubbod() {
   local chart="$1"
   local image="$2"
-  # The CNI daemonset needs privileged host access; keep the smoke test to the
-  # control plane itself.
   helm upgrade --install dubbod "${chart}" \
     --kube-context "kind-${CLUSTER_NAME}" \
     -n "${SYSTEM_NS}" \
-    --set global.proxyless.cni.enabled=false \
-    --set-string global.proxyless.cni.image="${image}" \
+    --set-string image="${image}" \
     --set replicaCount="${DUBBOD_REPLICAS}"
 }
 
 prepare_previous_chart
 
 log "installing dubbod ${UPGRADE_FROM_VERSION} chart (${DUBBOD_REPLICAS} replicas)"
-install_dubbod "${PREVIOUS_CHART}" "${UPGRADE_FROM_IMAGE}"
+helm upgrade --install dubbod "${PREVIOUS_CHART}" \
+  --kube-context "kind-${CLUSTER_NAME}" \
+  -n "${SYSTEM_NS}" \
+  --set replicaCount="${DUBBOD_REPLICAS}"
 
 log "waiting for previous dubbod rollout"
 "${KUBECTL[@]}" -n "${SYSTEM_NS}" rollout status deploy/dubbod --timeout=300s \

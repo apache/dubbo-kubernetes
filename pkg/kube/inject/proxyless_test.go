@@ -261,6 +261,15 @@ func assertGRPCInboundContainer(t *testing.T, pod *corev1.Pod) {
 	}
 }
 
+func TestGetProxyImageUsesTopLevelImage(t *testing.T) {
+	values := map[string]any{
+		"image": "registry.example.com/dubbod:test",
+	}
+	if got := getProxyImage(values, "kdubbo/dubbod:debug"); got != "registry.example.com/dubbod:test" {
+		t.Fatalf("getProxyImage() = %q, want registry.example.com/dubbod:test", got)
+	}
+}
+
 func TestAddApplicationContainerConfigInjectsProxylessGRPCContract(t *testing.T) {
 	pod := &corev1.Pod{
 		ObjectMeta: metav1.ObjectMeta{
