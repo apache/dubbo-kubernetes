@@ -257,6 +257,34 @@ jobs:
                 if (pr.merged) {
                   return;
                 }
+
+                const refreshAutoMerge = async () => {
+                  // A fork push can invalidate the previous native auto-merge
+                  // request while the REST field remains populated.
+                  if (pr.auto_merge && pr.mergeable_state !== 'clean') {
+                    try {
+                      await github.graphql(
+                        `mutation($id: ID!) { disablePullRequestAutoMerge(input: {pullRequestId: $id}) { pullRequest { number } } }`,
+                        {id: pr.node_id},
+                      );
+                    } catch (disableErr) {
+                      core.info(`Auto-merge refresh disable skipped: ${disableErr.message}`);
+                    }
+                  }
+                  await github.graphql(
+                    `mutation($id: ID!) { enablePullRequestAutoMerge(input: {pullRequestId: $id, mergeMethod: SQUASH}) { pullRequest { number } } }`,
+                    {id: pr.node_id},
+                  );
+                };
+
+                try {
+                  await refreshAutoMerge();
+                  await reply(`\`/lgtm\` recorded by @${commenter}. GitHub Auto-merge will squash merge the PR after required CI passes.`);
+                  return;
+                } catch (autoMergeErr) {
+                  core.info(`Native auto-merge unavailable: ${autoMergeErr.message}`);
+                }
+
                 try {
                   await github.rest.pulls.merge({
                     owner,
@@ -267,14 +295,7 @@ jobs:
                   });
                   await reply(`Merged on behalf of @${commenter} via \`/lgtm\`.`);
                 } catch (mergeErr) {
-                  core.info(`Merge deferred until CI finishes: ${mergeErr.message}`);
-                  if (!pr.auto_merge) {
-                    await github.graphql(
-                      `mutation($id: ID!) { enablePullRequestAutoMerge(input: {pullRequestId: $id, mergeMethod: SQUASH}) { pullRequest { number } } }`,
-                      {id: pr.node_id},
-                    );
-                  }
-                  await reply(`\`/lgtm\` recorded by @${commenter}. GitHub Auto-merge will squash merge the PR after required CI passes.`);
+                  await reply(`\`/lgtm\` recorded, but merge was not authorized: ${mergeErr.message}`);
                 }
                 return;
               }
