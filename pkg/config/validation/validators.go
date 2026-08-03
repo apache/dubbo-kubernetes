@@ -21,6 +21,7 @@ import (
 	"math"
 	"net"
 	"strings"
+	"time"
 
 	"github.com/apache/dubbo-kubernetes/pkg/config"
 	"github.com/apache/dubbo-kubernetes/pkg/config/constants"
@@ -209,6 +210,55 @@ var ValidateCircuitBreakerPolicy = validateFunc(
 				validatePercent("outlierDetection.maxEjectionPercent", od.GetMaxEjectionPercent()),
 				validatePercent("outlierDetection.minHealthPercent", od.GetMinHealthPercent()),
 			)
+		}
+		return v.Unwrap()
+	})
+
+// ValidateFaultInjectionPolicy checks that a FaultInjectionPolicy is safe and executable.
+var ValidateFaultInjectionPolicy = RegisterValidateFunc("ValidateFaultInjectionPolicy",
+	func(cfg config.Config) (Warning, error) {
+		spec, ok := cfg.Spec.(*networking.FaultInjectionPolicy)
+		if !ok {
+			return nil, fmt.Errorf("cannot cast to FaultInjectionPolicy")
+		}
+		v := Validation{}
+		if len(spec.GetTargetRefs()) == 0 {
+			v = appendValidation(v, fmt.Errorf("targetRefs must not be empty"))
+		}
+		for i, ref := range spec.GetTargetRefs() {
+			if ref == nil {
+				v = appendValidation(v, fmt.Errorf("targetRefs[%d] must not be null", i))
+				continue
+			}
+			if ref.GetKind() != "Service" {
+				v = appendValidation(v, fmt.Errorf("targetRefs[%d].kind %q is not supported; only Service targets are applied", i, ref.GetKind()))
+			}
+			if group := strings.TrimSpace(ref.GetGroup()); group != "" && group != "core" {
+				v = appendValidation(v, fmt.Errorf("targetRefs[%d].group %q is not supported; use the core API group", i, group))
+			}
+			if ref.GetName() == "" {
+				v = appendValidation(v, fmt.Errorf("targetRefs[%d].name must not be empty", i))
+			}
+		}
+		if spec.GetDelay() == nil && spec.GetAbort() == nil {
+			v = appendValidation(v, fmt.Errorf("at least one of delay or abort must be set"))
+		}
+		if delay := spec.GetDelay(); delay != nil {
+			v = appendValidation(v,
+				validatePositiveDuration("delay.fixedDelay", delay.GetFixedDelay()),
+				validateOptionalUInt32Percent("delay.percentage", delay.GetPercentage()),
+			)
+			if delay.GetFixedDelay() == nil {
+				v = appendValidation(v, fmt.Errorf("delay.fixedDelay must be set"))
+			} else if delay.GetFixedDelay().CheckValid() == nil && delay.GetFixedDelay().AsDuration() < time.Millisecond {
+				v = appendValidation(v, fmt.Errorf("delay.fixedDelay must be at least 1ms"))
+			}
+		}
+		if abort := spec.GetAbort(); abort != nil {
+			if status := abort.GetHttpStatus(); status < 400 || status > 599 {
+				v = appendValidation(v, fmt.Errorf("abort.httpStatus must be in range [400, 599], got %d", status))
+			}
+			v = appendValidation(v, validateOptionalUInt32Percent("abort.percentage", abort.GetPercentage()))
 		}
 		return v.Unwrap()
 	})

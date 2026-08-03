@@ -30,7 +30,10 @@ import (
 	"github.com/apache/dubbo-kubernetes/pkg/config/schema/collections"
 	"github.com/apache/dubbo-kubernetes/pkg/config/schema/gvk"
 	"github.com/apache/dubbo-kubernetes/pkg/kube/krt"
+	networking "github.com/kdubbo/api/networking/v1alpha3"
 	route "github.com/kdubbo/xds-api/route/v1"
+	"google.golang.org/protobuf/types/known/durationpb"
+	"google.golang.org/protobuf/types/known/wrapperspb"
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 )
 
@@ -182,6 +185,62 @@ func TestBuildHTTPRouteSetsGatewayAPIRetryPolicy(t *testing.T) {
 	}
 	if got := retry.GetRetryBackOff().GetMaxInterval().AsDuration(); got != time.Second {
 		t.Fatalf("retry backoff max = %v, want 1s", got)
+	}
+}
+
+func TestBuildHTTPRouteSetsServiceFaultInjectionPolicy(t *testing.T) {
+	routeConfig := newServiceAttachedHTTPRouteConfig("reviews-fault", "moviereview", "reviews", 9080)
+	faultConfig := config.Config{
+		Meta: config.Meta{
+			GroupVersionKind: gvk.FaultInjectionPolicy,
+			Name:             "reviews-fault",
+			Namespace:        "moviereview",
+		},
+		Spec: &networking.FaultInjectionPolicy{
+			TargetRefs: []*networking.PolicyTargetReference{{
+				Kind:        "Service",
+				Name:        "reviews",
+				SectionName: "http",
+			}},
+			Delay: &networking.FaultDelay{
+				FixedDelay: durationpb.New(250 * time.Millisecond),
+				Percentage: wrapperspb.UInt32(20),
+			},
+			Abort: &networking.FaultAbort{
+				HttpStatus: 503,
+				Percentage: wrapperspb.UInt32(10),
+			},
+		},
+	}
+	push := newRDSTestPushContext(t, []config.Config{routeConfig, faultConfig}, []*model.Service{
+		newRDSTestService("reviews", "moviereview", "reviews.moviereview.svc.cluster.local", 9080),
+		newRDSTestService("reviews-v1", "moviereview", "reviews-v1.moviereview.svc.cluster.local", 9080),
+		newRDSTestService("reviews-v2", "moviereview", "reviews-v2.moviereview.svc.cluster.local", 9080),
+	})
+
+	rc := buildHTTPRoute(
+		&model.Proxy{ID: "moviepage.moviereview", Type: model.Proxyless},
+		push,
+		"outbound|9080||reviews.moviereview.svc.cluster.local",
+	)
+	if rc == nil {
+		t.Fatal("buildHTTPRoute() returned nil")
+	}
+	fault := rc.VirtualHosts[0].Routes[0].GetRoute().GetFaultPolicy()
+	if fault == nil {
+		t.Fatal("fault policy = nil")
+	}
+	if got := fault.GetDelay().GetFixedDelay().AsDuration(); got != 250*time.Millisecond {
+		t.Fatalf("fixed delay = %v, want 250ms", got)
+	}
+	if got := fault.GetDelay().GetPercentage().GetValue(); got != 20 {
+		t.Fatalf("delay percentage = %d, want 20", got)
+	}
+	if got := fault.GetAbort().GetHttpStatus(); got != 503 {
+		t.Fatalf("abort status = %d, want 503", got)
+	}
+	if got := fault.GetAbort().GetPercentage().GetValue(); got != 10 {
+		t.Fatalf("abort percentage = %d, want 10", got)
 	}
 }
 

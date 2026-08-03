@@ -40,6 +40,7 @@ import (
 	"github.com/apache/dubbo-kubernetes/pkg/xds"
 	meshv1alpha1 "github.com/kdubbo/api/mesh/v1alpha1"
 	"go.uber.org/atomic"
+	"google.golang.org/protobuf/types/known/wrapperspb"
 	"k8s.io/apimachinery/pkg/types"
 )
 
@@ -75,6 +76,7 @@ type PushContext struct {
 	virtualServiceIndex    virtualServiceIndex
 	httpRouteIndex         httpRouteIndex
 	backendTLSPolicyIndex  backendTLSPolicyIndex
+	faultInjectionIndex    faultInjectionPolicyIndex
 	destinationRuleIndex   destinationRuleIndex
 	serviceAccounts        map[serviceAccountKey][]string
 	AuthenticationPolicies *AuthenticationPolicies
@@ -591,6 +593,7 @@ func (ps *PushContext) createNewContext(env *Environment) {
 	ps.initKubernetesGateways(env)
 	ps.initHTTPRoutes(env)
 	ps.initBackendTLSPolicies(env)
+	ps.initFaultInjectionPolicies(env)
 	ps.initAuthenticationPolicies(env)
 }
 
@@ -653,6 +656,14 @@ func (ps *PushContext) updateContext(env *Environment, oldPushContext *PushConte
 	} else {
 		log.Debugf("BackendTLSPolicies unchanged, reusing old BackendTLSPolicy index")
 		ps.backendTLSPolicyIndex = oldPushContext.backendTLSPolicyIndex
+	}
+
+	faultInjectionPoliciesChanged := pushReq != nil && HasConfigsOfKind(pushReq.ConfigsUpdated, kind.FaultInjectionPolicy)
+	if faultInjectionPoliciesChanged {
+		log.Debugf("FaultInjectionPolicies changed, re-initializing FaultInjectionPolicy index")
+		ps.initFaultInjectionPolicies(env)
+	} else {
+		ps.faultInjectionIndex = oldPushContext.faultInjectionIndex
 	}
 
 	authnPoliciesChanged := pushReq != nil && (pushReq.Full || authPolicyKindsChanged(pushReq.ConfigsUpdated))
@@ -900,6 +911,85 @@ func (ps *PushContext) BackendTLSForService(namespace, name string) (BackendTLSS
 	}
 	settings, found := ps.backendTLSPolicyIndex.serviceTLS[backendTLSPolicyServiceKey(namespace, name)]
 	return settings, found
+}
+
+type FaultInjectionSettings struct {
+	Delay           time.Duration
+	DelayPercentage uint32
+	AbortStatus     uint32
+	AbortPercentage uint32
+}
+
+type faultInjectionPolicyIndex struct {
+	serviceFaults map[string]FaultInjectionSettings
+}
+
+func (ps *PushContext) initFaultInjectionPolicies(env *Environment) {
+	policies := sortConfigByCreationTime(env.List(gvk.FaultInjectionPolicy, NamespaceAll))
+	serviceFaults := map[string]FaultInjectionSettings{}
+	for _, cfg := range policies {
+		spec, ok := cfg.Spec.(*networking.FaultInjectionPolicy)
+		if !ok || spec == nil {
+			continue
+		}
+		settings := FaultInjectionSettings{}
+		if delay := spec.GetDelay(); delay != nil {
+			if value := delay.GetFixedDelay(); value != nil && value.CheckValid() == nil && value.AsDuration() > 0 {
+				settings.Delay = value.AsDuration()
+				settings.DelayPercentage = faultPercentage(delay.GetPercentage())
+			}
+		}
+		if abort := spec.GetAbort(); abort != nil && abort.GetHttpStatus() >= 400 && abort.GetHttpStatus() <= 599 {
+			settings.AbortStatus = abort.GetHttpStatus()
+			settings.AbortPercentage = faultPercentage(abort.GetPercentage())
+		}
+		if settings.Delay == 0 && settings.AbortStatus == 0 {
+			continue
+		}
+		for _, target := range spec.GetTargetRefs() {
+			if !isFaultInjectionServiceTarget(target) {
+				continue
+			}
+			key := faultInjectionServiceKey(cfg.Namespace, target.GetName(), target.GetSectionName())
+			if _, found := serviceFaults[key]; !found {
+				serviceFaults[key] = settings
+			}
+		}
+	}
+	ps.faultInjectionIndex.serviceFaults = serviceFaults
+	log.Debugf("indexed FaultInjectionPolicies for %d service targets", len(serviceFaults))
+}
+
+func (ps *PushContext) FaultInjectionForService(namespace, name, portName string) (FaultInjectionSettings, bool) {
+	if ps == nil || ps.faultInjectionIndex.serviceFaults == nil {
+		return FaultInjectionSettings{}, false
+	}
+	if portName != "" {
+		if settings, found := ps.faultInjectionIndex.serviceFaults[faultInjectionServiceKey(namespace, name, portName)]; found {
+			return settings, true
+		}
+	}
+	settings, found := ps.faultInjectionIndex.serviceFaults[faultInjectionServiceKey(namespace, name, "")]
+	return settings, found
+}
+
+func faultPercentage(value *wrapperspb.UInt32Value) uint32 {
+	if value == nil {
+		return 100
+	}
+	return value.GetValue()
+}
+
+func isFaultInjectionServiceTarget(target *networking.PolicyTargetReference) bool {
+	if target == nil || target.GetName() == "" {
+		return false
+	}
+	group := strings.TrimSpace(target.GetGroup())
+	return (group == "" || group == "core") && target.GetKind() == "Service"
+}
+
+func faultInjectionServiceKey(namespace, name, section string) string {
+	return namespace + "/" + name + "#" + section
 }
 
 func supportsSystemBackendTLS(spec *sigsk8siogatewayapiapisv1.BackendTLSPolicySpec) bool {

@@ -161,6 +161,142 @@ metadata:
     dubbo: networking
     heritage: Tiller
     release: dubbo
+  name: faultinjectionpolicies.networking.dubbo.apache.org
+spec:
+  group: networking.dubbo.apache.org
+  names:
+    categories:
+    - dubbo
+    - networking
+    kind: FaultInjectionPolicy
+    listKind: FaultInjectionPolicyList
+    plural: faultinjectionpolicies
+    shortNames:
+    - fip
+    singular: faultinjectionpolicy
+  scope: Namespaced
+  versions:
+  - additionalPrinterColumns:
+    - description: Gateway API targets.
+      jsonPath: .spec.targetRefs[*].name
+      name: Targets
+      type: string
+    - description: CreationTimestamp is a timestamp representing the server time when
+        this object was created.
+      jsonPath: .metadata.creationTimestamp
+      name: Age
+      type: date
+    name: v1alpha3
+    schema:
+      openAPIV3Schema:
+        properties:
+          spec:
+            description: 'Gateway API policy attachment for controlled service faults.
+              See more details at: '
+            properties:
+              abort:
+                description: Abort terminates a matching request before it reaches
+                  the application.
+                properties:
+                  httpStatus:
+                    description: HTTP status returned by an L7 data plane.
+                    maximum: 599
+                    minimum: 400
+                    type: integer
+                  percentage:
+                    description: Percentage of requests or connections affected, from
+                      0 through 100.
+                    maximum: 100
+                    minimum: 0
+                    nullable: true
+                    type: integer
+                required:
+                - httpStatus
+                type: object
+              delay:
+                description: Delay pauses a matching request or connection before
+                  forwarding.
+                properties:
+                  fixedDelay:
+                    description: Fixed delay applied when this fault is selected.
+                    type: string
+                    x-kubernetes-validations:
+                    - message: must be a valid duration greater than 1ms
+                      rule: duration(self) >= duration('1ms')
+                  percentage:
+                    description: Percentage of requests or connections affected, from
+                      0 through 100.
+                    maximum: 100
+                    minimum: 0
+                    nullable: true
+                    type: integer
+                required:
+                - fixedDelay
+                type: object
+              targetRefs:
+                description: Gateway API policy targets.
+                items:
+                  properties:
+                    group:
+                      description: API group of the target.
+                      type: string
+                    kind:
+                      description: Kind of the target.
+                      type: string
+                    name:
+                      description: Name of the target object.
+                      type: string
+                    sectionName:
+                      description: Optional section name for future per-port attachment.
+                      type: string
+                  required:
+                  - kind
+                  - name
+                  type: object
+                type: array
+            required:
+            - targetRefs
+            type: object
+            x-kubernetes-validations:
+            - message: at least one of delay or abort must be set
+              rule: has(self.delay) || has(self.abort)
+          status:
+            properties:
+              conditions:
+                items:
+                  properties:
+                    observedGeneration:
+                      anyOf:
+                      - type: integer
+                      - type: string
+                      x-kubernetes-int-or-string: true
+                    reason:
+                      type: string
+                    status:
+                      type: string
+                    type:
+                      type: string
+                  type: object
+                type: array
+            type: object
+            x-kubernetes-preserve-unknown-fields: true
+        type: object
+    served: true
+    storage: true
+    subresources:
+      status: {}
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    "helm.sh/resource-policy": keep
+  labels:
+    app: dubbo
+    chart: dubbo
+    dubbo: networking
+    heritage: Tiller
+    release: dubbo
   name: serviceentries.networking.dubbo.apache.org
 spec:
   group: networking.dubbo.apache.org

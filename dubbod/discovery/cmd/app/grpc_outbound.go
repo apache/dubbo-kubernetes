@@ -21,6 +21,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"math/rand/v2"
 	"net"
 	"net/http"
 	"os"
@@ -53,6 +54,7 @@ import (
 	"google.golang.org/protobuf/types/known/anypb"
 	"google.golang.org/protobuf/types/known/durationpb"
 	"google.golang.org/protobuf/types/known/structpb"
+	"google.golang.org/protobuf/types/known/wrapperspb"
 )
 
 type grpcOutboundOptions struct {
@@ -103,6 +105,7 @@ type xdsRouteSnapshot struct {
 	Port         int              `json:"port"`
 	Timeout      string           `json:"timeout,omitempty"`
 	Retry        *xdsRetryPolicy  `json:"retry,omitempty"`
+	Fault        *xdsFaultPolicy  `json:"fault,omitempty"`
 	Destinations []xdsDestination `json:"destinations"`
 }
 
@@ -113,6 +116,13 @@ type xdsRetryPolicy struct {
 	PerTryTimeout string   `json:"perTryTimeout,omitempty"`
 	Backoff       string   `json:"backoff,omitempty"`
 	MaxBackoff    string   `json:"maxBackoff,omitempty"`
+}
+
+type xdsFaultPolicy struct {
+	Delay           string `json:"delay,omitempty"`
+	DelayPercentage uint32 `json:"delayPercentage,omitempty"`
+	AbortStatus     uint32 `json:"abortStatus,omitempty"`
+	AbortPercentage uint32 `json:"abortPercentage,omitempty"`
 }
 
 type sampleADSClient struct {
@@ -130,6 +140,7 @@ type sampleADSClient struct {
 	route         map[string]uint32
 	routeTimeout  time.Duration
 	routeRetry    *xdsRetryPolicy
+	routeFault    *xdsFaultPolicy
 	endpoints     map[string][]xdsEndpoint
 	clusterTLS    map[string]*tlsv1.UpstreamTlsContext
 	updates       chan struct{}
@@ -439,7 +450,7 @@ func (c *sampleADSClient) handleResponse(resp *discovery.DiscoveryResponse) erro
 			return c.subscribe(v1.RouteType, routeNames)
 		}
 	case v1.RouteType:
-		weights, clusters, timeout, retry, err := routeWeightsFromRoutes(resp.Resources, c.path, c.requestHeaders)
+		weights, clusters, timeout, retry, fault, err := routeWeightsFromRoutes(resp.Resources, c.path, c.requestHeaders)
 		if err != nil {
 			return err
 		}
@@ -447,6 +458,7 @@ func (c *sampleADSClient) handleResponse(resp *discovery.DiscoveryResponse) erro
 		c.route = weights
 		c.routeTimeout = timeout
 		c.routeRetry = retry
+		c.routeFault = fault
 		c.mu.Unlock()
 		c.notify()
 		if len(clusters) > 0 {
@@ -526,6 +538,7 @@ func (c *sampleADSClient) readySnapshot(expected map[string]uint32) (xdsRouteSna
 		snapshot.Timeout = c.routeTimeout.String()
 	}
 	snapshot.Retry = cloneRetryPolicy(c.routeRetry)
+	snapshot.Fault = cloneFaultPolicy(c.routeFault)
 	for clusterName, weight := range c.route {
 		if weight == 0 {
 			continue
@@ -584,12 +597,12 @@ func routeNamesFromListeners(resources []*anypb.Any) ([]string, error) {
 	return sortedUnique(out), nil
 }
 
-func routeWeightsFromRoutes(resources []*anypb.Any, requestPath string, requestHeaders http.Header) (map[string]uint32, []string, time.Duration, *xdsRetryPolicy, error) {
+func routeWeightsFromRoutes(resources []*anypb.Any, requestPath string, requestHeaders http.Header) (map[string]uint32, []string, time.Duration, *xdsRetryPolicy, *xdsFaultPolicy, error) {
 	weights := map[string]uint32{}
 	for _, resource := range resources {
 		rc := &routev1.RouteConfiguration{}
 		if err := proto.Unmarshal(resource.Value, rc); err != nil {
-			return nil, nil, 0, nil, err
+			return nil, nil, 0, nil, nil, err
 		}
 		for _, vh := range rc.GetVirtualHosts() {
 			for _, rt := range vh.GetRoutes() {
@@ -598,11 +611,11 @@ func routeWeightsFromRoutes(resources []*anypb.Any, requestPath string, requestH
 				}
 				action := rt.GetRoute()
 				addRouteActionWeights(weights, action)
-				return weights, sortedWeightClusterNames(weights), routeActionTimeout(action), routeActionRetryPolicy(action), nil
+				return weights, sortedWeightClusterNames(weights), routeActionTimeout(action), routeActionRetryPolicy(action), routeActionFaultPolicy(action), nil
 			}
 		}
 	}
-	return weights, sortedWeightClusterNames(weights), 0, nil, nil
+	return weights, sortedWeightClusterNames(weights), 0, nil, nil, nil
 }
 
 func routeActionTimeout(action *routev1.RouteAction) time.Duration {
@@ -656,6 +669,41 @@ func cloneRetryPolicy(policy *xdsRetryPolicy) *xdsRetryPolicy {
 	}
 	cloned := *policy
 	cloned.StatusCodes = append([]uint32(nil), policy.StatusCodes...)
+	return &cloned
+}
+
+func routeActionFaultPolicy(action *routev1.RouteAction) *xdsFaultPolicy {
+	if action == nil || action.GetFaultPolicy() == nil {
+		return nil
+	}
+	fault := action.GetFaultPolicy()
+	out := &xdsFaultPolicy{}
+	if delay := fault.GetDelay(); delay != nil && positiveProtoDuration(delay.GetFixedDelay()) > 0 {
+		out.Delay = delay.GetFixedDelay().AsDuration().String()
+		out.DelayPercentage = percentageValue(delay.GetPercentage())
+	}
+	if abort := fault.GetAbort(); abort != nil && abort.GetHttpStatus() != 0 {
+		out.AbortStatus = abort.GetHttpStatus()
+		out.AbortPercentage = percentageValue(abort.GetPercentage())
+	}
+	if out.Delay == "" && out.AbortStatus == 0 {
+		return nil
+	}
+	return out
+}
+
+func percentageValue(value *wrapperspb.UInt32Value) uint32 {
+	if value == nil {
+		return 100
+	}
+	return value.GetValue()
+}
+
+func cloneFaultPolicy(policy *xdsFaultPolicy) *xdsFaultPolicy {
+	if policy == nil {
+		return nil
+	}
+	cloned := *policy
 	return &cloned
 }
 
@@ -878,6 +926,23 @@ func runSampleRequestsWithOutput(ctx context.Context, adsClient *sampleADSClient
 }
 
 func runSampleRequest(ctx context.Context, adsClient *sampleADSClient, clients *sampleRequestClients, picker *smoothWeightedPicker, snapshot xdsRouteSnapshot) (string, error) {
+	if fault := snapshot.Fault; fault != nil {
+		if delay, ok := routeTimeoutDuration(fault.Delay); ok && faultPercentageMatches(fault.DelayPercentage) {
+			timer := time.NewTimer(delay)
+			select {
+			case <-ctx.Done():
+				if !timer.Stop() {
+					<-timer.C
+				}
+				return "", ctx.Err()
+			case <-timer.C:
+			}
+		}
+		if fault.AbortStatus != 0 && faultPercentageMatches(fault.AbortPercentage) {
+			return "", fmt.Errorf("fault injected HTTP status %d", fault.AbortStatus)
+		}
+	}
+
 	retry := snapshot.Retry
 	maxRetries := uint32(0)
 	if retry != nil {
@@ -949,6 +1014,17 @@ func runSampleRequest(ctx context.Context, adsClient *sampleADSClient, clients *
 		return strings.TrimSpace(string(body)), nil
 	}
 	return "", lastErr
+}
+
+func faultPercentageMatches(percentage uint32) bool {
+	switch {
+	case percentage == 0:
+		return false
+	case percentage >= 100:
+		return true
+	default:
+		return rand.Uint32N(100) < percentage
+	}
 }
 
 func retryAllowsTransportFailure(policy *xdsRetryPolicy) bool {

@@ -240,7 +240,7 @@ func proxylessGRPCRuntimeConfigNeedsUpdate(req *discoverymodel.PushRequest) bool
 	}
 	for cfg := range req.ConfigsUpdated {
 		switch cfg.Kind {
-		case kind.HTTPRoute, kind.BackendTLSPolicy, kind.CircuitBreakerPolicy, kind.PeerAuthentication, kind.RequestAuthentication, kind.AuthorizationPolicy, kind.Service, kind.EndpointSlice, kind.Endpoints, kind.Pod, kind.Namespace:
+		case kind.HTTPRoute, kind.BackendTLSPolicy, kind.CircuitBreakerPolicy, kind.FaultInjectionPolicy, kind.PeerAuthentication, kind.RequestAuthentication, kind.AuthorizationPolicy, kind.Service, kind.EndpointSlice, kind.Endpoints, kind.Pod, kind.Namespace:
 			return true
 		}
 	}
@@ -409,9 +409,25 @@ type proxylessGRPCServiceRuntimeConfig struct {
 }
 
 type proxylessGRPCPortRuntimeConfig struct {
-	Name     string `json:"name,omitempty"`
-	Port     int    `json:"port"`
-	MTLSMode string `json:"mtlsMode,omitempty"`
+	Name     string                           `json:"name,omitempty"`
+	Port     int                              `json:"port"`
+	MTLSMode string                           `json:"mtlsMode,omitempty"`
+	Fault    *proxylessGRPCFaultRuntimeConfig `json:"fault,omitempty"`
+}
+
+type proxylessGRPCFaultRuntimeConfig struct {
+	Delay *proxylessGRPCFaultDelayRuntimeConfig `json:"delay,omitempty"`
+	Abort *proxylessGRPCFaultAbortRuntimeConfig `json:"abort,omitempty"`
+}
+
+type proxylessGRPCFaultDelayRuntimeConfig struct {
+	FixedDelay string `json:"fixedDelay"`
+	Percentage uint32 `json:"percentage"`
+}
+
+type proxylessGRPCFaultAbortRuntimeConfig struct {
+	HTTPStatus uint32 `json:"httpStatus"`
+	Percentage uint32 `json:"percentage"`
 }
 
 type proxylessGRPCRouteRuntimeConfig struct {
@@ -740,11 +756,36 @@ func buildRuntimeServiceConfig(push *discoverymodel.PushContext, endpointIndex *
 			Name:     port.Name,
 			Port:     port.Port,
 			MTLSMode: runtimeInboundMTLSMode(push, svc.Attributes.Namespace, port.Port),
+			Fault:    runtimeFaultInjection(push, svc.Attributes.Namespace, svc.Attributes.Name, port.Name),
 		})
 		cfg.Endpoints = append(cfg.Endpoints, runtimeEndpointsForService(endpointIndex, svc, port.Port, nil)...)
 	}
 	sortRuntimeEndpoints(cfg.Endpoints)
 	return cfg
+}
+
+func runtimeFaultInjection(push *discoverymodel.PushContext, namespace, name, portName string) *proxylessGRPCFaultRuntimeConfig {
+	settings, found := push.FaultInjectionForService(namespace, name, portName)
+	if !found {
+		return nil
+	}
+	fault := &proxylessGRPCFaultRuntimeConfig{}
+	if settings.Delay > 0 {
+		fault.Delay = &proxylessGRPCFaultDelayRuntimeConfig{
+			FixedDelay: settings.Delay.String(),
+			Percentage: settings.DelayPercentage,
+		}
+	}
+	if settings.AbortStatus != 0 {
+		fault.Abort = &proxylessGRPCFaultAbortRuntimeConfig{
+			HTTPStatus: settings.AbortStatus,
+			Percentage: settings.AbortPercentage,
+		}
+	}
+	if fault.Delay == nil && fault.Abort == nil {
+		return nil
+	}
+	return fault
 }
 
 func buildRuntimeRouteConfig(push *discoverymodel.PushContext, endpointIndex *discoverymodel.EndpointIndex, svc *discoverymodel.Service, port int) proxylessGRPCRouteRuntimeConfig {

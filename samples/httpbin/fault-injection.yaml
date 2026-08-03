@@ -1,0 +1,15 @@
+apiVersion: networking.dubbo.apache.org/v1alpha3
+kind: FaultInjectionPolicy
+metadata:
+  name: httpbin-fault-injection
+spec:
+  targetRefs:
+  - group: ""
+    kind: Service
+    name: httpbin
+  delay:
+    fixedDelay: 250ms
+    percentage: 20
+  abort:
+    httpStatus: 503
+    percentage: 10

@@ -21,6 +21,7 @@ import (
 	"net/url"
 
 	"google.golang.org/protobuf/types/known/durationpb"
+	"google.golang.org/protobuf/types/known/wrapperspb"
 	"k8s.io/apimachinery/pkg/util/validation"
 
 	"github.com/apache/dubbo-kubernetes/pkg/config"
@@ -131,6 +132,16 @@ func validatePositiveDuration(name string, d *durationpb.Duration) error {
 func validatePercent(name string, val int32) error {
 	if val < 0 || val > 100 {
 		return fmt.Errorf("%s must be in range [0, 100], got %d", name, val)
+	}
+	return nil
+}
+
+func validateOptionalUInt32Percent(name string, val *wrapperspb.UInt32Value) error {
+	if val == nil {
+		return nil
+	}
+	if value := val.GetValue(); value > 100 {
+		return fmt.Errorf("%s must be in range [0, 100], got %d", name, value)
 	}
 	return nil
 }

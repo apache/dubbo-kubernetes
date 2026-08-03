@@ -17,7 +17,9 @@
 package validation
 
 import (
+	"net/http"
 	"testing"
+	"time"
 
 	"google.golang.org/protobuf/types/known/durationpb"
 	"google.golang.org/protobuf/types/known/wrapperspb"
@@ -288,6 +290,91 @@ func TestValidateCircuitBreakerPolicy(t *testing.T) {
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			_, err := ValidateCircuitBreakerPolicy(makeConfig(tc.spec))
+			if (err != nil) != tc.wantErr {
+				t.Fatalf("got err=%v, wantErr=%v", err, tc.wantErr)
+			}
+		})
+	}
+}
+
+func TestValidateFaultInjectionPolicy(t *testing.T) {
+	validRef := []*networking.PolicyTargetReference{{Kind: "Service", Name: "backend"}}
+	cases := []struct {
+		name    string
+		spec    *networking.FaultInjectionPolicy
+		wantErr bool
+	}{
+		{
+			name: "delay and abort",
+			spec: &networking.FaultInjectionPolicy{
+				TargetRefs: validRef,
+				Delay: &networking.FaultDelay{
+					FixedDelay: durationpb.New(time.Second),
+					Percentage: wrapperspb.UInt32(25),
+				},
+				Abort: &networking.FaultAbort{
+					HttpStatus: http.StatusServiceUnavailable,
+					Percentage: wrapperspb.UInt32(10),
+				},
+			},
+		},
+		{
+			name:    "no target refs",
+			spec:    &networking.FaultInjectionPolicy{Delay: &networking.FaultDelay{FixedDelay: durationpb.New(time.Second)}},
+			wantErr: true,
+		},
+		{
+			name: "unsupported target",
+			spec: &networking.FaultInjectionPolicy{
+				TargetRefs: []*networking.PolicyTargetReference{{Kind: "Gateway", Name: "edge"}},
+				Abort:      &networking.FaultAbort{HttpStatus: http.StatusServiceUnavailable},
+			},
+			wantErr: true,
+		},
+		{
+			name:    "no fault",
+			spec:    &networking.FaultInjectionPolicy{TargetRefs: validRef},
+			wantErr: true,
+		},
+		{
+			name: "invalid delay",
+			spec: &networking.FaultInjectionPolicy{
+				TargetRefs: validRef,
+				Delay:      &networking.FaultDelay{FixedDelay: durationpb.New(-time.Second)},
+			},
+			wantErr: true,
+		},
+		{
+			name: "delay below CRD minimum",
+			spec: &networking.FaultInjectionPolicy{
+				TargetRefs: validRef,
+				Delay:      &networking.FaultDelay{FixedDelay: durationpb.New(time.Microsecond)},
+			},
+			wantErr: true,
+		},
+		{
+			name: "invalid abort status",
+			spec: &networking.FaultInjectionPolicy{
+				TargetRefs: validRef,
+				Abort:      &networking.FaultAbort{HttpStatus: http.StatusOK},
+			},
+			wantErr: true,
+		},
+		{
+			name: "invalid percentage",
+			spec: &networking.FaultInjectionPolicy{
+				TargetRefs: validRef,
+				Abort: &networking.FaultAbort{
+					HttpStatus: http.StatusServiceUnavailable,
+					Percentage: wrapperspb.UInt32(101),
+				},
+			},
+			wantErr: true,
+		},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			_, err := ValidateFaultInjectionPolicy(makeConfig(tc.spec))
 			if (err != nil) != tc.wantErr {
 				t.Fatalf("got err=%v, wantErr=%v", err, tc.wantErr)
 			}
