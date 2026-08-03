@@ -35,16 +35,22 @@ on:
 permissions:
   contents: read
   issues: write
-  pull-requests: read
+  pull-requests: write
   statuses: write
 
 jobs:
   approval:
     name: Publish Maintainer Approval
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-slim
     timeout-minutes: 5
     if: github.repository == 'apache/dubbo-kubernetes'
     steps:
+      - name: Apply PR labels
+        if: github.event_name == 'pull_request_target'
+        uses: actions/labeler@b8dd2d9be0f68b860e7dae5dae7d772984eacd6d # v6.2.0
+        with:
+          repo-token: ${{ github.token }}
+
       - name: Publish approval status
         uses: actions/github-script@v7
         with:
