@@ -56,8 +56,7 @@ jobs:
     timeout-minutes: 10
     if: |
       github.event_name == 'issue_comment' &&
-      github.repository == 'apache/dubbo-kubernetes' &&
-      startsWith(github.event.comment.body, '/')
+      github.repository == 'apache/dubbo-kubernetes'
     env:
       BOT_APP_ID: ${{ secrets.BOT_APP_ID }}
     steps:
