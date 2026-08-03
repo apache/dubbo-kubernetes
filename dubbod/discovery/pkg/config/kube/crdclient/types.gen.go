@@ -50,6 +50,11 @@ func create(c kube.Client, cfg config.Config, objMeta metav1.ObjectMeta) (metav1
 			ObjectMeta: objMeta,
 			Spec:       *(cfg.Spec.(*githubcomkdubboapinetworkingv1alpha3.CircuitBreakerPolicy)),
 		}, metav1.CreateOptions{})
+	case gvk.FaultInjectionPolicy:
+		return c.Dubbo().NetworkingV1alpha3().FaultInjectionPolicies(cfg.Namespace).Create(context.TODO(), &apigithubcomapachedubbokubernetesapinetworkingv1alpha3.FaultInjectionPolicy{
+			ObjectMeta: objMeta,
+			Spec:       *(cfg.Spec.(*githubcomkdubboapinetworkingv1alpha3.FaultInjectionPolicy)),
+		}, metav1.CreateOptions{})
 	case gvk.GatewayClass:
 		return c.GatewayAPI().GatewayV1().GatewayClasses().Create(context.TODO(), &sigsk8siogatewayapiapisv1.GatewayClass{
 			ObjectMeta: objMeta,
@@ -117,6 +122,11 @@ func update(c kube.Client, cfg config.Config, objMeta metav1.ObjectMeta) (metav1
 			ObjectMeta: objMeta,
 			Spec:       *(cfg.Spec.(*githubcomkdubboapinetworkingv1alpha3.CircuitBreakerPolicy)),
 		}, metav1.UpdateOptions{})
+	case gvk.FaultInjectionPolicy:
+		return c.Dubbo().NetworkingV1alpha3().FaultInjectionPolicies(cfg.Namespace).Update(context.TODO(), &apigithubcomapachedubbokubernetesapinetworkingv1alpha3.FaultInjectionPolicy{
+			ObjectMeta: objMeta,
+			Spec:       *(cfg.Spec.(*githubcomkdubboapinetworkingv1alpha3.FaultInjectionPolicy)),
+		}, metav1.UpdateOptions{})
 	case gvk.GatewayClass:
 		return c.GatewayAPI().GatewayV1().GatewayClasses().Update(context.TODO(), &sigsk8siogatewayapiapisv1.GatewayClass{
 			ObjectMeta: objMeta,
@@ -181,6 +191,11 @@ func updateStatus(c kube.Client, cfg config.Config, objMeta metav1.ObjectMeta) (
 		}, metav1.UpdateOptions{})
 	case gvk.CircuitBreakerPolicy:
 		return c.Dubbo().NetworkingV1alpha3().CircuitBreakerPolicies(cfg.Namespace).UpdateStatus(context.TODO(), &apigithubcomapachedubbokubernetesapinetworkingv1alpha3.CircuitBreakerPolicy{
+			ObjectMeta: objMeta,
+			Status:     *(cfg.Status.(*githubcomkdubboapimetav1alpha1.DubboStatus)),
+		}, metav1.UpdateOptions{})
+	case gvk.FaultInjectionPolicy:
+		return c.Dubbo().NetworkingV1alpha3().FaultInjectionPolicies(cfg.Namespace).UpdateStatus(context.TODO(), &apigithubcomapachedubbokubernetesapinetworkingv1alpha3.FaultInjectionPolicy{
 			ObjectMeta: objMeta,
 			Status:     *(cfg.Status.(*githubcomkdubboapimetav1alpha1.DubboStatus)),
 		}, metav1.UpdateOptions{})
@@ -278,6 +293,21 @@ func patch(c kube.Client, orig config.Config, origMeta metav1.ObjectMeta, mod co
 			return nil, err
 		}
 		return c.Dubbo().NetworkingV1alpha3().CircuitBreakerPolicies(orig.Namespace).
+			Patch(context.TODO(), orig.Name, typ, patchBytes, metav1.PatchOptions{FieldManager: "pilot-discovery"})
+	case gvk.FaultInjectionPolicy:
+		oldRes := &apigithubcomapachedubbokubernetesapinetworkingv1alpha3.FaultInjectionPolicy{
+			ObjectMeta: origMeta,
+			Spec:       *(orig.Spec.(*githubcomkdubboapinetworkingv1alpha3.FaultInjectionPolicy)),
+		}
+		modRes := &apigithubcomapachedubbokubernetesapinetworkingv1alpha3.FaultInjectionPolicy{
+			ObjectMeta: modMeta,
+			Spec:       *(mod.Spec.(*githubcomkdubboapinetworkingv1alpha3.FaultInjectionPolicy)),
+		}
+		patchBytes, err := genPatchBytes(oldRes, modRes, typ)
+		if err != nil {
+			return nil, err
+		}
+		return c.Dubbo().NetworkingV1alpha3().FaultInjectionPolicies(orig.Namespace).
 			Patch(context.TODO(), orig.Name, typ, patchBytes, metav1.PatchOptions{FieldManager: "pilot-discovery"})
 	case gvk.GatewayClass:
 		oldRes := &sigsk8siogatewayapiapisv1.GatewayClass{
@@ -431,6 +461,8 @@ func delete(c kube.Client, typ config.GroupVersionKind, name, namespace string, 
 		return c.GatewayAPI().GatewayV1().BackendTLSPolicies(namespace).Delete(context.TODO(), name, deleteOptions)
 	case gvk.CircuitBreakerPolicy:
 		return c.Dubbo().NetworkingV1alpha3().CircuitBreakerPolicies(namespace).Delete(context.TODO(), name, deleteOptions)
+	case gvk.FaultInjectionPolicy:
+		return c.Dubbo().NetworkingV1alpha3().FaultInjectionPolicies(namespace).Delete(context.TODO(), name, deleteOptions)
 	case gvk.GatewayClass:
 		return c.GatewayAPI().GatewayV1().GatewayClasses().Delete(context.TODO(), name, deleteOptions)
 	case gvk.HTTPRoute:
@@ -618,6 +650,25 @@ var translationMap = map[config.GroupVersionKind]func(r runtime.Object) config.C
 				Generation:        obj.Generation,
 			},
 			Spec: obj,
+		}
+	},
+	gvk.FaultInjectionPolicy: func(r runtime.Object) config.Config {
+		obj := r.(*apigithubcomapachedubbokubernetesapinetworkingv1alpha3.FaultInjectionPolicy)
+		return config.Config{
+			Meta: config.Meta{
+				GroupVersionKind:  gvk.FaultInjectionPolicy,
+				Name:              obj.Name,
+				Namespace:         obj.Namespace,
+				Labels:            obj.Labels,
+				Annotations:       obj.Annotations,
+				ResourceVersion:   obj.ResourceVersion,
+				CreationTimestamp: obj.CreationTimestamp.Time,
+				OwnerReferences:   obj.OwnerReferences,
+				UID:               string(obj.UID),
+				Generation:        obj.Generation,
+			},
+			Spec:   &obj.Spec,
+			Status: &obj.Status,
 		}
 	},
 	gvk.GatewayClass: func(r runtime.Object) config.Config {

@@ -96,8 +96,9 @@ func buildHTTPRoute(node *model.Proxy, push *model.PushContext, routeName string
 		}
 		domains = append(domains, "*") // Wildcard for any domain - LEAST SPECIFIC
 
+		faultPolicy := serviceFaultPolicy(push, svc, parsedPort)
 		outboundRoutes := []*route.Route{
-			defaultSingleClusterRoute(routeName),
+			defaultSingleClusterRoute(routeName, faultPolicy),
 		}
 
 		if node.IsRouter() {
@@ -136,7 +137,7 @@ func buildHTTPRoute(node *model.Proxy, push *model.PushContext, routeName string
 					}
 				}
 
-				if routes := buildRoutesFromGatewayHTTPRoute(httpRoutes, host.Name("*"), parsedPort); len(routes) > 0 {
+				if routes := buildRoutesFromGatewayHTTPRoute(httpRoutes, host.Name("*"), parsedPort, faultPolicy); len(routes) > 0 {
 					log.Infof("built %d routes from Gateway API HTTPRoute", len(routes))
 					outboundRoutes = routes
 				} else {
@@ -145,7 +146,7 @@ func buildHTTPRoute(node *model.Proxy, push *model.PushContext, routeName string
 			}
 		} else if httpRoutes := filterHTTPRoutesByService(push.HTTPRouteForHost(host.Name(hostStr)), svc, parsedPort); len(httpRoutes) > 0 {
 			log.Infof("found %d service-attached HTTPRoute(s) for host %s", len(httpRoutes), hostStr)
-			if routes := buildRoutesFromGatewayHTTPRoute(httpRoutes, host.Name(hostStr), parsedPort); len(routes) > 0 {
+			if routes := buildRoutesFromGatewayHTTPRoute(httpRoutes, host.Name(hostStr), parsedPort, faultPolicy); len(routes) > 0 {
 				log.Infof("built %d routes from service-attached HTTPRoute for host %s", len(routes), hostStr)
 				outboundRoutes = routes
 			} else {
@@ -257,7 +258,7 @@ func buildHTTPRoute(node *model.Proxy, push *model.PushContext, routeName string
 				}
 			}
 
-			if routes := buildRoutesFromGatewayHTTPRoute(httpRoutes, host.Name("*"), parsedPort); len(routes) > 0 {
+			if routes := buildRoutesFromGatewayHTTPRoute(httpRoutes, host.Name("*"), parsedPort, nil); len(routes) > 0 {
 				log.Infof("Gateway Pod inbound listener built %d routes from HTTPRoute", len(routes))
 				outboundRoutes = routes
 			} else {
@@ -313,7 +314,7 @@ func buildHTTPRoute(node *model.Proxy, push *model.PushContext, routeName string
 	}
 }
 
-func defaultSingleClusterRoute(clusterName string) *route.Route {
+func defaultSingleClusterRoute(clusterName string, faultPolicy *route.FaultPolicy) *route.Route {
 	return &route.Route{
 		Match: &route.RouteMatch{
 			PathSpecifier: &route.RouteMatch_Prefix{
@@ -325,13 +326,14 @@ func defaultSingleClusterRoute(clusterName string) *route.Route {
 				ClusterSpecifier: &route.RouteAction_Cluster{
 					Cluster: clusterName,
 				},
+				FaultPolicy: faultPolicy,
 			},
 		},
 	}
 }
 
 // buildRoutesFromGatewayHTTPRoute converts Gateway API HTTPRoute resources to XDS Route configurations
-func buildRoutesFromGatewayHTTPRoute(httpRoutes []config.Config, hostName host.Name, defaultPort int) []*route.Route {
+func buildRoutesFromGatewayHTTPRoute(httpRoutes []config.Config, hostName host.Name, defaultPort int, faultPolicy *route.FaultPolicy) []*route.Route {
 	if len(httpRoutes) == 0 {
 		return nil
 	}
@@ -418,6 +420,7 @@ func buildRoutesFromGatewayHTTPRoute(httpRoutes []config.Config, hostName host.N
 				}
 			}
 			routeAction.RetryPolicy = gatewayAPIRetryPolicy(rule.Retry, rule.Timeouts)
+			routeAction.FaultPolicy = faultPolicy
 
 			builtRoute := &route.Route{
 				Match: routeMatch,
@@ -433,6 +436,37 @@ func buildRoutesFromGatewayHTTPRoute(httpRoutes []config.Config, hostName host.N
 	}
 
 	return allRoutes
+}
+
+func serviceFaultPolicy(push *model.PushContext, svc *model.Service, port int) *route.FaultPolicy {
+	if push == nil || svc == nil {
+		return nil
+	}
+	portName := ""
+	if servicePort, found := svc.Ports.GetByPort(port); found && servicePort != nil {
+		portName = servicePort.Name
+	}
+	settings, found := push.FaultInjectionForService(svc.Attributes.Namespace, svc.Attributes.Name, portName)
+	if !found {
+		return nil
+	}
+	policy := &route.FaultPolicy{}
+	if settings.Delay > 0 {
+		policy.Delay = &route.FaultDelay{
+			FixedDelay: durationpb.New(settings.Delay),
+			Percentage: wrapperspb.UInt32(settings.DelayPercentage),
+		}
+	}
+	if settings.AbortStatus != 0 {
+		policy.Abort = &route.FaultAbort{
+			HttpStatus: settings.AbortStatus,
+			Percentage: wrapperspb.UInt32(settings.AbortPercentage),
+		}
+	}
+	if policy.Delay == nil && policy.Abort == nil {
+		return nil
+	}
+	return policy
 }
 
 func gatewayAPIRetryPolicy(retry *sigsk8siogatewayapiapisv1.HTTPRouteRetry, timeouts *sigsk8siogatewayapiapisv1.HTTPRouteTimeouts) *route.RetryPolicy {

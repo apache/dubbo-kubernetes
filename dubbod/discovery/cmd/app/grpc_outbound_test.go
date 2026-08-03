@@ -485,7 +485,7 @@ func TestRouteWeightsFromRoutesFiltersHeaderMatchedRoute(t *testing.T) {
 		}},
 	})}
 
-	weights, _, _, _, err := routeWeightsFromRoutes(resources, "/", http.Header{"End-User": []string{"terminal-user"}})
+	weights, _, _, _, _, err := routeWeightsFromRoutes(resources, "/", http.Header{"End-User": []string{"terminal-user"}})
 	if err != nil {
 		t.Fatalf("routeWeightsFromRoutes() error = %v", err)
 	}
@@ -493,7 +493,7 @@ func TestRouteWeightsFromRoutesFiltersHeaderMatchedRoute(t *testing.T) {
 		t.Fatalf("terminal-user weights = %v, want v1=100 only", weights)
 	}
 
-	weights, _, _, _, err = routeWeightsFromRoutes(resources, "/", nil)
+	weights, _, _, _, _, err = routeWeightsFromRoutes(resources, "/", nil)
 	if err != nil {
 		t.Fatalf("routeWeightsFromRoutes() fallback error = %v", err)
 	}
@@ -527,7 +527,7 @@ func TestRouteWeightsFromRoutesReadsRetryPolicy(t *testing.T) {
 		}},
 	})}
 
-	_, _, _, retry, err := routeWeightsFromRoutes(resources, "/", nil)
+	_, _, _, retry, _, err := routeWeightsFromRoutes(resources, "/", nil)
 	if err != nil {
 		t.Fatalf("routeWeightsFromRoutes() error = %v", err)
 	}
@@ -542,6 +542,95 @@ func TestRouteWeightsFromRoutesReadsRetryPolicy(t *testing.T) {
 	}
 	if retry.PerTryTimeout != "250ms" || retry.Backoff != "100ms" || retry.MaxBackoff != "1s" {
 		t.Fatalf("retry durations = %#v", retry)
+	}
+}
+
+func TestRouteWeightsFromRoutesReadsFaultPolicy(t *testing.T) {
+	action := weightedRouteAction(map[string]uint32{
+		"outbound|9080|v1|reviews.moviereview.svc.cluster.local": 100,
+	})
+	action.Route.FaultPolicy = &routev1.FaultPolicy{
+		Delay: &routev1.FaultDelay{
+			FixedDelay: durationpb.New(250 * time.Millisecond),
+			Percentage: wrapperspb.UInt32(20),
+		},
+		Abort: &routev1.FaultAbort{
+			HttpStatus: http.StatusServiceUnavailable,
+			Percentage: wrapperspb.UInt32(10),
+		},
+	}
+	resources := []*anypb.Any{mustAnyRouteConfig(t, &routev1.RouteConfiguration{
+		VirtualHosts: []*routev1.VirtualHost{{
+			Routes: []*routev1.Route{{
+				Match:  &routev1.RouteMatch{PathSpecifier: &routev1.RouteMatch_Prefix{Prefix: "/"}},
+				Action: action,
+			}},
+		}},
+	})}
+
+	_, _, _, _, fault, err := routeWeightsFromRoutes(resources, "/", nil)
+	if err != nil {
+		t.Fatalf("routeWeightsFromRoutes() error = %v", err)
+	}
+	if fault == nil {
+		t.Fatal("fault = nil")
+	}
+	if fault.Delay != "250ms" || fault.DelayPercentage != 20 ||
+		fault.AbortStatus != http.StatusServiceUnavailable || fault.AbortPercentage != 10 {
+		t.Fatalf("fault = %#v", fault)
+	}
+}
+
+func TestRunSampleRequestAppliesFaultBeforeUpstreamAndRetry(t *testing.T) {
+	var requests atomic.Int32
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		requests.Add(1)
+		_, _ = w.Write([]byte("unexpected"))
+	}))
+	defer server.Close()
+
+	endpoint := endpointForServer(t, server)
+	snapshot := xdsRouteSnapshot{
+		Host: "reviews.moviereview.svc.cluster.local",
+		Port: 9080,
+		Fault: &xdsFaultPolicy{
+			Delay:           "20ms",
+			DelayPercentage: 100,
+			AbortStatus:     http.StatusServiceUnavailable,
+			AbortPercentage: 100,
+		},
+		Retry: &xdsRetryPolicy{
+			Attempts:    2,
+			RetryOn:     "retriable-status-codes",
+			StatusCodes: []uint32{http.StatusServiceUnavailable},
+		},
+		Destinations: []xdsDestination{{
+			Cluster:   "outbound|9080||reviews.moviereview.svc.cluster.local",
+			Host:      "reviews.moviereview.svc.cluster.local",
+			Weight:    100,
+			Endpoints: []xdsEndpoint{endpoint},
+		}},
+	}
+	client := &sampleADSClient{
+		host:           snapshot.Host,
+		port:           snapshot.Port,
+		path:           "/",
+		requestHeaders: http.Header{},
+	}
+	picker, err := newSmoothWeightedPicker(snapshot)
+	if err != nil {
+		t.Fatal(err)
+	}
+	started := time.Now()
+	_, err = runSampleRequest(context.Background(), client, newSampleRequestClients(client, time.Second), picker, snapshot)
+	if err == nil || err.Error() != "fault injected HTTP status 503" {
+		t.Fatalf("runSampleRequest() error = %v", err)
+	}
+	if elapsed := time.Since(started); elapsed < 20*time.Millisecond {
+		t.Fatalf("fault delay elapsed = %v, want at least 20ms", elapsed)
+	}
+	if requests.Load() != 0 {
+		t.Fatalf("upstream requests = %d, want 0", requests.Load())
 	}
 }
 
@@ -565,7 +654,7 @@ func TestRouteWeightsFromRoutesReadsRequestTimeout(t *testing.T) {
 		}},
 	})}
 
-	weights, _, timeout, _, err := routeWeightsFromRoutes(resources, "/reviews", nil)
+	weights, _, timeout, _, _, err := routeWeightsFromRoutes(resources, "/reviews", nil)
 	if err != nil {
 		t.Fatalf("routeWeightsFromRoutes() error = %v", err)
 	}

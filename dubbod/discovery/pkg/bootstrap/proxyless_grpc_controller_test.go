@@ -36,7 +36,10 @@ import (
 	"github.com/apache/dubbo-kubernetes/pkg/kube/inject"
 	"github.com/apache/dubbo-kubernetes/pkg/kube/krt"
 	"github.com/apache/dubbo-kubernetes/pkg/util/sets"
+	networking "github.com/kdubbo/api/networking/v1alpha3"
 	security "github.com/kdubbo/api/security/v1alpha3"
+	"google.golang.org/protobuf/types/known/durationpb"
+	"google.golang.org/protobuf/types/known/wrapperspb"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
@@ -306,6 +309,45 @@ func TestBuildRuntimeTrafficConfigCapturesPermissivePeerAuthentication(t *testin
 	}
 }
 
+func TestBuildRuntimeTrafficConfigCapturesFaultInjection(t *testing.T) {
+	hostname := host.Name("provider.grpc-app.svc.cluster.local")
+	svc := newProxylessRuntimeTestService("provider", "grpc-app", string(hostname), 17070)
+	push := newProxylessRuntimeTestPushContext(t, []config.Config{{
+		Meta: config.Meta{
+			GroupVersionKind: gvk.FaultInjectionPolicy,
+			Name:             "provider-fault",
+			Namespace:        "grpc-app",
+		},
+		Spec: &networking.FaultInjectionPolicy{
+			TargetRefs: []*networking.PolicyTargetReference{{
+				Kind:        "Service",
+				Name:        "provider",
+				SectionName: "grpc",
+			}},
+			Delay: &networking.FaultDelay{
+				FixedDelay: durationpb.New(250 * time.Millisecond),
+				Percentage: wrapperspb.UInt32(20),
+			},
+			Abort: &networking.FaultAbort{
+				HttpStatus: 503,
+				Percentage: wrapperspb.UInt32(10),
+			},
+		},
+	}}, []*discoverymodel.Service{svc})
+
+	serviceConfig := buildRuntimeServiceConfig(push, nil, svc)
+	if len(serviceConfig.Ports) != 1 || serviceConfig.Ports[0].Fault == nil {
+		t.Fatalf("ports = %+v, want one port with fault", serviceConfig.Ports)
+	}
+	fault := serviceConfig.Ports[0].Fault
+	if fault.Delay == nil || fault.Delay.FixedDelay != "250ms" || fault.Delay.Percentage != 20 {
+		t.Fatalf("delay = %+v", fault.Delay)
+	}
+	if fault.Abort == nil || fault.Abort.HTTPStatus != 503 || fault.Abort.Percentage != 10 {
+		t.Fatalf("abort = %+v", fault.Abort)
+	}
+}
+
 func TestProxylessGRPCRuntimeConfigNeedsUpdate(t *testing.T) {
 	tests := []struct {
 		name string
@@ -321,6 +363,13 @@ func TestProxylessGRPCRuntimeConfigNeedsUpdate(t *testing.T) {
 			name: "httproute",
 			req: &discoverymodel.PushRequest{
 				ConfigsUpdated: sets.New(discoverymodel.ConfigKey{Kind: kind.HTTPRoute, Name: "provider-routing", Namespace: "grpc-app"}),
+			},
+			want: true,
+		},
+		{
+			name: "fault injection policy",
+			req: &discoverymodel.PushRequest{
+				ConfigsUpdated: sets.New(discoverymodel.ConfigKey{Kind: kind.FaultInjectionPolicy, Name: "provider-fault", Namespace: "grpc-app"}),
 			},
 			want: true,
 		},

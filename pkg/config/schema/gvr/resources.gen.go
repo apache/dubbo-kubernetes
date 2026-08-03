@@ -15,6 +15,7 @@ var (
 	Deployment                     = schema.GroupVersionResource{Group: "apps", Version: "v1", Resource: "deployments"}
 	EndpointSlice                  = schema.GroupVersionResource{Group: "discovery.k8s.io", Version: "v1", Resource: "endpointslices"}
 	Endpoints                      = schema.GroupVersionResource{Group: "", Version: "v1", Resource: "endpoints"}
+	FaultInjectionPolicy           = schema.GroupVersionResource{Group: "networking.dubbo.apache.org", Version: "v1alpha3", Resource: "faultinjectionpolicies"}
 	GatewayClass                   = schema.GroupVersionResource{Group: "gateway.networking.k8s.io", Version: "v1", Resource: "gatewayclasses"}
 	GatewayClass_v1                = schema.GroupVersionResource{Group: "gateway.networking.k8s.io", Version: "v1", Resource: "gatewayclasses"}
 	HTTPRoute                      = schema.GroupVersionResource{Group: "gateway.networking.k8s.io", Version: "v1", Resource: "httproutes"}
@@ -64,6 +65,8 @@ func IsClusterScoped(g schema.GroupVersionResource) bool {
 	case EndpointSlice:
 		return false
 	case Endpoints:
+		return false
+	case FaultInjectionPolicy:
 		return false
 	case GatewayClass:
 		return true

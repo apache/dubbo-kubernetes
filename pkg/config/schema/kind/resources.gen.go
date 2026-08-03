@@ -15,6 +15,7 @@ const (
 	Deployment
 	EndpointSlice
 	Endpoints
+	FaultInjectionPolicy
 	GatewayClass
 	HTTPRoute
 	HorizontalPodAutoscaler
@@ -63,6 +64,8 @@ func (k Kind) String() string {
 		return "EndpointSlice"
 	case Endpoints:
 		return "Endpoints"
+	case FaultInjectionPolicy:
+		return "FaultInjectionPolicy"
 	case GatewayClass:
 		return "GatewayClass"
 	case HTTPRoute:
@@ -136,6 +139,8 @@ func FromString(s string) Kind {
 		return EndpointSlice
 	case "Endpoints":
 		return Endpoints
+	case "FaultInjectionPolicy":
+		return FaultInjectionPolicy
 	case "GatewayClass":
 		return GatewayClass
 	case "HTTPRoute":

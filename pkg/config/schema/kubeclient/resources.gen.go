@@ -52,6 +52,8 @@ func GetWriteClient[T runtime.Object](c ClientGetter, namespace string) ktypes.W
 		return c.Kube().DiscoveryV1().EndpointSlices(namespace).(ktypes.WriteAPI[T])
 	case *k8sioapicorev1.Endpoints:
 		return c.Kube().CoreV1().Endpoints(namespace).(ktypes.WriteAPI[T])
+	case *apigithubcomapachedubbokubernetesapinetworkingv1alpha3.FaultInjectionPolicy:
+		return c.Dubbo().NetworkingV1alpha3().FaultInjectionPolicies(namespace).(ktypes.WriteAPI[T])
 	case *sigsk8siogatewayapiapisv1.GatewayClass:
 		return c.GatewayAPI().GatewayV1().GatewayClasses().(ktypes.WriteAPI[T])
 	case *sigsk8siogatewayapiapisv1.HTTPRoute:
@@ -119,6 +121,8 @@ func GetClient[T, TL runtime.Object](c ClientGetter, namespace string) ktypes.Re
 		return c.Kube().DiscoveryV1().EndpointSlices(namespace).(ktypes.ReadWriteAPI[T, TL])
 	case *k8sioapicorev1.Endpoints:
 		return c.Kube().CoreV1().Endpoints(namespace).(ktypes.ReadWriteAPI[T, TL])
+	case *apigithubcomapachedubbokubernetesapinetworkingv1alpha3.FaultInjectionPolicy:
+		return c.Dubbo().NetworkingV1alpha3().FaultInjectionPolicies(namespace).(ktypes.ReadWriteAPI[T, TL])
 	case *sigsk8siogatewayapiapisv1.GatewayClass:
 		return c.GatewayAPI().GatewayV1().GatewayClasses().(ktypes.ReadWriteAPI[T, TL])
 	case *sigsk8siogatewayapiapisv1.HTTPRoute:
@@ -186,6 +190,8 @@ func gvrToObject(g schema.GroupVersionResource) runtime.Object {
 		return &k8sioapidiscoveryv1.EndpointSlice{}
 	case gvr.Endpoints:
 		return &k8sioapicorev1.Endpoints{}
+	case gvr.FaultInjectionPolicy:
+		return &apigithubcomapachedubbokubernetesapinetworkingv1alpha3.FaultInjectionPolicy{}
 	case gvr.GatewayClass:
 		return &sigsk8siogatewayapiapisv1.GatewayClass{}
 	case gvr.HTTPRoute:
@@ -300,6 +306,13 @@ func getInformerFiltered(c ClientGetter, opts ktypes.InformerOptions, g schema.G
 		}
 		w = func(options metav1.ListOptions) (watch.Interface, error) {
 			return c.Kube().CoreV1().Endpoints(opts.Namespace).Watch(context.Background(), options)
+		}
+	case gvr.FaultInjectionPolicy:
+		l = func(options metav1.ListOptions) (runtime.Object, error) {
+			return c.Dubbo().NetworkingV1alpha3().FaultInjectionPolicies(opts.Namespace).List(context.Background(), options)
+		}
+		w = func(options metav1.ListOptions) (watch.Interface, error) {
+			return c.Dubbo().NetworkingV1alpha3().FaultInjectionPolicies(opts.Namespace).Watch(context.Background(), options)
 		}
 	case gvr.GatewayClass:
 		l = func(options metav1.ListOptions) (runtime.Object, error) {

@@ -167,6 +167,21 @@ var (
 		ValidateProto: validation.EmptyValidate,
 	}.MustBuild()
 
+	FaultInjectionPolicy = resource.Builder{
+		Identifier: "FaultInjectionPolicy",
+		Group:      "networking.dubbo.apache.org",
+		Kind:       "FaultInjectionPolicy",
+		Plural:     "faultinjectionpolicies",
+		Version:    "v1alpha3",
+		Proto:      "dubbo.networking.v1alpha3.FaultInjectionPolicy", StatusProto: "dubbo.meta.v1alpha1.DubboStatus",
+		ReflectType: reflect.TypeOf(&githubcomkdubboapinetworkingv1alpha3.FaultInjectionPolicy{}).Elem(), StatusType: reflect.TypeOf(&githubcomkdubboapimetav1alpha1.DubboStatus{}).Elem(),
+		ProtoPackage: "github.com/kdubbo/api/networking/v1alpha3", StatusPackage: "github.com/kdubbo/api/meta/v1alpha1",
+		ClusterScoped: false,
+		Synthetic:     false,
+		Builtin:       false,
+		ValidateProto: validation.ValidateFaultInjectionPolicy,
+	}.MustBuild()
+
 	GatewayClass = resource.Builder{
 		Identifier: "GatewayClass",
 		Group:      "gateway.networking.k8s.io",
@@ -520,6 +535,7 @@ var (
 		MustAdd(Deployment).
 		MustAdd(EndpointSlice).
 		MustAdd(Endpoints).
+		MustAdd(FaultInjectionPolicy).
 		MustAdd(GatewayClass).
 		MustAdd(HTTPRoute).
 		MustAdd(HorizontalPodAutoscaler).
@@ -575,6 +591,7 @@ var (
 	Dubbo = collection.NewSchemasBuilder().
 		MustAdd(AuthorizationPolicy).
 		MustAdd(CircuitBreakerPolicy).
+		MustAdd(FaultInjectionPolicy).
 		MustAdd(PeerAuthentication).
 		MustAdd(RequestAuthentication).
 		MustAdd(ServiceEntry).
@@ -587,6 +604,7 @@ var (
 			MustAdd(AuthorizationPolicy).
 			MustAdd(BackendTLSPolicy).
 			MustAdd(CircuitBreakerPolicy).
+			MustAdd(FaultInjectionPolicy).
 			MustAdd(GatewayClass).
 			MustAdd(HTTPRoute).
 			MustAdd(KubernetesGateway).
@@ -603,6 +621,7 @@ var (
 				MustAdd(AuthorizationPolicy).
 				MustAdd(BackendTLSPolicy).
 				MustAdd(CircuitBreakerPolicy).
+				MustAdd(FaultInjectionPolicy).
 				MustAdd(GatewayClass).
 				MustAdd(HTTPRoute).
 				MustAdd(KubernetesGateway).

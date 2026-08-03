@@ -515,6 +515,8 @@ func (s *Server) initRegistryEventHandlers() {
 			configKind = kind.BackendTLSPolicy
 		case "CircuitBreakerPolicy":
 			configKind = kind.CircuitBreakerPolicy
+		case "FaultInjectionPolicy":
+			configKind = kind.FaultInjectionPolicy
 		default:
 			log.Debugf("unknown schema identifier %s for %v, skipping", schemaID, cfg.GroupVersionKind)
 			return
@@ -539,7 +541,8 @@ func (s *Server) initRegistryEventHandlers() {
 			configKind == kind.HTTPRoute ||
 			configKind == kind.BackendTLSPolicy ||
 			configKind == kind.ReferenceGrant ||
-			configKind == kind.CircuitBreakerPolicy
+			configKind == kind.CircuitBreakerPolicy ||
+			configKind == kind.FaultInjectionPolicy
 
 		// Trigger ConfigUpdate to push changes to all connected proxies
 		s.XDSServer.ConfigUpdate(&model.PushRequest{

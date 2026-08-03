@@ -48,6 +48,10 @@ func getGvk(obj any) (config.GroupVersionKind, bool) {
 		return gvk.EndpointSlice, true
 	case *k8sioapicorev1.Endpoints:
 		return gvk.Endpoints, true
+	case *githubcomkdubboapinetworkingv1alpha3.FaultInjectionPolicy:
+		return gvk.FaultInjectionPolicy, true
+	case *apigithubcomapachedubbokubernetesapinetworkingv1alpha3.FaultInjectionPolicy:
+		return gvk.FaultInjectionPolicy, true
 	case *sigsk8siogatewayapiapisv1.GatewayClass:
 		return gvk.GatewayClass, true
 	case *sigsk8siogatewayapiapisv1.HTTPRoute:

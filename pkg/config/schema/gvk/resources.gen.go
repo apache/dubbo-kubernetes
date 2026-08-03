@@ -20,6 +20,7 @@ var (
 	Deployment                     = config.GroupVersionKind{Group: "apps", Version: "v1", Kind: "Deployment"}
 	EndpointSlice                  = config.GroupVersionKind{Group: "discovery.k8s.io", Version: "v1", Kind: "EndpointSlice"}
 	Endpoints                      = config.GroupVersionKind{Group: "", Version: "v1", Kind: "Endpoints"}
+	FaultInjectionPolicy           = config.GroupVersionKind{Group: "networking.dubbo.apache.org", Version: "v1alpha3", Kind: "FaultInjectionPolicy"}
 	GatewayClass                   = config.GroupVersionKind{Group: "gateway.networking.k8s.io", Version: "v1", Kind: "GatewayClass"}
 	GatewayClass_v1                = config.GroupVersionKind{Group: "gateway.networking.k8s.io", Version: "v1", Kind: "GatewayClass"}
 	HTTPRoute                      = config.GroupVersionKind{Group: "gateway.networking.k8s.io", Version: "v1", Kind: "HTTPRoute"}
@@ -71,6 +72,8 @@ func ToGVR(g config.GroupVersionKind) (schema.GroupVersionResource, bool) {
 		return gvr.EndpointSlice, true
 	case Endpoints:
 		return gvr.Endpoints, true
+	case FaultInjectionPolicy:
+		return gvr.FaultInjectionPolicy, true
 	case GatewayClass:
 		return gvr.GatewayClass, true
 	case GatewayClass_v1:
@@ -148,6 +151,8 @@ func MustToKind(g config.GroupVersionKind) kind.Kind {
 		return kind.EndpointSlice
 	case Endpoints:
 		return kind.Endpoints
+	case FaultInjectionPolicy:
+		return kind.FaultInjectionPolicy
 	case GatewayClass:
 		return kind.GatewayClass
 	case HTTPRoute:
@@ -228,6 +233,8 @@ func FromGVR(g schema.GroupVersionResource) (config.GroupVersionKind, bool) {
 		return EndpointSlice, true
 	case gvr.Endpoints:
 		return Endpoints, true
+	case gvr.FaultInjectionPolicy:
+		return FaultInjectionPolicy, true
 	case gvr.GatewayClass:
 		return GatewayClass, true
 	case gvr.HTTPRoute:
