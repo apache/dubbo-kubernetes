@@ -213,9 +213,11 @@ jobs:
 
   required:
     name: CI Required
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-slim
     timeout-minutes: 5
-    if: ${{ always() }}
+    # Evaluate after all dependencies settle, but do not keep a superseded
+    # workflow alive and blocking the next run in this PR's concurrency group.
+    if: ${{ always() && !cancelled() }}
     needs:
       - lint
       - check

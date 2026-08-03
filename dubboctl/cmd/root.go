@@ -145,10 +145,8 @@ func GetRootCmd(args []string) *cobra.Command {
 	hideFlags(imageCmd, ChartFlag)
 
 	rootCmd.AddCommand(GetCmd(ctx))
-	rootCmd.AddCommand(AdminCmd(ctx))
 	rootCmd.AddCommand(ProxyStatusCmd(ctx))
 	rootCmd.AddCommand(AnalyzeCmd(ctx))
-	rootCmd.AddCommand(DashboardCmd(ctx))
 	rootCmd.AddCommand(MulticlusterCmd())
 
 	rootCmd.AddCommand(GuiCmd())
