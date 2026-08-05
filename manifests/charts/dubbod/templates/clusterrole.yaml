@@ -42,8 +42,8 @@ rules:
   - apiGroups: [""]
     resources: ["pods", "nodes", "services", "namespaces", "endpoints"]
     verbs: ["get", "list", "watch"]
-  # The console tails control plane and managed gateway pods; `pods` alone does
-  # not cover the log subresource.
+  # The management API tails control plane and managed gateway pods; `pods`
+  # alone does not cover the log subresource.
   - apiGroups: [""]
     resources: ["pods/log"]
     verbs: ["get"]

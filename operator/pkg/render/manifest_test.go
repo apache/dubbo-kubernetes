@@ -284,8 +284,7 @@ func TestGenerateManifestProxylessCNIIsGlobalByDefault(t *testing.T) {
 
 func TestGenerateManifestSetOverridesHelmValues(t *testing.T) {
 	manifests, _, err := GenerateManifest(nil, []string{
-		"values.global.gui.port=26081",
-		"values.global.gui.nodePort=30081",
+		"values.global.management.port=26081",
 		"values.global.proxy.clusterDomain=example.local",
 		"values.global.statusPort=26021",
 		"values.global.configValidation=false",
@@ -295,13 +294,12 @@ func TestGenerateManifestSetOverridesHelmValues(t *testing.T) {
 		t.Fatalf("GenerateManifest() error = %v", err)
 	}
 
-	guiService := findManifest(t, manifests, "Service", "dubbod-gui")
-	guiPort := findPort(t, guiService, "gui")
-	port, _, _ := unstructured.NestedInt64(guiPort, "port")
-	nodePort, _, _ := unstructured.NestedInt64(guiPort, "nodePort")
-	targetPort, _, _ := unstructured.NestedInt64(guiPort, "targetPort")
-	if port != 26081 || targetPort != 26081 || nodePort != 30081 {
-		t.Fatalf("dubbod-gui port=%d targetPort=%d nodePort=%d, want 26081/26081/30081", port, targetPort, nodePort)
+	managementService := findManifest(t, manifests, "Service", "dubbod-management")
+	managementPort := findPort(t, managementService, "management")
+	port, _, _ := unstructured.NestedInt64(managementPort, "port")
+	targetPort, _, _ := unstructured.NestedInt64(managementPort, "targetPort")
+	if port != 26081 || targetPort != 26081 {
+		t.Fatalf("dubbod-management port=%d targetPort=%d, want 26081/26081", port, targetPort)
 	}
 
 	deployment := findManifest(t, manifests, "Deployment", "dubbod")
@@ -314,8 +312,8 @@ func TestGenerateManifestSetOverridesHelmValues(t *testing.T) {
 	if err != nil || !ok {
 		t.Fatalf("container ports missing: ok=%v err=%v", ok, err)
 	}
-	if !hasContainerPort(containerPorts, "gui", 26081) {
-		t.Fatal("dubbod deployment missing gui containerPort 26081")
+	if !hasContainerPort(containerPorts, "management", 26081) {
+		t.Fatal("dubbod deployment missing management containerPort 26081")
 	}
 
 	configMap := findManifest(t, manifests, "ConfigMap", "dubbo")

@@ -21,15 +21,18 @@ import (
 	"net"
 	"os"
 	"strings"
+	"time"
 
 	"github.com/apache/dubbo-kubernetes/pkg/kube/inject"
 )
 
 const (
-	defaultStateDir     = "/var/run/dubbo-cni"
-	defaultIPTablesPath = "iptables"
-	defaultIPSetPath    = "ipset"
-	PluginType          = "dubbo-cni"
+	defaultStateDir         = "/var/run/dubbo-cni"
+	defaultIPTablesPath     = "iptables"
+	defaultIPSetPath        = "ipset"
+	PluginType              = "dubbo-cni"
+	defaultPodLookupRetries = 3
+	defaultPodLookupBackoff = 200 * time.Millisecond
 )
 
 type NetConf struct {
@@ -46,6 +49,36 @@ type NetConf struct {
 	IPTablesPath      string          `json:"iptablesPath,omitempty"`
 	IPSetPath         string          `json:"ipsetPath,omitempty"`
 	DryRun            bool            `json:"dryRun,omitempty"`
+	// FailClosed makes ADD fail when pod ownership cannot be determined.
+	//
+	// It is off by default because ownership is only knowable by reading the
+	// managed label from the API server: a pod that cannot be read might not
+	// belong to the mesh at all, and failing its ADD would stop unrelated
+	// workloads from starting on this node. The fence for a mesh pod that
+	// slipped through is restored by the node agent's reconcile loop instead.
+	FailClosed bool `json:"failClosed,omitempty"`
+	// PodLookupRetries is the number of extra attempts made to read the pod
+	// before ADD gives up.
+	PodLookupRetries int `json:"podLookupRetries,omitempty"`
+	// PodLookupRetryMillis is the delay between those attempts.
+	PodLookupRetryMillis int `json:"podLookupRetryMillis,omitempty"`
+}
+
+func (c NetConf) PodLookupAttempts() int {
+	if c.PodLookupRetries < 0 {
+		return 1
+	}
+	if c.PodLookupRetries == 0 {
+		return defaultPodLookupRetries + 1
+	}
+	return c.PodLookupRetries + 1
+}
+
+func (c NetConf) PodLookupBackoff() time.Duration {
+	if c.PodLookupRetryMillis <= 0 {
+		return defaultPodLookupBackoff
+	}
+	return time.Duration(c.PodLookupRetryMillis) * time.Millisecond
 }
 
 type KubernetesConf struct {

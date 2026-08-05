@@ -141,14 +141,10 @@ func addFlags(c *cobra.Command) {
 		"httpAddr",
 		":8080",
 		"Discovery service HTTP address")
-	c.PersistentFlags().StringVar(&serverArgs.ServerOptions.GUIAddr,
-		"guiAddr",
+	c.PersistentFlags().StringVar(&serverArgs.ServerOptions.ManagementAddr,
+		"managementAddr",
 		":26080",
-		"Embedded GUI HTTP address")
-	c.PersistentFlags().StringVar(&serverArgs.ServerOptions.GUIPath,
-		"guiPath",
-		"/gui",
-		"Embedded GUI base path on the HTTP address")
+		"Management API HTTP address")
 	c.PersistentFlags().StringVar(&serverArgs.ServerOptions.HTTPSAddr,
 		"httpsAddr",
 		":26017",

@@ -24,10 +24,8 @@ import "google/protobuf/wrappers.proto";
 // Package-wide variables from generator "generated".
 option go_package = "dubbo.apache.org/dubbo/operator/pkg/apis";
 
-message GUIConfig {
+message ManagementConfig {
   int64 port = 1;
-
-  int64 nodePort = 2;
 }
 
 message ProxyConfig {
@@ -67,7 +65,7 @@ message GlobalConfig {
 
   int64 statusPort = 2;
 
-  GUIConfig gui = 3;
+  ManagementConfig management = 3;
 
   bool configValidation = 4;
 

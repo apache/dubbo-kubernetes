@@ -15,15 +15,14 @@
 
 {{- $defaults := .Values._internal_default_values_not_set | default dict }}
 {{- $defaultGlobal := $defaults.global | default dict }}
-{{- $defaultGUI := $defaultGlobal.gui | default dict }}
+{{- $defaultManagement := $defaultGlobal.management | default dict }}
 {{- $defaultMulticluster := $defaultGlobal.multicluster | default dict }}
 {{- $defaultRemoteAccess := $defaultMulticluster.remoteAccess | default dict }}
 {{- $global := .Values.global | default dict }}
-{{- $gui := $global.gui | default dict }}
+{{- $management := $global.management | default dict }}
 {{- $multicluster := $global.multicluster | default dict }}
 {{- $remoteAccess := $multicluster.remoteAccess | default dict }}
-{{- $guiPort := int (coalesce $gui.port $defaultGUI.port 26080) }}
-{{- $guiNodePort := int (coalesce $gui.nodePort $defaultGUI.nodePort 30080) }}
+{{- $managementPort := int (coalesce $management.port $defaultManagement.port 26080) }}
 {{- $remoteAccessEnabled := coalesce $remoteAccess.enabled $defaultRemoteAccess.enabled false }}
 {{- $remoteAccessServiceType := coalesce $remoteAccess.serviceType $defaultRemoteAccess.serviceType "LoadBalancer" }}
 {{- $remoteAccessGRPCPort := int (coalesce $remoteAccess.grpcPort $defaultRemoteAccess.grpcPort 26010) }}
@@ -61,17 +60,15 @@ spec:
 apiVersion: v1
 kind: Service
 metadata:
-  name: dubbod-gui
+  name: dubbod-management
   namespace: dubbo-system
   labels:
     app: dubbod
 spec:
-  type: NodePort
   ports:
-    - port: {{ $guiPort }}
-      name: gui
-      targetPort: {{ $guiPort }}
-      nodePort: {{ $guiNodePort }}
+    - port: {{ $managementPort }}
+      name: management
+      targetPort: {{ $managementPort }}
       protocol: TCP
   selector:
     app: dubbod

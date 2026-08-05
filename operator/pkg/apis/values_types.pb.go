@@ -38,28 +38,27 @@ const (
 	_ = protoimpl.EnforceVersion(protoimpl.MaxVersion - 20)
 )
 
-type GUIConfig struct {
+type ManagementConfig struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Port          int64                  `protobuf:"varint,1,opt,name=port,proto3" json:"port,omitempty"`
-	NodePort      int64                  `protobuf:"varint,2,opt,name=nodePort,proto3" json:"nodePort,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
-func (x *GUIConfig) Reset() {
-	*x = GUIConfig{}
+func (x *ManagementConfig) Reset() {
+	*x = ManagementConfig{}
 	mi := &file_values_types_proto_msgTypes[0]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *GUIConfig) String() string {
+func (x *ManagementConfig) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*GUIConfig) ProtoMessage() {}
+func (*ManagementConfig) ProtoMessage() {}
 
-func (x *GUIConfig) ProtoReflect() protoreflect.Message {
+func (x *ManagementConfig) ProtoReflect() protoreflect.Message {
 	mi := &file_values_types_proto_msgTypes[0]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -71,21 +70,14 @@ func (x *GUIConfig) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use GUIConfig.ProtoReflect.Descriptor instead.
-func (*GUIConfig) Descriptor() ([]byte, []int) {
+// Deprecated: Use ManagementConfig.ProtoReflect.Descriptor instead.
+func (*ManagementConfig) Descriptor() ([]byte, []int) {
 	return file_values_types_proto_rawDescGZIP(), []int{0}
 }
 
-func (x *GUIConfig) GetPort() int64 {
+func (x *ManagementConfig) GetPort() int64 {
 	if x != nil {
 		return x.Port
-	}
-	return 0
-}
-
-func (x *GUIConfig) GetNodePort() int64 {
-	if x != nil {
-		return x.NodePort
 	}
 	return 0
 }
@@ -306,7 +298,7 @@ type GlobalConfig struct {
 	state            protoimpl.MessageState `protogen:"open.v1"`
 	Proxy            *ProxyConfig           `protobuf:"bytes,1,opt,name=proxy,proto3" json:"proxy,omitempty"`
 	StatusPort       int64                  `protobuf:"varint,2,opt,name=statusPort,proto3" json:"statusPort,omitempty"`
-	Gui              *GUIConfig             `protobuf:"bytes,3,opt,name=gui,proto3" json:"gui,omitempty"`
+	Management       *ManagementConfig      `protobuf:"bytes,3,opt,name=management,proto3" json:"management,omitempty"`
 	ConfigValidation bool                   `protobuf:"varint,4,opt,name=configValidation,proto3" json:"configValidation,omitempty"`
 	Multicluster     *MulticlusterConfig    `protobuf:"bytes,5,opt,name=multicluster,proto3" json:"multicluster,omitempty"`
 	Proxyless        *ProxylessConfig       `protobuf:"bytes,6,opt,name=proxyless,proto3" json:"proxyless,omitempty"`
@@ -358,9 +350,9 @@ func (x *GlobalConfig) GetStatusPort() int64 {
 	return 0
 }
 
-func (x *GlobalConfig) GetGui() *GUIConfig {
+func (x *GlobalConfig) GetManagement() *ManagementConfig {
 	if x != nil {
-		return x.Gui
+		return x.Management
 	}
 	return nil
 }
@@ -801,10 +793,9 @@ var File_values_types_proto protoreflect.FileDescriptor
 
 const file_values_types_proto_rawDesc = "" +
 	"\n" +
-	"\x12values_types.proto\x12\x17dubbo.operator.v1alpha1\x1a\x1egoogle/protobuf/wrappers.proto\";\n" +
-	"\tGUIConfig\x12\x12\n" +
-	"\x04port\x18\x01 \x01(\x03R\x04port\x12\x1a\n" +
-	"\bnodePort\x18\x02 \x01(\x03R\bnodePort\"3\n" +
+	"\x12values_types.proto\x12\x17dubbo.operator.v1alpha1\x1a\x1egoogle/protobuf/wrappers.proto\"&\n" +
+	"\x10ManagementConfig\x12\x12\n" +
+	"\x04port\x18\x01 \x01(\x03R\x04port\"3\n" +
 	"\vProxyConfig\x12$\n" +
 	"\rclusterDomain\x18\x01 \x01(\tR\rclusterDomain\"K\n" +
 	"\x0fProxylessConfig\x128\n" +
@@ -821,13 +812,15 @@ const file_values_types_proto_rawDesc = "" +
 	"\fiptablesPath\x18\t \x01(\tR\fiptablesPath\x12\x1c\n" +
 	"\tipsetPath\x18\n" +
 	" \x01(\tR\tipsetPath\x12(\n" +
-	"\x0frefreshInterval\x18\v \x01(\tR\x0frefreshInterval\"\xe5\x02\n" +
+	"\x0frefreshInterval\x18\v \x01(\tR\x0frefreshInterval\"\xfa\x02\n" +
 	"\fGlobalConfig\x12:\n" +
 	"\x05proxy\x18\x01 \x01(\v2$.dubbo.operator.v1alpha1.ProxyConfigR\x05proxy\x12\x1e\n" +
 	"\n" +
 	"statusPort\x18\x02 \x01(\x03R\n" +
-	"statusPort\x124\n" +
-	"\x03gui\x18\x03 \x01(\v2\".dubbo.operator.v1alpha1.GUIConfigR\x03gui\x12*\n" +
+	"statusPort\x12I\n" +
+	"\n" +
+	"management\x18\x03 \x01(\v2).dubbo.operator.v1alpha1.ManagementConfigR\n" +
+	"management\x12*\n" +
 	"\x10configValidation\x18\x04 \x01(\bR\x10configValidation\x12O\n" +
 	"\fmulticluster\x18\x05 \x01(\v2+.dubbo.operator.v1alpha1.MulticlusterConfigR\fmulticluster\x12F\n" +
 	"\tproxyless\x18\x06 \x01(\v2(.dubbo.operator.v1alpha1.ProxylessConfigR\tproxyless\"\xd4\x01\n" +
@@ -879,7 +872,7 @@ func file_values_types_proto_rawDescGZIP() []byte {
 
 var file_values_types_proto_msgTypes = make([]protoimpl.MessageInfo, 11)
 var file_values_types_proto_goTypes = []any{
-	(*GUIConfig)(nil),               // 0: dubbo.operator.v1alpha1.GUIConfig
+	(*ManagementConfig)(nil),        // 0: dubbo.operator.v1alpha1.ManagementConfig
 	(*ProxyConfig)(nil),             // 1: dubbo.operator.v1alpha1.ProxyConfig
 	(*ProxylessConfig)(nil),         // 2: dubbo.operator.v1alpha1.ProxylessConfig
 	(*MeshCNIConfig)(nil),           // 3: dubbo.operator.v1alpha1.MeshCNIConfig
@@ -896,7 +889,7 @@ var file_values_types_proto_goTypes = []any{
 var file_values_types_proto_depIdxs = []int32{
 	3,  // 0: dubbo.operator.v1alpha1.ProxylessConfig.cni:type_name -> dubbo.operator.v1alpha1.MeshCNIConfig
 	1,  // 1: dubbo.operator.v1alpha1.GlobalConfig.proxy:type_name -> dubbo.operator.v1alpha1.ProxyConfig
-	0,  // 2: dubbo.operator.v1alpha1.GlobalConfig.gui:type_name -> dubbo.operator.v1alpha1.GUIConfig
+	0,  // 2: dubbo.operator.v1alpha1.GlobalConfig.management:type_name -> dubbo.operator.v1alpha1.ManagementConfig
 	8,  // 3: dubbo.operator.v1alpha1.GlobalConfig.multicluster:type_name -> dubbo.operator.v1alpha1.MulticlusterConfig
 	2,  // 4: dubbo.operator.v1alpha1.GlobalConfig.proxyless:type_name -> dubbo.operator.v1alpha1.ProxylessConfig
 	6,  // 5: dubbo.operator.v1alpha1.EastWestGatewayConfig.gateways:type_name -> dubbo.operator.v1alpha1.EastWestGatewayEndpoint

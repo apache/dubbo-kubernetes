@@ -34,7 +34,6 @@ import (
 	klabels "k8s.io/apimachinery/pkg/labels"
 
 	discoverymodel "github.com/apache/dubbo-kubernetes/dubbod/discovery/pkg/model"
-	"github.com/apache/dubbo-kubernetes/dubbod/gui"
 	"github.com/apache/dubbo-kubernetes/dubbod/security/pkg/nodeagent/util"
 	"github.com/apache/dubbo-kubernetes/pkg/config"
 	"github.com/apache/dubbo-kubernetes/pkg/config/constants"
@@ -48,33 +47,37 @@ import (
 	sigsk8siogatewayapiapisv1 "sigs.k8s.io/gateway-api/apis/v1"
 )
 
-type guiOverview struct {
-	Product     string              `json:"product"`
-	Version     string              `json:"version"`
-	Cluster     string              `json:"clusterId"`
-	Namespace   string              `json:"namespace"`
-	PodName     string              `json:"podName,omitempty"`
-	Mesh        guiOverviewMesh     `json:"mesh"`
-	Server      guiOverviewServer   `json:"server"`
-	Status      guiOverviewStatus   `json:"status"`
-	Counts      guiOverviewCounts   `json:"counts"`
-	ConfigKinds []guiConfigKind     `json:"configKinds"`
-	Registries  []guiRegistry       `json:"registries"`
-	Services    []guiService        `json:"services"`
-	Instances   []guiDubbodInstance `json:"instances"`
-	DataPlane   []guiWorkload       `json:"dataPlane"`
+// managementAPIBase is the HTTP base path of the read-only management API the
+// external console aggregates across control planes.
+const managementAPIBase = "/api/v1"
+
+type managementOverview struct {
+	Product     string                     `json:"product"`
+	Version     string                     `json:"version"`
+	Cluster     string                     `json:"clusterId"`
+	Namespace   string                     `json:"namespace"`
+	PodName     string                     `json:"podName,omitempty"`
+	Mesh        managementOverviewMesh     `json:"mesh"`
+	Server      managementOverviewServer   `json:"server"`
+	Status      managementOverviewStatus   `json:"status"`
+	Counts      managementOverviewCounts   `json:"counts"`
+	ConfigKinds []managementConfigKind     `json:"configKinds"`
+	Registries  []managementRegistry       `json:"registries"`
+	Services    []managementService        `json:"services"`
+	Instances   []managementDubbodInstance `json:"instances"`
+	DataPlane   []managementWorkload       `json:"dataPlane"`
 	// Total running pods per namespace that a sidecar is expected in, so the
 	// console can show "5/6 injected" when one pod predates the label.
-	DataPlanePods    map[string]int      `json:"dataPlanePods,omitempty"`
-	Routes           []guiRoute          `json:"routes"`
-	XDSClients       []guiXDSClient      `json:"xdsClients"`
-	GatewayInstances []guiDubbodInstance `json:"gatewayInstances"`
-	UpdatedAt        time.Time           `json:"updatedAt"`
+	DataPlanePods    map[string]int             `json:"dataPlanePods,omitempty"`
+	Routes           []managementRoute          `json:"routes"`
+	XDSClients       []managementXDSClient      `json:"xdsClients"`
+	GatewayInstances []managementDubbodInstance `json:"gatewayInstances"`
+	UpdatedAt        time.Time                  `json:"updatedAt"`
 }
 
-// guiWorkload is one injected data plane pod, joined with the xDS stream it
+// managementWorkload is one injected data plane pod, joined with the xDS stream it
 // holds open against this control plane (if any).
-type guiWorkload struct {
+type managementWorkload struct {
 	Name           string     `json:"name"`
 	Namespace      string     `json:"namespace"`
 	IP             string     `json:"ip,omitempty"`
@@ -98,10 +101,10 @@ type guiWorkload struct {
 	Watched        []string   `json:"watched,omitempty"`
 }
 
-// guiXDSClient is one live ADS stream. Only proxies that actually open a stream
+// managementXDSClient is one live ADS stream. Only proxies that actually open a stream
 // appear here — the inbound sidecar reads certificates off disk and never
 // connects, so its absence is expected rather than a fault.
-type guiXDSClient struct {
+type managementXDSClient struct {
 	NodeID      string    `json:"nodeId"`
 	NodeType    string    `json:"nodeType,omitempty"`
 	Peer        string    `json:"peer,omitempty"`
@@ -109,30 +112,30 @@ type guiXDSClient struct {
 	Watched     []string  `json:"watched,omitempty"`
 }
 
-// guiRoute is one HTTPRoute as the control plane has it loaded: which parent it
+// managementRoute is one HTTPRoute as the control plane has it loaded: which parent it
 // attaches to, and where each rule sends traffic. This is the call graph dubbod
 // has programmed, not observed traffic — nothing in the xDS wire protocol
 // reports which call actually happened.
-type guiRoute struct {
-	Name      string         `json:"name"`
-	Namespace string         `json:"namespace"`
-	Parents   []string       `json:"parents,omitempty"`
-	Hostnames []string       `json:"hostnames,omitempty"`
-	Rules     []guiRouteRule `json:"rules,omitempty"`
+type managementRoute struct {
+	Name      string                `json:"name"`
+	Namespace string                `json:"namespace"`
+	Parents   []string              `json:"parents,omitempty"`
+	Hostnames []string              `json:"hostnames,omitempty"`
+	Rules     []managementRouteRule `json:"rules,omitempty"`
 }
 
-type guiRouteRule struct {
-	Match    string            `json:"match,omitempty"`
-	Backends []guiRouteBackend `json:"backends,omitempty"`
+type managementRouteRule struct {
+	Match    string                   `json:"match,omitempty"`
+	Backends []managementRouteBackend `json:"backends,omitempty"`
 }
 
-type guiRouteBackend struct {
+type managementRouteBackend struct {
 	Name   string `json:"name"`
 	Port   int32  `json:"port,omitempty"`
 	Weight int32  `json:"weight,omitempty"`
 }
 
-type guiDubbodInstance struct {
+type managementDubbodInstance struct {
 	Name            string `json:"name"`
 	Namespace       string `json:"namespace"`
 	IP              string `json:"ip"`
@@ -143,14 +146,13 @@ type guiDubbodInstance struct {
 	DesiredReplicas int32  `json:"desiredReplicas,omitempty"`
 }
 
-type guiOverviewMesh struct {
+type managementOverviewMesh struct {
 	TrustDomain      string `json:"trustDomain,omitempty"`
 	RootNamespace    string `json:"rootNamespace,omitempty"`
 	DiscoveryAddress string `json:"discoveryAddress,omitempty"`
 }
 
-type guiOverviewServer struct {
-	GUIPath           string `json:"guiPath"`
+type managementOverviewServer struct {
 	HTTPAddress       string `json:"httpAddress,omitempty"`
 	GRPCAddress       string `json:"grpcAddress,omitempty"`
 	SecureGRPCAddress string `json:"secureGrpcAddress,omitempty"`
@@ -160,7 +162,7 @@ type guiOverviewServer struct {
 	ReadyPath         string `json:"readyPath,omitempty"`
 }
 
-type guiOverviewStatus struct {
+type managementOverviewStatus struct {
 	XDSServerReady  bool `json:"xdsServerReady"`
 	CachesSynced    bool `json:"cachesSynced"`
 	ServicesSynced  bool `json:"servicesSynced"`
@@ -170,7 +172,7 @@ type guiOverviewStatus struct {
 	ValidationReady bool `json:"validationReady"`
 }
 
-type guiOverviewCounts struct {
+type managementOverviewCounts struct {
 	Services               int `json:"services"`
 	EndpointServices       int `json:"endpointServices"`
 	XDSConnections         int `json:"xdsConnections"`
@@ -183,19 +185,19 @@ type guiOverviewCounts struct {
 	Gateways               int `json:"gateways"`
 }
 
-type guiRegistry struct {
+type managementRegistry struct {
 	Provider string `json:"provider"`
 	Cluster  string `json:"cluster"`
 	Synced   bool   `json:"synced"`
 }
 
-type guiConfigKind struct {
+type managementConfigKind struct {
 	Kind        string `json:"kind"`
 	Count       int    `json:"count"`
 	Description string `json:"description"`
 }
 
-type guiService struct {
+type managementService struct {
 	Name            string `json:"name"`
 	Hostname        string `json:"hostname"`
 	Namespace       string `json:"namespace"`
@@ -209,40 +211,40 @@ type guiService struct {
 	MTLSFromPolicy  bool   `json:"mtlsFromPolicy"`
 }
 
-type guiMetricsResponse struct {
-	Families  []guiMetricFamily `json:"families"`
-	UpdatedAt time.Time         `json:"updatedAt"`
+type managementMetricsResponse struct {
+	Families  []managementMetricFamily `json:"families"`
+	UpdatedAt time.Time                `json:"updatedAt"`
 }
 
-type guiMetricFamily struct {
-	Name    string            `json:"name"`
-	Help    string            `json:"help,omitempty"`
-	Type    string            `json:"type"`
-	Metrics []guiMetricSample `json:"metrics"`
+type managementMetricFamily struct {
+	Name    string                   `json:"name"`
+	Help    string                   `json:"help,omitempty"`
+	Type    string                   `json:"type"`
+	Metrics []managementMetricSample `json:"metrics"`
 }
 
-type guiMetricSample struct {
-	Labels  map[string]string `json:"labels,omitempty"`
-	Value   *float64          `json:"value,omitempty"`
-	Count   *uint64           `json:"count,omitempty"`
-	Sum     *float64          `json:"sum,omitempty"`
-	Buckets []guiMetricBucket `json:"buckets,omitempty"`
+type managementMetricSample struct {
+	Labels  map[string]string        `json:"labels,omitempty"`
+	Value   *float64                 `json:"value,omitempty"`
+	Count   *uint64                  `json:"count,omitempty"`
+	Sum     *float64                 `json:"sum,omitempty"`
+	Buckets []managementMetricBucket `json:"buckets,omitempty"`
 }
 
-type guiMetricBucket struct {
+type managementMetricBucket struct {
 	LE    float64 `json:"le"`
 	Count uint64  `json:"count"`
 }
 
-type guiLogsResponse struct {
-	Kind      string      `json:"kind"`
-	Name      string      `json:"name"`
-	Namespace string      `json:"namespace"`
-	Pods      []guiPodLog `json:"pods"`
-	UpdatedAt time.Time   `json:"updatedAt"`
+type managementLogsResponse struct {
+	Kind      string             `json:"kind"`
+	Name      string             `json:"name"`
+	Namespace string             `json:"namespace"`
+	Pods      []managementPodLog `json:"pods"`
+	UpdatedAt time.Time          `json:"updatedAt"`
 }
 
-type guiPodLog struct {
+type managementPodLog struct {
 	Name      string `json:"name"`
 	Container string `json:"container"`
 	Phase     string `json:"phase"`
@@ -251,71 +253,44 @@ type guiPodLog struct {
 	Error     string `json:"error,omitempty"`
 }
 
-func (s *Server) initGUI(args *DubboArgs) error {
-	s.guiPath = gui.NormalizeBasePath(args.ServerOptions.GUIPath)
-
-	handler, err := gui.NewHandler(s.guiPath, gui.Config{
-		Product: version.Product,
-	})
-	if err != nil {
-		return err
-	}
-
-	overviewPath := s.guiOverviewPath()
-	logsPath := s.guiLogsPath()
-	metricsAPIPath := s.guiMetricsPath()
-	if s.guiPath == "/" {
-		s.guiMux.HandleFunc(overviewPath, s.guiOverviewHandler)
-		s.guiMux.HandleFunc(logsPath, s.guiLogsHandler)
-		s.guiMux.HandleFunc(metricsAPIPath, s.guiMetricsHandler)
-		s.guiMux.Handle("/", handler)
-		return nil
-	}
-
-	s.guiMux.HandleFunc("/", func(writer http.ResponseWriter, request *http.Request) {
-		http.Redirect(writer, request, s.guiPath+"/", http.StatusTemporaryRedirect)
-	})
-	s.guiMux.HandleFunc(s.guiPath, func(writer http.ResponseWriter, request *http.Request) {
-		http.Redirect(writer, request, s.guiPath+"/", http.StatusTemporaryRedirect)
-	})
-	s.guiMux.HandleFunc(overviewPath, s.guiOverviewHandler)
-	s.guiMux.HandleFunc(logsPath, s.guiLogsHandler)
-	s.guiMux.HandleFunc(metricsAPIPath, s.guiMetricsHandler)
-	s.guiMux.Handle(s.guiPath+"/", handler)
+func (s *Server) initManagement() error {
+	s.managementMux.HandleFunc(s.managementOverviewPath(), s.managementOverviewHandler)
+	s.managementMux.HandleFunc(s.managementLogsPath(), s.managementLogsHandler)
+	s.managementMux.HandleFunc(s.managementMetricsPath(), s.managementMetricsHandler)
 
 	return nil
 }
 
-func (s *Server) initGUIServer(addr string) error {
-	s.addStartFunc("gui", func(stop <-chan struct{}) error {
+func (s *Server) initManagementServer(addr string) error {
+	s.addStartFunc("management", func(stop <-chan struct{}) error {
 		if addr == "" {
 			return nil
 		}
 
 		listener, err := net.Listen("tcp", addr)
 		if err != nil {
-			return fmt.Errorf("unable to listen on gui socket: %v", err)
+			return fmt.Errorf("unable to listen on management socket: %v", err)
 		}
-		s.guiAddr = listener.Addr().String()
+		s.managementAddr = listener.Addr().String()
 
-		guiServer := &http.Server{
+		managementServer := &http.Server{
 			Addr:        listener.Addr().String(),
-			Handler:     s.guiMux,
+			Handler:     s.managementMux,
 			IdleTimeout: 90 * time.Second,
 			ReadTimeout: 30 * time.Second,
 		}
 
 		go func() {
-			log.Infof("starting GUI Server at %s", listener.Addr())
-			if err := guiServer.Serve(listener); err != nil && err != http.ErrServerClosed {
-				log.Errorf("error serving GUI Server: %v", err)
+			log.Infof("starting Management Server at %s", listener.Addr())
+			if err := managementServer.Serve(listener); err != nil && err != http.ErrServerClosed {
+				log.Errorf("error serving Management Server: %v", err)
 			}
 		}()
 
 		go func() {
 			<-stop
-			if err := guiServer.Close(); err != nil {
-				log.Errorf("error closing GUI Server: %v", err)
+			if err := managementServer.Close(); err != nil {
+				log.Errorf("error closing Management Server: %v", err)
 			}
 		}()
 
@@ -325,19 +300,19 @@ func (s *Server) initGUIServer(addr string) error {
 	return nil
 }
 
-func (s *Server) guiOverviewPath() string {
-	return path.Join(s.guiPath, "api/overview")
+func (s *Server) managementOverviewPath() string {
+	return path.Join(managementAPIBase, "overview")
 }
 
-func (s *Server) guiLogsPath() string {
-	return path.Join(s.guiPath, "api/logs")
+func (s *Server) managementLogsPath() string {
+	return path.Join(managementAPIBase, "logs")
 }
 
-func (s *Server) guiMetricsPath() string {
-	return path.Join(s.guiPath, "api/metrics")
+func (s *Server) managementMetricsPath() string {
+	return path.Join(managementAPIBase, "metrics")
 }
 
-func (s *Server) guiMetricsHandler(writer http.ResponseWriter, request *http.Request) {
+func (s *Server) managementMetricsHandler(writer http.ResponseWriter, request *http.Request) {
 	if request.Method != http.MethodGet {
 		writer.WriteHeader(http.StatusMethodNotAllowed)
 		return
@@ -346,26 +321,26 @@ func (s *Server) guiMetricsHandler(writer http.ResponseWriter, request *http.Req
 	writer.Header().Set("Content-Type", "application/json; charset=utf-8")
 	families, err := monitoring.GetRegistry().Gather()
 	if err != nil {
-		writeGUIError(writer, http.StatusInternalServerError, err.Error())
+		writeManagementError(writer, http.StatusInternalServerError, err.Error())
 		return
 	}
 
-	response := guiMetricsResponse{
-		Families:  make([]guiMetricFamily, 0, len(families)),
+	response := managementMetricsResponse{
+		Families:  make([]managementMetricFamily, 0, len(families)),
 		UpdatedAt: time.Now().UTC(),
 	}
 	for _, family := range families {
 		if family == nil {
 			continue
 		}
-		out := guiMetricFamily{
+		out := managementMetricFamily{
 			Name:    family.GetName(),
 			Help:    family.GetHelp(),
 			Type:    family.GetType().String(),
-			Metrics: make([]guiMetricSample, 0, len(family.GetMetric())),
+			Metrics: make([]managementMetricSample, 0, len(family.GetMetric())),
 		}
 		for _, metric := range family.GetMetric() {
-			out.Metrics = append(out.Metrics, guiMetricSampleFrom(family.GetType(), metric))
+			out.Metrics = append(out.Metrics, managementMetricSampleFrom(family.GetType(), metric))
 		}
 		response.Families = append(response.Families, out)
 	}
@@ -374,8 +349,8 @@ func (s *Server) guiMetricsHandler(writer http.ResponseWriter, request *http.Req
 	_ = encoder.Encode(response)
 }
 
-func guiMetricSampleFrom(kind dto.MetricType, metric *dto.Metric) guiMetricSample {
-	sample := guiMetricSample{}
+func managementMetricSampleFrom(kind dto.MetricType, metric *dto.Metric) managementMetricSample {
+	sample := managementMetricSample{}
 	if labels := metric.GetLabel(); len(labels) > 0 {
 		sample.Labels = make(map[string]string, len(labels))
 		for _, pair := range labels {
@@ -397,9 +372,9 @@ func guiMetricSampleFrom(kind dto.MetricType, metric *dto.Metric) guiMetricSampl
 		histogram := metric.GetHistogram()
 		sample.Count = uintPtr(histogram.GetSampleCount())
 		sample.Sum = floatPtr(histogram.GetSampleSum())
-		sample.Buckets = make([]guiMetricBucket, 0, len(histogram.GetBucket()))
+		sample.Buckets = make([]managementMetricBucket, 0, len(histogram.GetBucket()))
 		for _, bucket := range histogram.GetBucket() {
-			sample.Buckets = append(sample.Buckets, guiMetricBucket{
+			sample.Buckets = append(sample.Buckets, managementMetricBucket{
 				LE:    bucket.GetUpperBound(),
 				Count: bucket.GetCumulativeCount(),
 			})
@@ -412,7 +387,7 @@ func guiMetricSampleFrom(kind dto.MetricType, metric *dto.Metric) guiMetricSampl
 	return sample
 }
 
-func (s *Server) guiOverviewHandler(writer http.ResponseWriter, request *http.Request) {
+func (s *Server) managementOverviewHandler(writer http.ResponseWriter, request *http.Request) {
 	if request.Method != http.MethodGet {
 		writer.WriteHeader(http.StatusMethodNotAllowed)
 		return
@@ -421,10 +396,10 @@ func (s *Server) guiOverviewHandler(writer http.ResponseWriter, request *http.Re
 	writer.Header().Set("Content-Type", "application/json; charset=utf-8")
 	encoder := json.NewEncoder(writer)
 	encoder.SetIndent("", "  ")
-	_ = encoder.Encode(s.buildGUIOverview())
+	_ = encoder.Encode(s.buildManagementOverview())
 }
 
-func (s *Server) guiLogsHandler(writer http.ResponseWriter, request *http.Request) {
+func (s *Server) managementLogsHandler(writer http.ResponseWriter, request *http.Request) {
 	if request.Method != http.MethodGet {
 		writer.WriteHeader(http.StatusMethodNotAllowed)
 		return
@@ -432,16 +407,16 @@ func (s *Server) guiLogsHandler(writer http.ResponseWriter, request *http.Reques
 
 	writer.Header().Set("Content-Type", "application/json; charset=utf-8")
 	if s.kubeClient == nil {
-		writeGUIError(writer, http.StatusServiceUnavailable, "kubernetes client is unavailable")
+		writeManagementError(writer, http.StatusServiceUnavailable, "kubernetes client is unavailable")
 		return
 	}
 
 	kind := strings.TrimSpace(request.URL.Query().Get("kind"))
 	namespace := strings.TrimSpace(request.URL.Query().Get("namespace"))
 	name := strings.TrimSpace(request.URL.Query().Get("name"))
-	tailLines := guiLogTailLines(request.URL.Query().Get("tail"))
+	tailLines := managementLogTailLines(request.URL.Query().Get("tail"))
 
-	var response guiLogsResponse
+	var response managementLogsResponse
 	var err error
 	switch kind {
 	case "dubbod":
@@ -454,16 +429,16 @@ func (s *Server) guiLogsHandler(writer http.ResponseWriter, request *http.Reques
 		response, err = s.deploymentLogs(request.Context(), "dubbod", namespace, name, "execute", tailLines)
 	case "gateway":
 		if namespace == "" || name == "" {
-			writeGUIError(writer, http.StatusBadRequest, "gateway logs require namespace and name")
+			writeManagementError(writer, http.StatusBadRequest, "gateway logs require namespace and name")
 			return
 		}
 		response, err = s.deploymentLogs(request.Context(), "gateway", namespace, name, "dxgate", tailLines)
 	default:
-		writeGUIError(writer, http.StatusBadRequest, "unknown log kind")
+		writeManagementError(writer, http.StatusBadRequest, "unknown log kind")
 		return
 	}
 	if err != nil {
-		writeGUIError(writer, http.StatusInternalServerError, err.Error())
+		writeManagementError(writer, http.StatusInternalServerError, err.Error())
 		return
 	}
 
@@ -472,12 +447,12 @@ func (s *Server) guiLogsHandler(writer http.ResponseWriter, request *http.Reques
 	_ = encoder.Encode(response)
 }
 
-func writeGUIError(writer http.ResponseWriter, status int, message string) {
+func writeManagementError(writer http.ResponseWriter, status int, message string) {
 	writer.WriteHeader(status)
 	_ = json.NewEncoder(writer).Encode(map[string]string{"error": message})
 }
 
-func guiLogTailLines(raw string) int64 {
+func managementLogTailLines(raw string) int64 {
 	const (
 		defaultTailLines int64 = 200
 		maxTailLines     int64 = 2000
@@ -495,15 +470,15 @@ func guiLogTailLines(raw string) int64 {
 	return n
 }
 
-func (s *Server) deploymentLogs(ctx context.Context, kind, namespace, name, preferredContainer string, tailLines int64) (guiLogsResponse, error) {
+func (s *Server) deploymentLogs(ctx context.Context, kind, namespace, name, preferredContainer string, tailLines int64) (managementLogsResponse, error) {
 	deployment, err := s.kubeClient.Kube().AppsV1().Deployments(namespace).Get(ctx, name, metav1.GetOptions{})
 	if err != nil {
-		return guiLogsResponse{}, fmt.Errorf("get deployment %s/%s: %v", namespace, name, err)
+		return managementLogsResponse{}, fmt.Errorf("get deployment %s/%s: %v", namespace, name, err)
 	}
 
 	selector, err := metav1.LabelSelectorAsSelector(deployment.Spec.Selector)
 	if err != nil {
-		return guiLogsResponse{}, fmt.Errorf("build pod selector for deployment %s/%s: %v", namespace, name, err)
+		return managementLogsResponse{}, fmt.Errorf("build pod selector for deployment %s/%s: %v", namespace, name, err)
 	}
 	if selector.Empty() {
 		selector = klabels.SelectorFromSet(deployment.Spec.Template.Labels)
@@ -513,17 +488,17 @@ func (s *Server) deploymentLogs(ctx context.Context, kind, namespace, name, pref
 		LabelSelector: selector.String(),
 	})
 	if err != nil {
-		return guiLogsResponse{}, fmt.Errorf("list pods for deployment %s/%s: %v", namespace, name, err)
+		return managementLogsResponse{}, fmt.Errorf("list pods for deployment %s/%s: %v", namespace, name, err)
 	}
 	sort.SliceStable(pods.Items, func(i, j int) bool {
 		return pods.Items[i].Name < pods.Items[j].Name
 	})
 
-	out := guiLogsResponse{
+	out := managementLogsResponse{
 		Kind:      kind,
 		Name:      name,
 		Namespace: namespace,
-		Pods:      make([]guiPodLog, 0, len(pods.Items)),
+		Pods:      make([]managementPodLog, 0, len(pods.Items)),
 		UpdatedAt: time.Now().UTC(),
 	}
 	for _, pod := range pods.Items {
@@ -532,11 +507,11 @@ func (s *Server) deploymentLogs(ctx context.Context, kind, namespace, name, pref
 	return out, nil
 }
 
-func (s *Server) podLogs(ctx context.Context, pod corev1.Pod, preferredContainer string, tailLines int64) []guiPodLog {
-	containers := guiLogContainers(pod, preferredContainer)
-	out := make([]guiPodLog, 0, len(containers))
+func (s *Server) podLogs(ctx context.Context, pod corev1.Pod, preferredContainer string, tailLines int64) []managementPodLog {
+	containers := managementLogContainers(pod, preferredContainer)
+	out := make([]managementPodLog, 0, len(containers))
 	for _, container := range containers {
-		entry := guiPodLog{
+		entry := managementPodLog{
 			Name:      pod.Name,
 			Container: container,
 			Phase:     string(pod.Status.Phase),
@@ -557,7 +532,7 @@ func (s *Server) podLogs(ctx context.Context, pod corev1.Pod, preferredContainer
 	return out
 }
 
-func guiLogContainers(pod corev1.Pod, preferredContainer string) []string {
+func managementLogContainers(pod corev1.Pod, preferredContainer string) []string {
 	if preferredContainer != "" {
 		for _, container := range pod.Spec.Containers {
 			if container.Name == preferredContainer {
@@ -581,8 +556,8 @@ func podReady(pod corev1.Pod) bool {
 	return false
 }
 
-func (s *Server) buildGUIOverview() guiOverview {
-	meshOverview := guiOverviewMesh{}
+func (s *Server) buildManagementOverview() managementOverview {
+	meshOverview := managementOverviewMesh{}
 	if meshConfig := s.environment.Mesh(); meshConfig != nil {
 		meshOverview.TrustDomain = meshConfig.GetTrustDomain()
 		meshOverview.RootNamespace = meshConfig.GetRootNamespace()
@@ -591,20 +566,20 @@ func (s *Server) buildGUIOverview() guiOverview {
 		}
 	}
 
-	dataPlane, dataPlanePods := s.buildGUIDataPlane()
+	dataPlane, dataPlanePods := s.buildManagementDataPlane()
 
-	registries := s.buildGUIRegistries()
-	configKinds := s.buildGUIConfigKinds()
-	services := s.buildGUIServices()
-	instances := s.buildGUIDubbodInstances()
+	registries := s.buildManagementRegistries()
+	configKinds := s.buildManagementConfigKinds()
+	services := s.buildManagementServices()
+	instances := s.buildManagementDubbodInstances()
 
 	readyPath := ""
 	if s.httpsAddr != "" {
 		readyPath = "https://" + localLinkAddress(s.httpsAddr) + "/ready"
 	}
-	overviewPath := s.guiOverviewPath()
-	if s.guiAddr != "" {
-		overviewPath = buildLocalHTTPURL(s.guiAddr, s.guiOverviewPath())
+	overviewPath := s.managementOverviewPath()
+	if s.managementAddr != "" {
+		overviewPath = buildLocalHTTPURL(s.managementAddr, s.managementOverviewPath())
 	}
 	metricsURL := metricsPath
 	if s.httpAddr != "" {
@@ -615,16 +590,15 @@ func (s *Server) buildGUIOverview() guiOverview {
 		versionURL = buildLocalHTTPURL(s.httpAddr, versionPath)
 	}
 
-	return guiOverview{
+	return managementOverview{
 		Product:   version.Product,
 		Version:   version.Info.String(),
 		Cluster:   string(s.clusterID),
 		Namespace: s.namespace,
 		PodName:   s.podName,
 		Mesh:      meshOverview,
-		Server: guiOverviewServer{
-			GUIPath:           s.guiPath,
-			HTTPAddress:       s.guiAddr,
+		Server: managementOverviewServer{
+			HTTPAddress:       s.managementAddr,
 			GRPCAddress:       s.grpcAddress,
 			SecureGRPCAddress: s.secureGrpcAddress,
 			OverviewPath:      overviewPath,
@@ -632,7 +606,7 @@ func (s *Server) buildGUIOverview() guiOverview {
 			VersionPath:       versionURL,
 			ReadyPath:         readyPath,
 		},
-		Status: guiOverviewStatus{
+		Status: managementOverviewStatus{
 			XDSServerReady:  s.XDSServer.IsServerReady(),
 			CachesSynced:    s.cachesSynced(),
 			ServicesSynced:  s.ServiceController().HasSynced(),
@@ -641,7 +615,7 @@ func (s *Server) buildGUIOverview() guiOverview {
 			InjectorReady:   s.kubeClient == nil || s.readinessFlags.InjectorReady.Load(),
 			ValidationReady: s.kubeClient == nil || s.readinessFlags.configValidationReady.Load(),
 		},
-		Counts: guiOverviewCounts{
+		Counts: managementOverviewCounts{
 			Services:               len(services),
 			EndpointServices:       len(s.environment.EndpointIndex.AllServices()),
 			XDSConnections:         len(s.XDSServer.AllClients()),
@@ -657,37 +631,37 @@ func (s *Server) buildGUIOverview() guiOverview {
 		Registries:       registries,
 		Services:         services,
 		Instances:        instances,
-		Routes:           s.buildGUIRoutes(),
-		XDSClients:       s.buildGUIXDSClients(),
+		Routes:           s.buildManagementRoutes(),
+		XDSClients:       s.buildManagementXDSClients(),
 		DataPlane:        dataPlane,
 		DataPlanePods:    dataPlanePods,
-		GatewayInstances: s.buildGUIGatewayInstances(),
+		GatewayInstances: s.buildManagementGatewayInstances(),
 		UpdatedAt:        time.Now().UTC(),
 	}
 }
 
 const (
-	// guiDubbodPodSelector matches the label the dubbod chart puts on control
+	// managementDubbodPodSelector matches the label the dubbod chart puts on control
 	// plane pods (manifests/charts/dubbod/templates/deployment.yaml).
-	guiDubbodPodSelector = "app=dubbod"
+	managementDubbodPodSelector = "app=dubbod"
 
 	// Gateway deployments provisioned by dubbod carry these labels; the same
 	// pair identifies gateway pods so the data plane listing can skip them.
-	guiGatewayNameLabel = "app.kubernetes.io/name"
-	guiGatewayNameValue = "dxgate"
-	guiGatewaySelector  = guiGatewayNameLabel + "=" + guiGatewayNameValue + ",app.kubernetes.io/managed-by=dubbod"
+	managementGatewayNameLabel = "app.kubernetes.io/name"
+	managementGatewayNameValue = "dxgate"
+	managementGatewaySelector  = managementGatewayNameLabel + "=" + managementGatewayNameValue + ",app.kubernetes.io/managed-by=dubbod"
 
 	// What the inbound sidecar enforces when no PeerAuthentication applies.
 	grpcInboundFallbackMTLSMode = "PERMISSIVE"
 )
 
-func (s *Server) buildGUIDubbodInstances() []guiDubbodInstance {
-	instances := make([]guiDubbodInstance, 0)
+func (s *Server) buildManagementDubbodInstances() []managementDubbodInstance {
+	instances := make([]managementDubbodInstance, 0)
 
 	// Off-cluster runs (`go run ./dubbod/discovery/cmd`) have no pods to list, so
 	// report this process as-is rather than inventing an address for it.
 	if s.kubeClient == nil {
-		return append(instances, guiDubbodInstance{
+		return append(instances, managementDubbodInstance{
 			Name:      s.podName,
 			Namespace: s.namespace,
 			IsReady:   true,
@@ -695,15 +669,15 @@ func (s *Server) buildGUIDubbodInstances() []guiDubbodInstance {
 	}
 
 	pods, err := s.kubeClient.Kube().CoreV1().Pods(s.namespace).List(context.TODO(), metav1.ListOptions{
-		LabelSelector: guiDubbodPodSelector,
+		LabelSelector: managementDubbodPodSelector,
 	})
 	if err != nil {
-		log.Warnf("gui: listing control plane pods in %s: %v", s.namespace, err)
+		log.Warnf("management: listing control plane pods in %s: %v", s.namespace, err)
 		return instances
 	}
 
 	for _, pod := range pods.Items {
-		instances = append(instances, guiDubbodInstance{
+		instances = append(instances, managementDubbodInstance{
 			Name:      pod.Name,
 			Namespace: pod.Namespace,
 			IP:        pod.Status.PodIP,
@@ -738,14 +712,14 @@ func xdsTypeShortName(typeURL string) string {
 	return typeURL
 }
 
-func (s *Server) buildGUIXDSClients() []guiXDSClient {
-	clients := make([]guiXDSClient, 0)
+func (s *Server) buildManagementXDSClients() []managementXDSClient {
+	clients := make([]managementXDSClient, 0)
 	for _, conn := range s.XDSServer.AllClients() {
 		proxy := conn.Proxy()
 		if proxy == nil {
 			continue
 		}
-		entry := guiXDSClient{
+		entry := managementXDSClient{
 			NodeID:      proxy.ID,
 			NodeType:    string(proxy.Type),
 			Peer:        conn.Peer(),
@@ -763,17 +737,17 @@ func (s *Server) buildGUIXDSClients() []guiXDSClient {
 	return clients
 }
 
-// guiXDSClientsByIP indexes live ADS streams by every IP their node reported, so
+// managementXDSClientsByIP indexes live ADS streams by every IP their node reported, so
 // a pod row can be joined to the stream it actually holds open.
-func (s *Server) guiXDSClientsByIP() map[string]guiWorkload {
-	byIP := make(map[string]guiWorkload)
+func (s *Server) managementXDSClientsByIP() map[string]managementWorkload {
+	byIP := make(map[string]managementWorkload)
 	for _, conn := range s.XDSServer.AllClients() {
 		proxy := conn.Proxy()
 		if proxy == nil {
 			continue
 		}
 
-		entry := guiWorkload{
+		entry := managementWorkload{
 			Connected: true,
 			NodeID:    proxy.ID,
 			NodeType:  string(proxy.Type),
@@ -799,9 +773,9 @@ func (s *Server) guiXDSClientsByIP() map[string]guiWorkload {
 	return byIP
 }
 
-// guiSidecarContainer returns the dxplane inbound sidecar in a pod, or nil when
+// managementSidecarContainer returns the dxplane inbound sidecar in a pod, or nil when
 // the pod is not part of the data plane.
-func guiSidecarContainer(pod corev1.Pod) *corev1.Container {
+func managementSidecarContainer(pod corev1.Pod) *corev1.Container {
 	for i := range pod.Spec.Containers {
 		if pod.Spec.Containers[i].Name == inject.ProxylessGRPCInboundContainerName {
 			return &pod.Spec.Containers[i]
@@ -810,10 +784,10 @@ func guiSidecarContainer(pod corev1.Pod) *corev1.Container {
 	return nil
 }
 
-// guiSidecarAddresses reads the listener and upstream dxplane was started with.
+// managementSidecarAddresses reads the listener and upstream dxplane was started with.
 // The sidecar takes both as `--listen`/`--upstream` flags, so the running
 // configuration is readable from the pod spec without contacting the pod.
-func guiSidecarAddresses(container corev1.Container) (inbound, upstream string) {
+func managementSidecarAddresses(container corev1.Container) (inbound, upstream string) {
 	args := container.Args
 	for i := 0; i < len(args); i++ {
 		var flag, value string
@@ -842,7 +816,7 @@ func guiSidecarAddresses(container corev1.Container) (inbound, upstream string) 
 	return inbound, upstream
 }
 
-func guiContainerEnv(container corev1.Container, name string) string {
+func managementContainerEnv(container corev1.Container, name string) string {
 	for _, env := range container.Env {
 		if env.Name == name {
 			return env.Value
@@ -851,9 +825,9 @@ func guiContainerEnv(container corev1.Container, name string) string {
 	return ""
 }
 
-// guiActiveRootCert mirrors proxylessGRPCWorkloadController.activeRootCert so
+// managementActiveRootCert mirrors proxylessGRPCWorkloadController.activeRootCert so
 // the console compares workload secrets against the same root the issuer uses.
-func (s *Server) guiActiveRootCert() []byte {
+func (s *Server) managementActiveRootCert() []byte {
 	authority := s.RA
 	if authority == nil {
 		if s.CA == nil {
@@ -870,11 +844,11 @@ func (s *Server) guiActiveRootCert() []byte {
 	return authority.GetCAKeyCertBundle().GetRootCertPem()
 }
 
-// guiWorkloadSecretState reads the per-workload secret dubbod itself generates.
+// managementWorkloadSecretState reads the per-workload secret dubbod itself generates.
 // That secret holds the exact runtime config and certificate the sidecar is
 // running with, so the mTLS mode and certificate expiry reported here are what
 // is actually in force — not a restatement of the policy dubbod intended.
-func (s *Server) guiWorkloadSecretState(ctx context.Context, pod corev1.Pod, activeRoot []byte) (modes []string, expiresAt *time.Time, rootActive bool, problem string) {
+func (s *Server) managementWorkloadSecretState(ctx context.Context, pod corev1.Pod, activeRoot []byte) (modes []string, expiresAt *time.Time, rootActive bool, problem string) {
 	name := inject.ProxylessGRPCSecretNameForMeta(pod.ObjectMeta)
 	secret, err := s.kubeClient.Kube().CoreV1().Secrets(pod.Namespace).Get(ctx, name, metav1.GetOptions{})
 	if err != nil {
@@ -926,11 +900,11 @@ func (s *Server) guiWorkloadSecretState(ctx context.Context, pod corev1.Pod, act
 	return modes, expiresAt, rootActive, problem
 }
 
-// buildGUIDataPlane lists the pods carrying the proxyless gRPC sidecar and joins
+// buildManagementDataPlane lists the pods carrying the proxyless gRPC sidecar and joins
 // each to its ADS stream. Gateway pods are excluded — they are reported
 // separately as the external data plane.
-func (s *Server) buildGUIDataPlane() ([]guiWorkload, map[string]int) {
-	workloads := make([]guiWorkload, 0)
+func (s *Server) buildManagementDataPlane() ([]managementWorkload, map[string]int) {
+	workloads := make([]managementWorkload, 0)
 	candidates := make(map[string]int)
 	if s.kubeClient == nil {
 		return workloads, candidates
@@ -938,14 +912,14 @@ func (s *Server) buildGUIDataPlane() ([]guiWorkload, map[string]int) {
 
 	pods, err := s.kubeClient.Kube().CoreV1().Pods(metav1.NamespaceAll).List(context.TODO(), metav1.ListOptions{})
 	if err != nil {
-		log.Warnf("gui: listing data plane pods: %v", err)
+		log.Warnf("management: listing data plane pods: %v", err)
 		return workloads, candidates
 	}
 
-	clients := s.guiXDSClientsByIP()
-	activeRoot := s.guiActiveRootCert()
+	clients := s.managementXDSClientsByIP()
+	activeRoot := s.managementActiveRootCert()
 	for _, pod := range pods.Items {
-		if pod.Labels[guiGatewayNameLabel] == guiGatewayNameValue {
+		if pod.Labels[managementGatewayNameLabel] == managementGatewayNameValue {
 			continue
 		}
 
@@ -956,7 +930,7 @@ func (s *Server) buildGUIDataPlane() ([]guiWorkload, map[string]int) {
 		}
 		candidates[pod.Namespace]++
 
-		sidecar := guiSidecarContainer(pod)
+		sidecar := managementSidecarContainer(pod)
 		if sidecar == nil {
 			continue
 		}
@@ -968,8 +942,8 @@ func (s *Server) buildGUIDataPlane() ([]guiWorkload, map[string]int) {
 			}
 		}
 
-		inbound, upstream := guiSidecarAddresses(*sidecar)
-		workload := guiWorkload{
+		inbound, upstream := managementSidecarAddresses(*sidecar)
+		workload := managementWorkload{
 			Name:           pod.Name,
 			Namespace:      pod.Namespace,
 			IP:             pod.Status.PodIP,
@@ -980,7 +954,7 @@ func (s *Server) buildGUIDataPlane() ([]guiWorkload, map[string]int) {
 			Image:          sidecar.Image,
 			Inbound:        inbound,
 			Upstream:       upstream,
-			XDSAddress:     guiContainerEnv(*sidecar, "XDS_ADDRESS"),
+			XDSAddress:     managementContainerEnv(*sidecar, "XDS_ADDRESS"),
 		}
 		for _, status := range pod.Status.ContainerStatuses {
 			if status.Name == sidecar.Name {
@@ -988,7 +962,7 @@ func (s *Server) buildGUIDataPlane() ([]guiWorkload, map[string]int) {
 			}
 		}
 		workload.MTLSModes, workload.CertExpiresAt, workload.CertRootActive, workload.ConfigError =
-			s.guiWorkloadSecretState(context.TODO(), pod, activeRoot)
+			s.managementWorkloadSecretState(context.TODO(), pod, activeRoot)
 		if client, ok := clients[pod.Status.PodIP]; ok {
 			workload.Connected = client.Connected
 			workload.NodeID = client.NodeID
@@ -1021,16 +995,16 @@ func (s *Server) buildGUIDataPlane() ([]guiWorkload, map[string]int) {
 	return workloads, candidates
 }
 
-func (s *Server) buildGUIGatewayInstances() []guiDubbodInstance {
-	instances := make([]guiDubbodInstance, 0)
+func (s *Server) buildManagementGatewayInstances() []managementDubbodInstance {
+	instances := make([]managementDubbodInstance, 0)
 
 	if s.kubeClient != nil {
 		deployments, err := s.kubeClient.Kube().AppsV1().Deployments("").List(context.TODO(), metav1.ListOptions{
-			LabelSelector: guiGatewaySelector,
+			LabelSelector: managementGatewaySelector,
 		})
 		if err == nil && len(deployments.Items) > 0 {
 			for _, deployment := range deployments.Items {
-				instances = append(instances, guiGatewayInstanceFromDeployment(deployment))
+				instances = append(instances, managementGatewayInstanceFromDeployment(deployment))
 			}
 		}
 	}
@@ -1038,7 +1012,7 @@ func (s *Server) buildGUIGatewayInstances() []guiDubbodInstance {
 	return instances
 }
 
-func guiGatewayInstanceFromDeployment(deployment appsv1.Deployment) guiDubbodInstance {
+func managementGatewayInstanceFromDeployment(deployment appsv1.Deployment) managementDubbodInstance {
 	desired := int32(1)
 	if deployment.Spec.Replicas != nil {
 		desired = *deployment.Spec.Replicas
@@ -1046,7 +1020,7 @@ func guiGatewayInstanceFromDeployment(deployment appsv1.Deployment) guiDubbodIns
 	ready := deployment.Status.ReadyReplicas
 	gatewayName := deployment.Labels["gateway.networking.k8s.io/gateway-name"]
 
-	return guiDubbodInstance{
+	return managementDubbodInstance{
 		Name:            deployment.Name,
 		Namespace:       deployment.Namespace,
 		IsReady:         desired > 0 && ready >= desired,
@@ -1057,11 +1031,11 @@ func guiGatewayInstanceFromDeployment(deployment appsv1.Deployment) guiDubbodIns
 	}
 }
 
-// buildGUIRoutes flattens the HTTPRoutes in the config store into the shape the
+// buildManagementRoutes flattens the HTTPRoutes in the config store into the shape the
 // console draws. Matches are rendered as the operator wrote them so a rule in
 // the UI can be grepped for in `kubectl get httproute -o yaml`.
-func (s *Server) buildGUIRoutes() []guiRoute {
-	routes := make([]guiRoute, 0)
+func (s *Server) buildManagementRoutes() []managementRoute {
+	routes := make([]managementRoute, 0)
 	if s.environment.ConfigStore == nil {
 		return routes
 	}
@@ -1072,7 +1046,7 @@ func (s *Server) buildGUIRoutes() []guiRoute {
 			continue
 		}
 
-		entry := guiRoute{Name: cfg.Name, Namespace: cfg.Namespace}
+		entry := managementRoute{Name: cfg.Name, Namespace: cfg.Namespace}
 		for _, parent := range spec.ParentRefs {
 			entry.Parents = append(entry.Parents, string(parent.Name))
 		}
@@ -1081,9 +1055,9 @@ func (s *Server) buildGUIRoutes() []guiRoute {
 		}
 
 		for _, rule := range spec.Rules {
-			out := guiRouteRule{Match: guiRouteMatch(rule.Matches)}
+			out := managementRouteRule{Match: managementRouteMatch(rule.Matches)}
 			for _, backend := range rule.BackendRefs {
-				item := guiRouteBackend{Name: string(backend.Name)}
+				item := managementRouteBackend{Name: string(backend.Name)}
 				if backend.Port != nil {
 					item.Port = *backend.Port
 				}
@@ -1107,9 +1081,9 @@ func (s *Server) buildGUIRoutes() []guiRoute {
 	return routes
 }
 
-// guiRouteMatch renders the match conditions of one rule; an empty match set is
+// managementRouteMatch renders the match conditions of one rule; an empty match set is
 // Gateway API's "match everything", which reads better as an explicit path.
-func guiRouteMatch(matches []sigsk8siogatewayapiapisv1.HTTPRouteMatch) string {
+func managementRouteMatch(matches []sigsk8siogatewayapiapisv1.HTTPRouteMatch) string {
 	if len(matches) == 0 {
 		return "/"
 	}
@@ -1137,11 +1111,11 @@ func guiRouteMatch(matches []sigsk8siogatewayapiapisv1.HTTPRouteMatch) string {
 	return strings.Join(parts, " | ")
 }
 
-func (s *Server) buildGUIRegistries() []guiRegistry {
+func (s *Server) buildManagementRegistries() []managementRegistry {
 	registries := s.ServiceController().GetRegistries()
-	items := make([]guiRegistry, 0, len(registries))
+	items := make([]managementRegistry, 0, len(registries))
 	for _, registry := range registries {
-		items = append(items, guiRegistry{
+		items = append(items, managementRegistry{
 			Provider: string(registry.Provider()),
 			Cluster:  string(registry.Cluster()),
 			Synced:   registry.HasSynced(),
@@ -1158,8 +1132,8 @@ func (s *Server) buildGUIRegistries() []guiRegistry {
 	return items
 }
 
-func (s *Server) buildGUIConfigKinds() []guiConfigKind {
-	return []guiConfigKind{
+func (s *Server) buildManagementConfigKinds() []managementConfigKind {
+	return []managementConfigKind{
 		{
 			Kind:        "PeerAuthentication",
 			Count:       s.countConfigs(gvk.PeerAuthentication),
@@ -1193,7 +1167,7 @@ func (s *Server) buildGUIConfigKinds() []guiConfigKind {
 	}
 }
 
-func (s *Server) buildGUIServices() []guiService {
+func (s *Server) buildManagementServices() []managementService {
 	injectedNamespaces := make(map[string]bool)
 	if s.kubeClient != nil {
 		nsList, err := s.kubeClient.Kube().CoreV1().Namespaces().List(context.TODO(), metav1.ListOptions{})
@@ -1209,7 +1183,7 @@ func (s *Server) buildGUIServices() []guiService {
 	}
 
 	services := s.environment.Services()
-	items := make([]guiService, 0, len(services))
+	items := make([]managementService, 0, len(services))
 	for _, service := range services {
 		injected := injectedNamespaces[service.Attributes.Namespace]
 		if !injected && s.environment.EndpointIndex != nil {
@@ -1234,8 +1208,8 @@ func (s *Server) buildGUIServices() []guiService {
 			continue
 		}
 
-		mode, fromPolicy := s.guiServiceMTLSMode(service)
-		items = append(items, guiService{
+		mode, fromPolicy := s.managementServiceMTLSMode(service)
+		items = append(items, managementService{
 			MTLSMode:        mode,
 			MTLSFromPolicy:  fromPolicy,
 			Name:            service.Attributes.Name,
@@ -1263,13 +1237,13 @@ func (s *Server) buildGUIServices() []guiService {
 	return items
 }
 
-// guiServiceMTLSMode resolves the inbound mTLS mode callers of this service will
+// managementServiceMTLSMode resolves the inbound mTLS mode callers of this service will
 // meet. When no PeerAuthentication selects the workload the effective mode is
 // UNKNOWN, and the sidecar falls back to PERMISSIVE
 // (cmd/app/grpc_inbound.go effectiveMTLSMode) — reporting that fallback rather
 // than "strict" keeps the console from claiming an encryption guarantee the data
 // plane is not making.
-func (s *Server) guiServiceMTLSMode(service *discoverymodel.Service) (mode string, fromPolicy bool) {
+func (s *Server) managementServiceMTLSMode(service *discoverymodel.Service) (mode string, fromPolicy bool) {
 	push := s.environment.PushContext()
 	if push == nil || push.AuthenticationPolicies == nil {
 		return grpcInboundFallbackMTLSMode, false
