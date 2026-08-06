@@ -29,24 +29,68 @@ func TestIPTablesRuleManagerAddsGRPCInboundBoundaryRules(t *testing.T) {
 	}
 	manager := NewIPTablesRuleManagerWithRunner(conf, runner)
 
-	if err := manager.AddPodRules(context.Background(), "10.244.0.12"); err != nil {
+	if err := manager.AddPodRules(context.Background(), "10.244.0.12", []int{9090}); err != nil {
 		t.Fatalf("AddPodRules() failed: %v", err)
 	}
 
 	joined := strings.Join(runner.commands, "\n")
 	for _, want := range []string{
 		"ipset create DUBBO-GRPC-INBOUND-PODS hash:ip -exist",
+		"ipset create DUBBO-GRPC-INBOUND-EXCLUDE hash:ip,port -exist",
 		"-N DUBBO-GRPC-INBOUND",
 		"-I FORWARD 1 -j DUBBO-GRPC-INBOUND",
 		"-I OUTPUT 1 -j DUBBO-GRPC-INBOUND",
+		"-A DUBBO-GRPC-INBOUND -m set --match-set DUBBO-GRPC-INBOUND-EXCLUDE dst,dst -p tcp -j RETURN",
 		"-A DUBBO-GRPC-INBOUND -m set --match-set DUBBO-GRPC-INBOUND-PODS dst -p tcp --dport 15080 -j RETURN",
 		"-A DUBBO-GRPC-INBOUND -m set --match-set DUBBO-GRPC-INBOUND-PODS dst -p tcp --dport 26021 -j RETURN",
 		"-A DUBBO-GRPC-INBOUND -m set --match-set DUBBO-GRPC-INBOUND-PODS dst -p tcp -j REJECT",
 		"ipset add DUBBO-GRPC-INBOUND-PODS 10.244.0.12 -exist",
+		"ipset add DUBBO-GRPC-INBOUND-EXCLUDE 10.244.0.12,tcp:9090 -exist",
 	} {
 		if !strings.Contains(joined, want) {
 			t.Fatalf("commands missing %q:\n%s", want, joined)
 		}
+	}
+
+	// The exclusion must be evaluated before the catch-all REJECT.
+	excludeAt := strings.Index(joined, "--match-set DUBBO-GRPC-INBOUND-EXCLUDE dst,dst -p tcp -j RETURN")
+	rejectAt := strings.Index(joined, "DUBBO-GRPC-INBOUND-PODS dst -p tcp -j REJECT")
+	if excludeAt < 0 || rejectAt < 0 || excludeAt > rejectAt {
+		t.Fatalf("exclusion rule is not appended before the REJECT rule:\n%s", joined)
+	}
+}
+
+func TestIPTablesRuleManagerReconcileRebuildsFence(t *testing.T) {
+	runner := &recordingRunner{}
+	conf, err := ParseNetConf([]byte(`{"grpcInboundPort":15080}`))
+	if err != nil {
+		t.Fatalf("ParseNetConf() failed: %v", err)
+	}
+	manager := NewIPTablesRuleManagerWithRunner(conf, runner)
+
+	err = manager.Reconcile(context.Background(), []PodState{
+		{IP: "10.244.0.12", ExcludedPorts: []int{9090}},
+		{IP: "10.244.0.13"},
+		{IP: "not-an-ip"},
+	})
+	if err != nil {
+		t.Fatalf("Reconcile() failed: %v", err)
+	}
+
+	joined := strings.Join(runner.commands, "\n")
+	for _, want := range []string{
+		"ipset flush DUBBO-GRPC-INBOUND-PODS",
+		"ipset flush DUBBO-GRPC-INBOUND-EXCLUDE",
+		"ipset add DUBBO-GRPC-INBOUND-PODS 10.244.0.12 -exist",
+		"ipset add DUBBO-GRPC-INBOUND-EXCLUDE 10.244.0.12,tcp:9090 -exist",
+		"ipset add DUBBO-GRPC-INBOUND-PODS 10.244.0.13 -exist",
+	} {
+		if !strings.Contains(joined, want) {
+			t.Fatalf("commands missing %q:\n%s", want, joined)
+		}
+	}
+	if strings.Contains(joined, "not-an-ip") {
+		t.Fatalf("malformed state was not skipped:\n%s", joined)
 	}
 }
 

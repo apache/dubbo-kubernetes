@@ -23,7 +23,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-func TestGUIGatewayInstanceUsesDeploymentIdentity(t *testing.T) {
+func TestManagementGatewayInstanceUsesDeploymentIdentity(t *testing.T) {
 	desired := int32(2)
 	deployment := appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
@@ -41,7 +41,7 @@ func TestGUIGatewayInstanceUsesDeploymentIdentity(t *testing.T) {
 		},
 	}
 
-	got := guiGatewayInstanceFromDeployment(deployment)
+	got := managementGatewayInstanceFromDeployment(deployment)
 	if got.Name != "dxgate-gateway" {
 		t.Fatalf("Name = %q, want deployment name without pod hash", got.Name)
 	}
@@ -54,19 +54,19 @@ func TestGUIGatewayInstanceUsesDeploymentIdentity(t *testing.T) {
 	}
 }
 
-func TestGUILogTailLines(t *testing.T) {
-	if got := guiLogTailLines(""); got != 200 {
+func TestManagementLogTailLines(t *testing.T) {
+	if got := managementLogTailLines(""); got != 200 {
 		t.Fatalf("default tail lines = %d, want 200", got)
 	}
-	if got := guiLogTailLines("25"); got != 25 {
+	if got := managementLogTailLines("25"); got != 25 {
 		t.Fatalf("tail lines = %d, want 25", got)
 	}
-	if got := guiLogTailLines("99999"); got != 2000 {
+	if got := managementLogTailLines("99999"); got != 2000 {
 		t.Fatalf("capped tail lines = %d, want 2000", got)
 	}
 }
 
-func TestGUILogContainersPrefersNamedContainer(t *testing.T) {
+func TestManagementLogContainersPrefersNamedContainer(t *testing.T) {
 	pod := corev1.Pod{
 		Spec: corev1.PodSpec{
 			Containers: []corev1.Container{
@@ -76,12 +76,12 @@ func TestGUILogContainersPrefersNamedContainer(t *testing.T) {
 		},
 	}
 
-	got := guiLogContainers(pod, "dxgate")
+	got := managementLogContainers(pod, "dxgate")
 	if len(got) != 1 || got[0] != "dxgate" {
 		t.Fatalf("containers = %v, want [dxgate]", got)
 	}
 
-	got = guiLogContainers(pod, "missing")
+	got = managementLogContainers(pod, "missing")
 	if len(got) != 2 || got[0] != "setup" || got[1] != "dxgate" {
 		t.Fatalf("fallback containers = %v, want all containers", got)
 	}

@@ -17,102 +17,198 @@ package cmd
 
 import (
 	"fmt"
-	guiapp "github.com/apache/dubbo-kubernetes/dubbod/gui"
-	"github.com/spf13/cobra"
+	"net"
 	"net/http"
 	"net/url"
+	"os"
 	"os/exec"
+	"os/signal"
 	"path"
 	"runtime"
 	"strings"
+	"syscall"
 	"time"
+
+	"github.com/spf13/cobra"
 )
 
+// launchEnvVar gates the console binary: it refuses to boot unless dubboctl
+// started it, so the console is never exposed as a standalone service.
+const launchEnvVar = "DUBBOCTL_GUI_LAUNCH"
+
+const defaultConsoleBinary = "dubbod-console"
+
 type guiArgs struct {
-	address string
-	path    string
-	open    bool
-	wait    time.Duration
+	binary     string
+	listen     string
+	basePath   string
+	kubeconfig string
+	contexts   []string
+	endpoints  []string
+	open       bool
+	wait       time.Duration
 }
 
 func GuiCmd() *cobra.Command {
 	args := &guiArgs{
-		address: "http://127.0.0.1:26080",
-		path:    "/gui",
-		open:    true,
-		wait:    30 * time.Second,
+		binary:   defaultConsoleBinary,
+		listen:   "127.0.0.1:8080",
+		basePath: "/",
+		open:     true,
+		wait:     30 * time.Second,
 	}
 
 	command := &cobra.Command{
-		Use:   "gui",
-		Short: "Open the embedded dubbod GUI",
-		Args:  cobra.NoArgs,
-		RunE: func(cmd *cobra.Command, _ []string) error {
-			guiURL, overviewURL, err := buildGUIURLs(args.address, args.path)
+		Use:   "gui [-- CONSOLE FLAGS]",
+		Short: "Start the dubbod console and open it in a browser",
+		Long: "Start the dubbod console and open it in a browser.\n\n" +
+			"The console is a separate binary that aggregates the management API of every\n" +
+			"discovered control plane. It only runs when started through this command.\n" +
+			"Arguments after -- are passed to the console unchanged.",
+		RunE: func(cmd *cobra.Command, extraArgs []string) error {
+			binary, err := exec.LookPath(args.binary)
+			if err != nil {
+				return fmt.Errorf("console binary %q not found: %w", args.binary, err)
+			}
+
+			consoleURL, healthURL, err := buildGUIURLs(args.listen, args.basePath)
 			if err != nil {
 				return err
 			}
 
-			if err := waitForOverview(overviewURL, args.wait); err != nil {
+			console := exec.Command(binary, args.consoleArgs(extraArgs)...)
+			console.Env = append(os.Environ(), launchEnvVar+"=1")
+			console.Stdout = cmd.OutOrStdout()
+			console.Stderr = cmd.ErrOrStderr()
+			if err := console.Start(); err != nil {
+				return fmt.Errorf("failed to start console: %w", err)
+			}
+
+			exited := make(chan error, 1)
+			go func() { exited <- console.Wait() }()
+
+			if err := waitForConsole(healthURL, args.wait, exited); err != nil {
+				terminate(console)
 				return err
 			}
 
-			_, _ = fmt.Fprintln(cmd.OutOrStdout(), guiURL)
+			_, _ = fmt.Fprintln(cmd.OutOrStdout(), consoleURL)
 
 			if args.open {
-				if err := openBrowser(guiURL); err != nil {
+				if err := openBrowser(consoleURL); err != nil {
+					terminate(console)
 					return err
 				}
 			}
 
-			return nil
+			signals := make(chan os.Signal, 1)
+			signal.Notify(signals, os.Interrupt, syscall.SIGTERM)
+			defer signal.Stop(signals)
+
+			select {
+			case err := <-exited:
+				return err
+			case <-signals:
+				terminate(console)
+				<-exited
+				return nil
+			}
 		},
 	}
 
 	flags := command.Flags()
-	flags.StringVar(&args.address, "address", args.address, "Base HTTP address for dubbod")
-	flags.StringVar(&args.path, "path", args.path, "GUI base path on the dubbod HTTP address")
-	flags.BoolVar(&args.open, "open", args.open, "Open the GUI in the default browser")
-	flags.DurationVar(&args.wait, "wait", args.wait, "Maximum time to wait for the GUI overview endpoint")
+	flags.StringVar(&args.binary, "binary", args.binary, "Console binary name or path")
+	flags.StringVar(&args.listen, "listen", args.listen, "Address the console listens on")
+	flags.StringVar(&args.basePath, "base-path", args.basePath, "Console HTTP base path")
+	flags.StringVar(&args.kubeconfig, "kubeconfig", args.kubeconfig, "Kubeconfig used to discover control planes; the default kubeconfig is used when empty")
+	flags.StringSliceVar(&args.contexts, "context", args.contexts, "Kubeconfig context to discover; repeatable for cross-control-plane views")
+	flags.StringSliceVar(&args.endpoints, "endpoint", args.endpoints, "Static control-plane endpoint as name=http://host:port; repeatable")
+	flags.BoolVar(&args.open, "open", args.open, "Open the console in the default browser")
+	flags.DurationVar(&args.wait, "wait", args.wait, "Maximum time to wait for the console to become healthy")
 
 	return command
 }
 
-func buildGUIURLs(address, guiPath string) (string, string, error) {
-	baseAddress := strings.TrimSpace(address)
-	if baseAddress == "" {
-		return "", "", fmt.Errorf("gui address cannot be empty")
-	}
-	if !strings.Contains(baseAddress, "://") {
-		baseAddress = "http://" + baseAddress
-	}
-
-	baseURL, err := url.Parse(baseAddress)
-	if err != nil {
-		return "", "", fmt.Errorf("invalid gui address %q: %w", address, err)
+// consoleArgs maps the dubboctl flags onto the console's own flag set. Discovery
+// falls back to the default kubeconfig so `dubboctl gui` works with no flags.
+func (a *guiArgs) consoleArgs(extraArgs []string) []string {
+	consoleArgs := []string{
+		"--listen", a.listen,
+		"--base-path", a.basePath,
 	}
 
-	normalizedPath := guiapp.NormalizeBasePath(guiPath)
-	guiURL := *baseURL
-	guiURL.Path = path.Join("/", strings.TrimPrefix(baseURL.Path, "/"), strings.TrimPrefix(normalizedPath, "/"))
-	if normalizedPath != "/" && !strings.HasSuffix(guiURL.Path, "/") {
-		guiURL.Path += "/"
+	if a.kubeconfig != "" {
+		consoleArgs = append(consoleArgs, "--kubeconfig", a.kubeconfig)
+	}
+	for _, context := range a.contexts {
+		consoleArgs = append(consoleArgs, "--context", context)
+	}
+	for _, endpoint := range a.endpoints {
+		consoleArgs = append(consoleArgs, "--endpoint", endpoint)
+	}
+	if a.kubeconfig == "" && len(a.contexts) == 0 && len(a.endpoints) == 0 {
+		consoleArgs = append(consoleArgs, "--discover-kubeconfig")
 	}
 
-	overviewURL := *baseURL
-	overviewURL.Path = path.Join(guiURL.Path, "api/overview")
-
-	return guiURL.String(), overviewURL.String(), nil
+	return append(consoleArgs, extraArgs...)
 }
 
-func waitForOverview(overviewURL string, timeout time.Duration) error {
+func buildGUIURLs(listen, basePath string) (string, string, error) {
+	address := strings.TrimSpace(listen)
+	if address == "" {
+		return "", "", fmt.Errorf("console listen address cannot be empty")
+	}
+	if !strings.Contains(address, "://") {
+		address = "http://" + normalizeListenHost(address)
+	}
+
+	baseURL, err := url.Parse(address)
+	if err != nil {
+		return "", "", fmt.Errorf("invalid console listen address %q: %w", listen, err)
+	}
+
+	consoleURL := *baseURL
+	consoleURL.Path = path.Join("/", strings.TrimPrefix(basePath, "/"))
+	if consoleURL.Path != "/" {
+		consoleURL.Path += "/"
+	}
+
+	healthURL := *baseURL
+	healthURL.Path = path.Join(consoleURL.Path, "healthz")
+
+	return consoleURL.String(), healthURL.String(), nil
+}
+
+// normalizeListenHost turns a wildcard listen address into something dialable,
+// so `--listen :8080` still yields a URL the browser can open.
+func normalizeListenHost(address string) string {
+	host, port, err := net.SplitHostPort(address)
+	if err != nil {
+		return address
+	}
+	if host == "" || host == "0.0.0.0" || host == "::" {
+		host = "127.0.0.1"
+	}
+	return net.JoinHostPort(host, port)
+}
+
+func waitForConsole(healthURL string, timeout time.Duration, exited <-chan error) error {
 	client := &http.Client{
 		Timeout: 2 * time.Second,
 	}
 
 	deadline := time.Now().Add(timeout)
 	for {
-		response, err := client.Get(overviewURL)
+		select {
+		case err := <-exited:
+			if err != nil {
+				return fmt.Errorf("console exited before becoming healthy: %w", err)
+			}
+			return fmt.Errorf("console exited before becoming healthy")
+		default:
+		}
+
+		response, err := client.Get(healthURL)
 		if err == nil {
 			_ = response.Body.Close()
 			if response.StatusCode == http.StatusOK {
@@ -121,11 +217,18 @@ func waitForOverview(overviewURL string, timeout time.Duration) error {
 		}
 
 		if timeout <= 0 || time.Now().After(deadline) {
-			return fmt.Errorf("gui overview endpoint is unavailable: %s", overviewURL)
+			return fmt.Errorf("console health endpoint is unavailable: %s", healthURL)
 		}
 
 		time.Sleep(500 * time.Millisecond)
 	}
+}
+
+func terminate(console *exec.Cmd) {
+	if console.Process == nil {
+		return
+	}
+	_ = console.Process.Signal(syscall.SIGTERM)
 }
 
 func openBrowser(target string) error {

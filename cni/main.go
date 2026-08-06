@@ -90,18 +90,81 @@ func runInstall(args []string) error {
 	opts := nodeagent.DefaultInstallerOptions()
 	var watch bool
 	var interval time.Duration
+	var reconcileInterval time.Duration
+	var requireDataplane bool
+	var nodeName string
 	flags := installerFlagSet("install", &opts)
+	flags.StringVar(&nodeName, "node-name", defaultNodeName(), "node whose managed Pods the reconcile loop restores rules for")
 	flags.BoolVar(&watch, "watch", false, "keep installer running and refresh service account credentials")
 	flags.DurationVar(&interval, "refresh-interval", nodeagent.DefaultInstallerInterval(), "credential refresh interval")
+	flags.DurationVar(&reconcileInterval, "reconcile-interval", nodeagent.DefaultReconcileInterval(), "how often to rebuild the inbound fence from persisted pod state")
+	flags.BoolVar(&requireDataplane, "require-iptables-dataplane", false, "refuse to start when the node's dataplane would bypass the inbound fence")
 	if err := flags.Parse(args); err != nil {
 		return err
 	}
+	if requireDataplane {
+		if err := nodeagent.VerifyDataplane(); err != nil {
+			return err
+		}
+	} else {
+		nodeagent.LogDataplaneWarnings(os.Stderr)
+	}
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
-	if watch {
-		return nodeagent.InstallLoop(ctx, opts, interval)
+	if !watch {
+		return nodeagent.Install(ctx, opts)
 	}
-	return nodeagent.Install(ctx, opts)
+
+	conf := nodeagent.NetConf{
+		GRPCInboundPort: opts.GRPCInboundPort,
+		IPTablesPath:    opts.IPTablesPath,
+		IPSetPath:       opts.IPSetPath,
+		StateDir:        opts.StateDir,
+	}
+	cluster := clusterSource(opts, nodeName)
+	go func() {
+		_ = nodeagent.ReconcileLoop(ctx,
+			nodeagent.NewFileStateStore(conf.StateDirectory()),
+			nodeagent.NewIPTablesRuleManager(conf),
+			cluster,
+			reconcileInterval)
+	}()
+	return nodeagent.InstallLoop(ctx, opts, interval)
+}
+
+// defaultNodeName prefers the downward-API value and falls back to the
+// hostname, which matches the node name when the agent runs with host
+// networking.
+func defaultNodeName() string {
+	if name := os.Getenv("NODE_NAME"); name != "" {
+		return name
+	}
+	name, err := os.Hostname()
+	if err != nil {
+		return ""
+	}
+	return name
+}
+
+// clusterSource returns the authoritative membership source for reconciliation,
+// or nil when no Kubernetes client can be built. A nil source degrades the
+// loop to replaying local state, which is what the previous behavior was.
+func clusterSource(opts nodeagent.InstallerOptions, nodeName string) *nodeagent.ClusterSource {
+	if nodeName == "" {
+		fmt.Fprintln(os.Stderr, "dubbo-cni: node name is unknown, reconciling from local state only")
+		return nil
+	}
+	provider, err := nodeagent.NewK8sPodInfoProvider(opts.KubeConfigPath)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "dubbo-cni: no Kubernetes client, reconciling from local state only: %v\n", err)
+		return nil
+	}
+	return &nodeagent.ClusterSource{
+		Lister:     provider,
+		NodeName:   nodeName,
+		Label:      opts.ManagedLabel,
+		LabelValue: opts.ManagedLabelValue,
+	}
 }
 
 func runUninstall(args []string) error {

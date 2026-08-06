@@ -19,6 +19,7 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/apache/dubbo-kubernetes/pkg/kube/inject"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
@@ -49,6 +50,48 @@ func NewK8sPodInfoProvider(kubeconfig string) (*K8sPodInfoProvider, error) {
 	return &K8sPodInfoProvider{client: client}, nil
 }
 
+// ManagedPodsOnNode lists the mesh-managed pods scheduled to nodeName, as pod
+// states ready to be turned into fence rules.
+//
+// This is the authoritative membership source for reconciliation: a pod whose
+// CNI ADD could not read it is absent from the local state store but present
+// here, which is what lets the reconcile loop install the rules ADD skipped.
+func (p *K8sPodInfoProvider) ManagedPodsOnNode(ctx context.Context, nodeName, label, value string) ([]PodState, error) {
+	if nodeName == "" {
+		return nil, fmt.Errorf("node name is required to list managed pods")
+	}
+	if label == "" {
+		return nil, fmt.Errorf("managed label is required to list managed pods")
+	}
+	list, err := p.client.CoreV1().Pods(metav1.NamespaceAll).List(ctx, metav1.ListOptions{
+		LabelSelector: label + "=" + value,
+		FieldSelector: "spec.nodeName=" + nodeName,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("list managed pods on %s: %w", nodeName, err)
+	}
+	states := make([]PodState, 0, len(list.Items))
+	for i := range list.Items {
+		pod := &list.Items[i]
+		if pod.Status.PodIP == "" || pod.DeletionTimestamp != nil {
+			continue
+		}
+		excluded, err := inject.ProxylessExcludedInboundPorts(pod)
+		if err != nil {
+			// One malformed annotation must not stop the rest of the node from
+			// being reconciled; that pod keeps whatever rules it already has.
+			continue
+		}
+		states = append(states, PodState{
+			Namespace:     pod.Namespace,
+			Name:          pod.Name,
+			IP:            pod.Status.PodIP,
+			ExcludedPorts: excluded,
+		})
+	}
+	return states, nil
+}
+
 func (p *K8sPodInfoProvider) PodInfo(ctx context.Context, ref PodRef) (PodInfo, error) {
 	pod, err := p.client.CoreV1().Pods(ref.Namespace).Get(ctx, ref.Name, metav1.GetOptions{})
 	if err != nil {
@@ -63,10 +106,15 @@ func (p *K8sPodInfoProvider) PodInfo(ctx context.Context, ref PodRef) (PodInfo, 
 	if pod.Status.PodIP != "" && len(ips) == 0 {
 		ips = append(ips, pod.Status.PodIP)
 	}
+	excluded, err := inject.ProxylessExcludedInboundPorts(pod)
+	if err != nil {
+		return PodInfo{}, fmt.Errorf("pod %s/%s: %w", ref.Namespace, ref.Name, err)
+	}
 	return PodInfo{
-		Namespace: pod.Namespace,
-		Name:      pod.Name,
-		Labels:    pod.Labels,
-		IPs:       ips,
+		Namespace:     pod.Namespace,
+		Name:          pod.Name,
+		Labels:        pod.Labels,
+		IPs:           ips,
+		ExcludedPorts: excluded,
 	}, nil
 }

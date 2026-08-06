@@ -17,18 +17,18 @@
 {{- $defaultGlobal := $defaults.global | default dict }}
 {{- $defaultProxyless := $defaultGlobal.proxyless | default dict }}
 {{- $defaultCNI := $defaultProxyless.cni | default dict }}
-{{- $defaultGUI := $defaultGlobal.gui | default dict }}
+{{- $defaultManagement := $defaultGlobal.management | default dict }}
 {{- $defaultMulticluster := $defaultGlobal.multicluster | default dict }}
 {{- $defaultRemoteAccess := $defaultMulticluster.remoteAccess | default dict }}
 {{- $defaultEastWestGateway := $defaultMulticluster.eastWestGateway | default dict }}
 {{- $global := .Values.global | default dict }}
 {{- $proxyless := $global.proxyless | default dict }}
 {{- $cni := $proxyless.cni | default dict }}
-{{- $gui := $global.gui | default dict }}
+{{- $management := $global.management | default dict }}
 {{- $multicluster := $global.multicluster | default dict }}
 {{- $remoteAccess := $multicluster.remoteAccess | default dict }}
 {{- $eastWestGateway := $multicluster.eastWestGateway | default dict }}
-{{- $guiPort := int (coalesce $gui.port $defaultGUI.port 26080) }}
+{{- $managementPort := int (coalesce $management.port $defaultManagement.port 26080) }}
 {{- $replicaCount := int (coalesce .Values.replicaCount $defaults.replicaCount 1) }}
 {{- $remoteAccessCertificateHosts := $remoteAccess.certificateHosts | default $defaultRemoteAccess.certificateHosts | default (list) }}
 {{- $eastWestGateways := $eastWestGateway.gateways | default $defaultEastWestGateway.gateways | default (list) }}
@@ -75,15 +75,15 @@ spec:
             - "execute"
             - --domain
             - cluster.local
-            - --guiAddr
-            - ":{{ $guiPort }}"
+            - --managementAddr
+            - ":{{ $managementPort }}"
           ports:
             - containerPort: 8080
               protocol: TCP
               name: http-debug
-            - containerPort: {{ $guiPort }}
+            - containerPort: {{ $managementPort }}
               protocol: TCP
-              name: gui
+              name: management
             - containerPort: 26010
               protocol: TCP
               name: grpc-xds

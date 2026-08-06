@@ -26,6 +26,7 @@ import (
 const (
 	meshInboundChain = "DUBBO-GRPC-INBOUND"
 	meshPodIPSet     = "DUBBO-GRPC-INBOUND-PODS"
+	meshExcludeIPSet = "DUBBO-GRPC-INBOUND-EXCLUDE"
 	dxgateAdminPort  = 26021
 )
 
@@ -64,7 +65,7 @@ func NewIPTablesRuleManagerWithRunner(conf NetConf, runner CommandRunner) *IPTab
 	return manager
 }
 
-func (m *IPTablesRuleManager) AddPodRules(ctx context.Context, podIP string) error {
+func (m *IPTablesRuleManager) AddPodRules(ctx context.Context, podIP string, excludedPorts []int) error {
 	ip, err := normalizePodIP(podIP)
 	if err != nil {
 		return err
@@ -72,19 +73,78 @@ func (m *IPTablesRuleManager) AddPodRules(ctx context.Context, podIP string) err
 	if err := m.ensureBase(ctx); err != nil {
 		return err
 	}
-	return m.runIPSet(ctx, "add", meshPodIPSet, ip, "-exist")
+	if err := m.runIPSet(ctx, "add", meshPodIPSet, ip, "-exist"); err != nil {
+		return err
+	}
+	return m.addExcludedPorts(ctx, ip, excludedPorts)
 }
 
-func (m *IPTablesRuleManager) DeletePodRules(ctx context.Context, podIP string) error {
+func (m *IPTablesRuleManager) DeletePodRules(ctx context.Context, podIP string, excludedPorts []int) error {
 	ip, err := normalizePodIP(podIP)
 	if err != nil {
 		return err
 	}
+	for _, port := range excludedPorts {
+		if err := m.runIPSet(ctx, "del", meshExcludeIPSet, excludeEntry(ip, port), "-exist"); err != nil {
+			return err
+		}
+	}
 	return m.runIPSet(ctx, "del", meshPodIPSet, ip, "-exist")
+}
+
+// Reconcile rebuilds the whole fence from the supplied pod states.
+//
+// ipset and iptables live in kernel state that does not survive a node
+// restart, and the CNI ADD hook only fires for pods created after that point.
+// Without this the fence silently disappears for every already-running pod,
+// so the node agent replays it from its own persisted state.
+func (m *IPTablesRuleManager) Reconcile(ctx context.Context, states []PodState) error {
+	if err := m.ensureBase(ctx); err != nil {
+		return err
+	}
+	if err := m.runIPSet(ctx, "flush", meshPodIPSet); err != nil {
+		return err
+	}
+	if err := m.runIPSet(ctx, "flush", meshExcludeIPSet); err != nil {
+		return err
+	}
+	for _, state := range states {
+		ip, err := normalizePodIP(state.IP)
+		if err != nil {
+			// A malformed entry must not stop the remaining pods from being restored.
+			continue
+		}
+		if err := m.runIPSet(ctx, "add", meshPodIPSet, ip, "-exist"); err != nil {
+			return err
+		}
+		if err := m.addExcludedPorts(ctx, ip, state.ExcludedPorts); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (m *IPTablesRuleManager) addExcludedPorts(ctx context.Context, ip string, ports []int) error {
+	for _, port := range ports {
+		if port < 1 || port > 65535 {
+			return fmt.Errorf("excluded port %d is out of range", port)
+		}
+		if err := m.runIPSet(ctx, "add", meshExcludeIPSet, excludeEntry(ip, port), "-exist"); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func excludeEntry(ip string, port int) string {
+	return fmt.Sprintf("%s,tcp:%d", ip, port)
 }
 
 func (m *IPTablesRuleManager) ensureBase(ctx context.Context) error {
 	if err := m.runIPSet(ctx, "create", meshPodIPSet, "hash:ip", "-exist"); err != nil {
+		return err
+	}
+	if err := m.runIPSet(ctx, "create", meshExcludeIPSet, "hash:ip,port", "-exist"); err != nil {
 		return err
 	}
 	if err := m.runIgnoreExists(ctx, "-w", "-t", "filter", "-N", meshInboundChain); err != nil {
@@ -98,12 +158,19 @@ func (m *IPTablesRuleManager) ensureBase(ctx context.Context) error {
 			return err
 		}
 	}
+	// Excluded ports are matched on (destination IP, destination port) so an
+	// exemption granted to one pod never opens the same port on another.
+	allowExcluded := []string{"-m", "set", "--match-set", meshExcludeIPSet, "dst,dst", "-p", "tcp", "-j", "RETURN"}
 	allowGRPCInbound := []string{"-m", "set", "--match-set", meshPodIPSet, "dst", "-p", "tcp", "--dport", fmt.Sprint(m.grpcInboundPort), "-j", "RETURN"}
 	allowDxgateAdmin := []string{"-m", "set", "--match-set", meshPodIPSet, "dst", "-p", "tcp", "--dport", fmt.Sprint(dxgateAdminPort), "-j", "RETURN"}
 	rejectOtherTCP := []string{"-m", "set", "--match-set", meshPodIPSet, "dst", "-p", "tcp", "-j", "REJECT"}
+	m.deleteRepeated(ctx, allowExcluded...)
 	m.deleteRepeated(ctx, allowGRPCInbound...)
 	m.deleteRepeated(ctx, allowDxgateAdmin...)
 	m.deleteRepeated(ctx, rejectOtherTCP...)
+	if err := m.appendRule(ctx, allowExcluded...); err != nil {
+		return err
+	}
 	if err := m.appendRule(ctx, allowGRPCInbound...); err != nil {
 		return err
 	}
