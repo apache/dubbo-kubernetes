@@ -136,10 +136,6 @@ func GetRootCmd(args []string) *cobra.Command {
 	rootCmd.AddCommand(createCmd)
 	hideFlags(createCmd, ChartFlag)
 
-	repoCmd := RepoCmd(ctx, rootCmd, factory)
-	rootCmd.AddCommand(repoCmd)
-	hideFlags(repoCmd, ChartFlag)
-
 	imageCmd := ImageCmd(ctx, rootCmd, factory)
 	rootCmd.AddCommand(imageCmd)
 	hideFlags(imageCmd, ChartFlag)

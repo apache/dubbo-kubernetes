@@ -88,13 +88,13 @@ type Server struct {
 	secureGrpcServer  *grpc.Server
 	secureGrpcAddress string
 
-	httpsServer *http.Server // webhooks HTTPS Server.
-	httpAddr    string
-	guiAddr     string
-	httpsAddr   string
-	httpMux     *http.ServeMux
-	guiMux      *http.ServeMux
-	httpsMux    *http.ServeMux // webhooks
+	httpsServer    *http.Server // webhooks HTTPS Server.
+	httpAddr       string
+	managementAddr string
+	httpsAddr      string
+	httpMux        *http.ServeMux
+	managementMux  *http.ServeMux
+	httpsMux       *http.ServeMux // webhooks
 
 	monitoringMux *http.ServeMux
 
@@ -109,7 +109,6 @@ type Server struct {
 	shutdownDuration time.Duration
 	namespace        string
 	podName          string
-	guiPath          string
 
 	caServer                *caserver.Server
 	cacertsWatcher          *fsnotify.Watcher
@@ -182,7 +181,7 @@ func NewServer(args *DubboArgs, initFuncs ...func(*Server)) (*Server, error) {
 		server:                  server.New(),
 		clusterID:               getClusterID(args),
 		httpMux:                 http.NewServeMux(),
-		guiMux:                  http.NewServeMux(),
+		managementMux:           http.NewServeMux(),
 		monitoringMux:           http.NewServeMux(),
 		dubbodCertBundleWatcher: keycertbundle.NewWatcher(),
 		fileWatcher:             filewatcher.NewWatcher(),
@@ -242,11 +241,11 @@ func NewServer(args *DubboArgs, initFuncs ...func(*Server)) (*Server, error) {
 
 	InitGenerators(s.XDSServer, configGen)
 
-	if err := s.initGUI(args); err != nil {
-		return nil, fmt.Errorf("error initializing gui: %v", err)
+	if err := s.initManagement(); err != nil {
+		return nil, fmt.Errorf("error initializing management API: %v", err)
 	}
-	if err := s.initGUIServer(args.ServerOptions.GUIAddr); err != nil {
-		return nil, fmt.Errorf("error initializing GUI Server: %v", err)
+	if err := s.initManagementServer(args.ServerOptions.ManagementAddr); err != nil {
+		return nil, fmt.Errorf("error initializing Management Server: %v", err)
 	}
 
 	// Initialize monitoring server

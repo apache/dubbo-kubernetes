@@ -18,17 +18,16 @@
 {{- $defaultProxy := $defaultGlobal.proxy | default dict }}
 {{- $defaultProxyless := $defaultGlobal.proxyless | default dict }}
 {{- $defaultCNI := $defaultProxyless.cni | default dict }}
-{{- $defaultGUI := $defaultGlobal.gui | default dict }}
+{{- $defaultManagement := $defaultGlobal.management | default dict }}
 {{- $global := .Values.global | default dict }}
 {{- $proxy := $global.proxy | default dict }}
 {{- $proxyless := $global.proxyless | default dict }}
 {{- $cni := $proxyless.cni | default dict }}
-{{- $gui := $global.gui | default dict }}
+{{- $management := $global.management | default dict }}
 {{- $clusterDomain := coalesce $proxy.clusterDomain $defaultProxy.clusterDomain "cluster.local" }}
 {{- $revision := .Values.revision | default "default" }}
 {{- $statusPort := coalesce $global.statusPort $defaultGlobal.statusPort 26020 }}
-{{- $guiPort := int (coalesce $gui.port $defaultGUI.port 26080) }}
-{{- $guiNodePort := int (coalesce $gui.nodePort $defaultGUI.nodePort 30080) }}
+{{- $managementPort := int (coalesce $management.port $defaultManagement.port 26080) }}
 {{- $image := coalesce $cni.image $defaultCNI.image (printf "ghcr.io/apache/dubbo-kubernetes/dubbod:%s" .Chart.AppVersion) }}
 {{- $cniEnabled := false }}
 {{- if hasKey $defaultCNI "enabled" }}
@@ -65,9 +64,8 @@ data:
           iptablesPath: {{ coalesce $cni.iptablesPath $defaultCNI.iptablesPath "iptables" | quote }}
           ipsetPath: {{ coalesce $cni.ipsetPath $defaultCNI.ipsetPath "ipset" | quote }}
           refreshInterval: {{ coalesce $cni.refreshInterval $defaultCNI.refreshInterval "1m" | quote }}
-      gui:
-        port: {{ $guiPort }}
-        nodePort: {{ $guiNodePort }}
+      management:
+        port: {{ $managementPort }}
       statusPort: {{ $statusPort }}
   original-values: |-
 {{ $original | toYaml | nindent 4 }}

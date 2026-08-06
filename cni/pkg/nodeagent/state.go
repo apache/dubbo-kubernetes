@@ -30,6 +30,9 @@ type PodState struct {
 	Namespace   string `json:"namespace"`
 	Name        string `json:"name"`
 	IP          string `json:"ip"`
+	// ExcludedPorts is persisted so the fence can be rebuilt after a node
+	// restart, and so DEL removes exactly the exemptions ADD granted.
+	ExcludedPorts []int `json:"excludedPorts,omitempty"`
 }
 
 type FileStateStore struct {
@@ -67,6 +70,38 @@ func (s *FileStateStore) Read(containerID string) (PodState, error) {
 		return PodState{}, err
 	}
 	return state, nil
+}
+
+// List returns every persisted pod state. Entries that cannot be decoded are
+// skipped rather than failing the whole listing, so one corrupt file cannot
+// block the fence from being rebuilt for the remaining pods.
+func (s *FileStateStore) List() ([]PodState, error) {
+	entries, err := os.ReadDir(s.dir)
+	if err != nil {
+		if errors.Is(err, os.ErrNotExist) {
+			return nil, nil
+		}
+		return nil, err
+	}
+	states := make([]PodState, 0, len(entries))
+	for _, entry := range entries {
+		if entry.IsDir() || filepath.Ext(entry.Name()) != ".json" {
+			continue
+		}
+		data, err := os.ReadFile(filepath.Join(s.dir, entry.Name()))
+		if err != nil {
+			continue
+		}
+		state := PodState{}
+		if err := json.Unmarshal(data, &state); err != nil {
+			continue
+		}
+		if state.IP == "" {
+			continue
+		}
+		states = append(states, state)
+	}
+	return states, nil
 }
 
 func (s *FileStateStore) Delete(containerID string) error {

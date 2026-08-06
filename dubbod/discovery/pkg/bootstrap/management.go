@@ -22,6 +22,7 @@ import (
 	"fmt"
 	"net"
 	"net/http"
+	"path"
 	"sort"
 	"strconv"
 	"strings"
@@ -45,6 +46,10 @@ import (
 	dto "github.com/prometheus/client_model/go"
 	sigsk8siogatewayapiapisv1 "sigs.k8s.io/gateway-api/apis/v1"
 )
+
+// managementAPIBase is the HTTP base path of the read-only management API the
+// external console aggregates across control planes.
+const managementAPIBase = "/api/v1"
 
 type managementOverview struct {
 	Product     string                     `json:"product"`
@@ -148,7 +153,6 @@ type managementOverviewMesh struct {
 }
 
 type managementOverviewServer struct {
-	APIPath           string `json:"apiPath"`
 	HTTPAddress       string `json:"httpAddress,omitempty"`
 	GRPCAddress       string `json:"grpcAddress,omitempty"`
 	SecureGRPCAddress string `json:"secureGrpcAddress,omitempty"`
@@ -253,6 +257,7 @@ func (s *Server) initManagement() error {
 	s.managementMux.HandleFunc(s.managementOverviewPath(), s.managementOverviewHandler)
 	s.managementMux.HandleFunc(s.managementLogsPath(), s.managementLogsHandler)
 	s.managementMux.HandleFunc(s.managementMetricsPath(), s.managementMetricsHandler)
+
 	return nil
 }
 
@@ -296,15 +301,15 @@ func (s *Server) initManagementServer(addr string) error {
 }
 
 func (s *Server) managementOverviewPath() string {
-	return "/api/v1/overview"
+	return path.Join(managementAPIBase, "overview")
 }
 
 func (s *Server) managementLogsPath() string {
-	return "/api/v1/logs"
+	return path.Join(managementAPIBase, "logs")
 }
 
 func (s *Server) managementMetricsPath() string {
-	return "/api/v1/metrics"
+	return path.Join(managementAPIBase, "metrics")
 }
 
 func (s *Server) managementMetricsHandler(writer http.ResponseWriter, request *http.Request) {
@@ -593,7 +598,6 @@ func (s *Server) buildManagementOverview() managementOverview {
 		PodName:   s.podName,
 		Mesh:      meshOverview,
 		Server: managementOverviewServer{
-			APIPath:           "/api/v1",
 			HTTPAddress:       s.managementAddr,
 			GRPCAddress:       s.grpcAddress,
 			SecureGRPCAddress: s.secureGrpcAddress,

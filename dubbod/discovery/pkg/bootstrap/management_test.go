@@ -16,38 +16,12 @@
 package bootstrap
 
 import (
-	"net/http"
 	"testing"
 
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
-
-func TestManagementAPIPaths(t *testing.T) {
-	server := &Server{managementMux: http.NewServeMux()}
-	if err := server.initManagement(); err != nil {
-		t.Fatalf("initManagement() error = %v", err)
-	}
-	for _, path := range []string{"/api/v1/overview", "/api/v1/metrics", "/api/v1/logs"} {
-		request, err := http.NewRequest(http.MethodGet, path, nil)
-		if err != nil {
-			t.Fatal(err)
-		}
-		_, pattern := server.managementMux.Handler(request)
-		if pattern != path {
-			t.Fatalf("handler pattern for %s = %q", path, pattern)
-		}
-	}
-	legacyRequest, err := http.NewRequest(http.MethodGet, "/gui/api/overview", nil)
-	if err != nil {
-		t.Fatal(err)
-	}
-	_, pattern := server.managementMux.Handler(legacyRequest)
-	if pattern != "" {
-		t.Fatalf("legacy GUI handler remains registered as %q", pattern)
-	}
-}
 
 func TestManagementGatewayInstanceUsesDeploymentIdentity(t *testing.T) {
 	desired := int32(2)

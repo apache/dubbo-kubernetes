@@ -1,3 +1,4 @@
+//
 // Licensed to the Apache Software Foundation (ASF) under one or more
 // contributor license agreements.  See the NOTICE file distributed with
 // this work for additional information regarding copyright ownership.
@@ -13,20 +14,14 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package resources
+package cmd
 
-import (
-	"embed"
-	"io/fs"
-)
+import "testing"
 
-//go:embed data/*
-var guiData embed.FS
-
-func FS() fs.FS {
-	fsys, err := fs.Sub(guiData, "data")
-	if err != nil {
-		panic(err)
+func TestRootCommandDoesNotExposeRepo(t *testing.T) {
+	for _, command := range GetRootCmd(nil).Commands() {
+		if command.Name() == "repo" {
+			t.Fatal("repo command must not be registered")
+		}
 	}
-	return fsys
 }

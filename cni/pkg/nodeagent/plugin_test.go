@@ -80,25 +80,89 @@ func TestPluginAddSkipsUnmanagedPod(t *testing.T) {
 	}
 }
 
-func TestPluginAddSkipsWhenPodInfoIsUnavailable(t *testing.T) {
+func TestPluginAddAllowsUnreadablePodByDefault(t *testing.T) {
 	conf := testConf(t)
+	conf.PodLookupRetryMillis = 1
 	rules := &fakeRuleManager{}
+	provider := &countingPodInfoProvider{failures: -1, err: errors.New("get pod app/nginx: Unauthorized")}
 	plugin := Plugin{
-		PodInfoProvider: fakePodInfoProvider{err: errors.New("get pod app/nginx: Unauthorized")},
+		PodInfoProvider: provider,
 		RuleManager:     rules,
 		StateStore:      NewFileStateStore(t.TempDir()),
 	}
 
+	// An unreadable pod may not be a mesh pod at all, so failing its ADD would
+	// stop unrelated workloads from starting on this node. The reconcile loop
+	// installs the rules later if it turns out to be mesh-managed.
 	out, err := plugin.Run(context.Background(), Env{
 		Command:     "ADD",
 		ContainerID: "container-a",
 		Args:        "K8S_POD_NAMESPACE=app;K8S_POD_NAME=nginx",
 	}, conf)
 	if err != nil {
-		t.Fatalf("Run(ADD) failed: %v", err)
+		t.Fatalf("Run(ADD) with an unreadable pod failed: %v", err)
 	}
 	if len(out) == 0 {
 		t.Fatal("Run(ADD) returned empty result")
+	}
+	if want := conf.PodLookupAttempts(); provider.calls != want {
+		t.Fatalf("pod lookups = %d, want %d", provider.calls, want)
+	}
+	if len(rules.added) != 0 {
+		t.Fatalf("added rules = %v, want none", rules.added)
+	}
+}
+
+func TestPluginAddRetriesTransientPodInfoFailure(t *testing.T) {
+	conf := testConf(t)
+	conf.StateDir = t.TempDir()
+	conf.PodLookupRetryMillis = 1
+	rules := &fakeRuleManager{}
+	provider := &countingPodInfoProvider{
+		failures: 2,
+		err:      errors.New("etcdserver: request timed out"),
+		pod: PodInfo{Labels: map[string]string{
+			inject.ProxylessManagedLabel: inject.ProxylessManagedLabelValue,
+		}},
+	}
+	plugin := Plugin{
+		PodInfoProvider: provider,
+		RuleManager:     rules,
+		StateStore:      NewFileStateStore(conf.StateDirectory()),
+	}
+
+	if _, err := plugin.Run(context.Background(), Env{
+		Command:     "ADD",
+		ContainerID: "container-a",
+		Args:        "K8S_POD_NAMESPACE=app;K8S_POD_NAME=nginx",
+	}, conf); err != nil {
+		t.Fatalf("Run(ADD) failed: %v", err)
+	}
+	if provider.calls != 3 {
+		t.Fatalf("pod lookups = %d, want 3", provider.calls)
+	}
+	if len(rules.added) != 1 || rules.added[0] != "10.244.0.12" {
+		t.Fatalf("added rules = %v, want [10.244.0.12]", rules.added)
+	}
+}
+
+func TestPluginAddFailClosedRejectsUnresolvedPod(t *testing.T) {
+	conf := testConf(t)
+	conf.PodLookupRetryMillis = 1
+	conf.FailClosed = true
+	rules := &fakeRuleManager{}
+	plugin := Plugin{
+		PodInfoProvider: &countingPodInfoProvider{failures: -1, err: errors.New("get pod app/nginx: Unauthorized")},
+		RuleManager:     rules,
+		StateStore:      NewFileStateStore(t.TempDir()),
+	}
+
+	if _, err := plugin.Run(context.Background(), Env{
+		Command:     "ADD",
+		ContainerID: "container-a",
+		Args:        "K8S_POD_NAMESPACE=app;K8S_POD_NAME=nginx",
+	}, conf); err == nil {
+		t.Fatal("Run(ADD) with failClosed returned nil error")
 	}
 	if len(rules.added) != 0 {
 		t.Fatalf("added rules = %v, want none", rules.added)
@@ -108,7 +172,7 @@ func TestPluginAddSkipsWhenPodInfoIsUnavailable(t *testing.T) {
 	}
 }
 
-func TestPluginAddSkipsWithoutPodInfoProvider(t *testing.T) {
+func TestPluginAddAllowsWithoutPodInfoProvider(t *testing.T) {
 	conf := testConf(t)
 	rules := &fakeRuleManager{}
 	plugin := Plugin{
@@ -121,10 +185,44 @@ func TestPluginAddSkipsWithoutPodInfoProvider(t *testing.T) {
 		ContainerID: "container-a",
 		Args:        "K8S_POD_NAMESPACE=app;K8S_POD_NAME=nginx",
 	}, conf); err != nil {
-		t.Fatalf("Run(ADD) failed: %v", err)
+		t.Fatalf("Run(ADD) without a pod info provider failed: %v", err)
 	}
 	if len(rules.added) != 0 {
 		t.Fatalf("added rules = %v, want none", rules.added)
+	}
+}
+
+func TestPluginAddPassesExcludedPortsThrough(t *testing.T) {
+	conf := testConf(t)
+	conf.StateDir = t.TempDir()
+	rules := &fakeRuleManager{}
+	plugin := Plugin{
+		PodInfoProvider: fakePodInfoProvider{pod: PodInfo{
+			Labels: map[string]string{
+				inject.ProxylessManagedLabel: inject.ProxylessManagedLabelValue,
+			},
+			ExcludedPorts: []int{9090, 15020},
+		}},
+		RuleManager: rules,
+		StateStore:  NewFileStateStore(conf.StateDirectory()),
+	}
+
+	if _, err := plugin.Run(context.Background(), Env{
+		Command:     "ADD",
+		ContainerID: "container-a",
+		Args:        "K8S_POD_NAMESPACE=app;K8S_POD_NAME=nginx",
+	}, conf); err != nil {
+		t.Fatalf("Run(ADD) failed: %v", err)
+	}
+	if got := rules.addedPorts["10.244.0.12"]; len(got) != 2 || got[0] != 9090 || got[1] != 15020 {
+		t.Fatalf("excluded ports = %v, want [9090 15020]", got)
+	}
+	state, err := plugin.StateStore.Read("container-a")
+	if err != nil {
+		t.Fatalf("state read failed: %v", err)
+	}
+	if len(state.ExcludedPorts) != 2 {
+		t.Fatalf("state excluded ports = %v, want two entries", state.ExcludedPorts)
 	}
 }
 
@@ -172,17 +270,48 @@ func (f fakePodInfoProvider) PodInfo(context.Context, PodRef) (PodInfo, error) {
 	return f.pod, f.err
 }
 
-type fakeRuleManager struct {
-	added   []string
-	deleted []string
+// countingPodInfoProvider fails the first `failures` calls and then succeeds.
+// A negative `failures` fails every call.
+type countingPodInfoProvider struct {
+	pod      PodInfo
+	err      error
+	failures int
+	calls    int
 }
 
-func (f *fakeRuleManager) AddPodRules(_ context.Context, podIP string) error {
+func (f *countingPodInfoProvider) PodInfo(context.Context, PodRef) (PodInfo, error) {
+	f.calls++
+	if f.failures < 0 {
+		return PodInfo{}, f.err
+	}
+	if f.failures > 0 {
+		f.failures--
+		return PodInfo{}, f.err
+	}
+	return f.pod, nil
+}
+
+type fakeRuleManager struct {
+	added        []string
+	deleted      []string
+	addedPorts   map[string][]int
+	deletedPorts map[string][]int
+}
+
+func (f *fakeRuleManager) AddPodRules(_ context.Context, podIP string, excludedPorts []int) error {
 	f.added = append(f.added, podIP)
+	if f.addedPorts == nil {
+		f.addedPorts = map[string][]int{}
+	}
+	f.addedPorts[podIP] = excludedPorts
 	return nil
 }
 
-func (f *fakeRuleManager) DeletePodRules(_ context.Context, podIP string) error {
+func (f *fakeRuleManager) DeletePodRules(_ context.Context, podIP string, excludedPorts []int) error {
 	f.deleted = append(f.deleted, podIP)
+	if f.deletedPorts == nil {
+		f.deletedPorts = map[string][]int{}
+	}
+	f.deletedPorts[podIP] = excludedPorts
 	return nil
 }

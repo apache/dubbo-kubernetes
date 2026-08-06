@@ -15,44 +15,102 @@
 
 package cmd
 
-import "testing"
+import (
+	"strings"
+	"testing"
+)
 
 func TestBuildGUIURLs(t *testing.T) {
 	tests := []struct {
-		name            string
-		address         string
-		path            string
-		wantGUI         string
-		wantOverviewURL string
+		name        string
+		listen      string
+		basePath    string
+		wantConsole string
+		wantHealth  string
 	}{
 		{
-			name:            "default host and path",
-			address:         "http://127.0.0.1:26080",
-			path:            "/gui",
-			wantGUI:         "http://127.0.0.1:26080/gui/",
-			wantOverviewURL: "http://127.0.0.1:26080/gui/api/overview",
+			name:        "loopback and root base path",
+			listen:      "127.0.0.1:8080",
+			basePath:    "/",
+			wantConsole: "http://127.0.0.1:8080/",
+			wantHealth:  "http://127.0.0.1:8080/healthz",
 		},
 		{
-			name:            "host without scheme",
-			address:         "127.0.0.1:26080",
-			path:            "dashboard",
-			wantGUI:         "http://127.0.0.1:26080/dashboard/",
-			wantOverviewURL: "http://127.0.0.1:26080/dashboard/api/overview",
+			name:        "wildcard listen address",
+			listen:      ":8080",
+			basePath:    "/console",
+			wantConsole: "http://127.0.0.1:8080/console/",
+			wantHealth:  "http://127.0.0.1:8080/console/healthz",
+		},
+		{
+			name:        "base path without leading slash",
+			listen:      "0.0.0.0:9090",
+			basePath:    "dashboard",
+			wantConsole: "http://127.0.0.1:9090/dashboard/",
+			wantHealth:  "http://127.0.0.1:9090/dashboard/healthz",
 		},
 	}
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			gotGUI, gotOverviewURL, err := buildGUIURLs(test.address, test.path)
+			gotConsole, gotHealth, err := buildGUIURLs(test.listen, test.basePath)
 			if err != nil {
 				t.Fatalf("buildGUIURLs() returned error: %v", err)
 			}
-			if gotGUI != test.wantGUI {
-				t.Fatalf("buildGUIURLs() GUI URL = %q, want %q", gotGUI, test.wantGUI)
+			if gotConsole != test.wantConsole {
+				t.Fatalf("buildGUIURLs() console URL = %q, want %q", gotConsole, test.wantConsole)
 			}
-			if gotOverviewURL != test.wantOverviewURL {
-				t.Fatalf("buildGUIURLs() overview URL = %q, want %q", gotOverviewURL, test.wantOverviewURL)
+			if gotHealth != test.wantHealth {
+				t.Fatalf("buildGUIURLs() health URL = %q, want %q", gotHealth, test.wantHealth)
 			}
 		})
+	}
+}
+
+func TestBuildGUIURLsRejectsEmptyListen(t *testing.T) {
+	if _, _, err := buildGUIURLs("  ", "/"); err == nil {
+		t.Fatal("buildGUIURLs() with empty listen address returned no error")
+	}
+}
+
+func TestConsoleArgs(t *testing.T) {
+	tests := []struct {
+		name string
+		args guiArgs
+		want string
+	}{
+		{
+			name: "defaults fall back to kubeconfig discovery",
+			args: guiArgs{listen: "127.0.0.1:8080", basePath: "/"},
+			want: "--listen 127.0.0.1:8080 --base-path / --discover-kubeconfig",
+		},
+		{
+			name: "explicit discovery suppresses the fallback",
+			args: guiArgs{
+				listen:    "127.0.0.1:8080",
+				basePath:  "/",
+				contexts:  []string{"east", "west"},
+				endpoints: []string{"local=http://127.0.0.1:26080"},
+			},
+			want: "--listen 127.0.0.1:8080 --base-path / --context east --context west --endpoint local=http://127.0.0.1:26080",
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			got := strings.Join(test.args.consoleArgs(nil), " ")
+			if got != test.want {
+				t.Fatalf("consoleArgs() = %q, want %q", got, test.want)
+			}
+		})
+	}
+}
+
+func TestConsoleArgsAppendsExtraArgs(t *testing.T) {
+	args := guiArgs{listen: "127.0.0.1:8080", basePath: "/"}
+	got := args.consoleArgs([]string{"--upstream-timeout", "10s"})
+	want := "--listen 127.0.0.1:8080 --base-path / --discover-kubeconfig --upstream-timeout 10s"
+	if strings.Join(got, " ") != want {
+		t.Fatalf("consoleArgs() = %q, want %q", strings.Join(got, " "), want)
 	}
 }
