@@ -1,23 +1,29 @@
 # dxplane
 
-本文档主要介绍 Inhernet 模式的组件的架构和设计决策
+This document introduces the architecture and design decisions of components operating in Inhernet mode.
 
-## 背景
-组件的前身是 Proxyless 模式下的 SDK 库，是指修改应用程序代码的工作范畴，当前模式是将原本的 SDK 库翻译成传统控制器。
-目的是减少对 SDK 库的维护和频繁操作对繁琐的应用程序代码进行修改的行为。
+## Background
 
-## 目标
+The component originated as an SDK library used in Proxyless mode, which required modifying application code.
+
+The current approach translates the original SDK library into a conventional controller. Its purpose is to reduce SDK maintenance overhead and avoid frequent, cumbersome modifications to application code.
+
+## Goals
+
 TODO
 
-## 实现
+## Implementation
+
 TODO
 
-### 流量
+### Traffic
+
 TODO
 
-### 安全
+### Security
+
 TODO
 
-### 遥测
-TODO
+### Telemetry
 
+TODO
