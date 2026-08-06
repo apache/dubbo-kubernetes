@@ -19,6 +19,8 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"os"
+	"time"
 )
 
 type Plugin struct {
@@ -28,10 +30,11 @@ type Plugin struct {
 }
 
 type PodInfo struct {
-	Namespace string
-	Name      string
-	Labels    map[string]string
-	IPs       []string
+	Namespace     string
+	Name          string
+	Labels        map[string]string
+	IPs           []string
+	ExcludedPorts []int
 }
 
 type PodInfoProvider interface {
@@ -39,8 +42,8 @@ type PodInfoProvider interface {
 }
 
 type RuleManager interface {
-	AddPodRules(ctx context.Context, podIP string) error
-	DeletePodRules(ctx context.Context, podIP string) error
+	AddPodRules(ctx context.Context, podIP string, excludedPorts []int) error
+	DeletePodRules(ctx context.Context, podIP string, excludedPorts []int) error
 }
 
 type StateStore interface {
@@ -71,15 +74,14 @@ func (p Plugin) addOrCheck(ctx context.Context, env Env, conf NetConf) ([]byte, 
 		return out, nil
 	}
 	if p.PodInfoProvider == nil {
-		return out, nil
+		return p.unresolvedPod(conf, out, ref, fmt.Errorf("no Kubernetes client is configured"))
 	}
-	pod, err := p.PodInfoProvider.PodInfo(ctx, ref)
+	pod, err := p.lookupPod(ctx, conf, ref)
 	if err != nil {
 		if ctxErr := ctx.Err(); ctxErr != nil {
 			return nil, ctxErr
 		}
-		// Ownership is not proven until the managed label is read.
-		return out, nil
+		return p.unresolvedPod(conf, out, ref, err)
 	}
 	if !isManagedPod(conf, pod) {
 		return out, nil
@@ -91,19 +93,71 @@ func (p Plugin) addOrCheck(ctx context.Context, env Env, conf NetConf) ([]byte, 
 	if p.RuleManager == nil {
 		return nil, fmt.Errorf("rule manager is required")
 	}
-	if err := p.RuleManager.AddPodRules(ctx, podIP); err != nil {
+	if err := p.RuleManager.AddPodRules(ctx, podIP, pod.ExcludedPorts); err != nil {
 		return nil, err
 	}
 	if p.StateStore != nil && env.ContainerID != "" {
 		if err := p.StateStore.Write(PodState{
-			ContainerID: env.ContainerID,
-			Namespace:   ref.Namespace,
-			Name:        ref.Name,
-			IP:          podIP,
+			ContainerID:   env.ContainerID,
+			Namespace:     ref.Namespace,
+			Name:          ref.Name,
+			IP:            podIP,
+			ExcludedPorts: pod.ExcludedPorts,
 		}); err != nil {
 			return nil, err
 		}
 	}
+	return out, nil
+}
+
+// lookupPod retries a failed lookup before giving up. Pod creation is a burst
+// workload and the API server is the one dependency in this path, so a short
+// retry converts most transient failures into a normal ADD.
+func (p Plugin) lookupPod(ctx context.Context, conf NetConf, ref PodRef) (PodInfo, error) {
+	attempts := conf.PodLookupAttempts()
+	var err error
+	for attempt := 0; attempt < attempts; attempt++ {
+		if attempt > 0 {
+			timer := time.NewTimer(conf.PodLookupBackoff())
+			select {
+			case <-ctx.Done():
+				timer.Stop()
+				return PodInfo{}, ctx.Err()
+			case <-timer.C:
+			}
+		}
+		var pod PodInfo
+		pod, err = p.PodInfoProvider.PodInfo(ctx, ref)
+		if err == nil {
+			return pod, nil
+		}
+		if ctxErr := ctx.Err(); ctxErr != nil {
+			return PodInfo{}, ctxErr
+		}
+	}
+	return PodInfo{}, err
+}
+
+// unresolvedPod decides what to do when pod ownership could not be determined.
+//
+// Ownership is only knowable from the managed label, so an unreadable pod
+// might not be a mesh pod at all. Failing the ADD would block it from
+// starting, which puts non-mesh workloads at the mercy of a mesh component —
+// the plugin is chained after the primary CNI precisely so that it never owns
+// that decision. So ADD is allowed to proceed, loudly.
+//
+// The gap this leaves — a mesh pod that never got its rules, which ADD will
+// not retry — is closed by the node agent's reconcile loop, which reads the
+// managed pods on this node and fences any that are missing. Clusters that
+// would rather stop scheduling than run with that window can set failClosed.
+func (p Plugin) unresolvedPod(conf NetConf, out []byte, ref PodRef, cause error) ([]byte, error) {
+	if conf.FailClosed {
+		return nil, fmt.Errorf("determine whether pod %s/%s is mesh-managed: %w", ref.Namespace, ref.Name, cause)
+	}
+	fmt.Fprintf(os.Stderr,
+		"dubbo-cni: allowing %s/%s without inbound rules because pod ownership could not be determined: %v; "+
+			"the node agent reconcile loop will install them if the pod is mesh-managed\n",
+		ref.Namespace, ref.Name, cause)
 	return out, nil
 }
 
@@ -119,7 +173,7 @@ func (p Plugin) del(ctx context.Context, env Env) error {
 		return err
 	}
 	if p.RuleManager != nil && state.IP != "" {
-		if err := p.RuleManager.DeletePodRules(ctx, state.IP); err != nil {
+		if err := p.RuleManager.DeletePodRules(ctx, state.IP, state.ExcludedPorts); err != nil {
 			return err
 		}
 	}
