@@ -47,8 +47,12 @@ const (
 	ProxylessGRPCConfigPath                      = ProxylessXDSMountPath + "/" + ProxylessGRPCConfigFileName
 	ProxylessGRPCInboundContainerName            = "dubbo-grpc-inbound"
 	ProxylessGRPCInboundPort                     = 15080
-	ProxylessManagedLabel                        = "proxyless.dubbo.apache.org/managed"
-	ProxylessManagedLabelValue                   = "true"
+	// ProxylessGRPCInboundAdminPort serves the inbound sidecar's health,
+	// readiness and metrics endpoints. It carries no mesh traffic, so the node
+	// fence exempts it and kubelet can probe it directly.
+	ProxylessGRPCInboundAdminPort = 15020
+	ProxylessManagedLabel         = "proxyless.dubbo.apache.org/managed"
+	ProxylessManagedLabelValue    = "true"
 )
 
 // ProxylessExcludeInboundPortsAnnotation lists inbound ports that stay

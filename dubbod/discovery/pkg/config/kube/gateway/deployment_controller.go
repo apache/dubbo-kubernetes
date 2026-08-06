@@ -82,7 +82,14 @@ const (
 	xdsAddressAnnotation        = "gateway.dubbo.apache.org/xds-address"
 	accessLogAnnotation         = "gateway.dubbo.apache.org/access-log"
 	accessLogFormatAnnotation   = "gateway.dubbo.apache.org/access-log-format"
+	replicasAnnotation          = "gateway.dubbo.apache.org/replicas"
 )
+
+// defaultGatewayReplicas keeps a gateway serving while one replica is drained,
+// upgraded or evicted. A single replica turns any of those into an outage for
+// every route the gateway fronts. The installed default comes from
+// features.DxgateReplicas; this is the floor used when that value is unusable.
+const defaultGatewayReplicas = 2
 
 var builtinClasses = getBuiltinClasses()
 
@@ -405,6 +412,7 @@ func (d *DeploymentController) configureGateway(log *dubbolog.Logger, gw gateway
 		ServiceAccount:      defaultName,
 		Ports:               ports,
 		ServiceType:         serviceType,
+		Replicas:            gatewayReplicas(gw),
 		Revision:            d.revision,
 		ControllerLabel:     gi.controllerLabel,
 		BootstrapConfig:     bootstrapConfig,
@@ -460,6 +468,7 @@ type TemplateInput struct {
 	ServiceAccount  string
 	Ports           []corev1.ServicePort
 	ServiceType     corev1.ServiceType
+	Replicas        int32
 	Revision        string
 	ControllerLabel string
 
@@ -1408,6 +1417,34 @@ func gatewayServiceNodePort(gw gateway.Gateway) int32 {
 		return 0
 	}
 	return int32(port)
+}
+
+// gatewayReplicas reports how many dxgate pods to run. Zero is allowed so a
+// gateway can be scaled down deliberately, which is why this does not reuse
+// positiveIntAnnotation.
+func gatewayReplicas(gw gateway.Gateway) int32 {
+	return gatewayReplicasWithDefault(gw, installedGatewayReplicas())
+}
+
+func gatewayReplicasWithDefault(gw gateway.Gateway, fallback int32) int32 {
+	if gw.Annotations == nil || gw.Annotations[replicasAnnotation] == "" {
+		return fallback
+	}
+	replicas, err := strconv.Atoi(gw.Annotations[replicasAnnotation])
+	if err != nil || replicas < 0 {
+		return fallback
+	}
+	return int32(replicas)
+}
+
+// installedGatewayReplicas is the mesh-wide default. A negative setting is
+// meaningless and a zero one would make every gateway default to serving no
+// traffic, so both fall back to the highly available floor.
+func installedGatewayReplicas() int32 {
+	if features.DxgateReplicas < 1 {
+		return defaultGatewayReplicas
+	}
+	return int32(features.DxgateReplicas)
 }
 
 func positiveIntAnnotation(gw gateway.Gateway, name string) (int, bool) {

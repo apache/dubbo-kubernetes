@@ -23,9 +23,12 @@ import (
 	"strings"
 
 	"github.com/apache/dubbo-kubernetes/dubboctl/pkg/cli"
+	"github.com/apache/dubbo-kubernetes/pkg/config/constants"
 	"github.com/apache/dubbo-kubernetes/pkg/kube"
 	"github.com/spf13/cobra"
+	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
+	policyv1 "k8s.io/api/policy/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 )
@@ -54,7 +57,12 @@ func AnalyzeCmd(ctx cli.Context) *cobra.Command {
 		Short: "Analyze Dubbo mesh configuration and report potential issues",
 		Long: `Analyze inspects HTTPRoutes, security policies and circuit breaker policies in the
 cluster and reports references to missing services, selectors that match no
-workloads, and authentication configurations that are not actually enforced.`,
+workloads, and authentication configurations that are not actually enforced.
+
+It also checks that the control plane and every gateway survive a node drain:
+more than one replica, a PodDisruptionBudget, and replicas placed on different
+nodes. The control plane is checked even when the analysis is scoped to a
+single application namespace.`,
 		Example: `  # Analyze the default namespace
   dubboctl analyze
 
@@ -105,7 +113,143 @@ func runAnalyzers(ctx context.Context, client kube.CLIClient, namespace string) 
 	msgs = append(msgs, analyzeHTTPRoutes(ctx, client, namespace, services.Items)...)
 	msgs = append(msgs, analyzeSecurityPolicies(ctx, client, namespace, pods.Items)...)
 	msgs = append(msgs, analyzeCircuitBreakerPolicies(ctx, client, namespace, services.Items)...)
+	msgs = append(msgs, collectHighAvailability(ctx, client, namespace)...)
 	return msgs, nil
+}
+
+// collectHighAvailability gathers the workloads whose availability the whole
+// mesh depends on. The control plane is always inspected in the system
+// namespace: a request scoped to one application namespace still fails in the
+// same way when dubbod goes down.
+func collectHighAvailability(ctx context.Context, client kube.CLIClient, namespace string) []analyzeMessage {
+	namespaces := []string{namespace}
+	if namespace != metav1.NamespaceAll && namespace != constants.DubboSystemNamespace {
+		namespaces = append(namespaces, constants.DubboSystemNamespace)
+	}
+
+	msgs := []analyzeMessage{}
+	for _, ns := range namespaces {
+		deployments, err := client.Kube().AppsV1().Deployments(ns).List(ctx, metav1.ListOptions{})
+		if err != nil {
+			msgs = append(msgs, analyzeMessage{levelWarning, "Deployment",
+				fmt.Sprintf("failed to list deployments in %s: %v", ns, err)})
+			continue
+		}
+		budgets, err := client.Kube().PolicyV1().PodDisruptionBudgets(ns).List(ctx, metav1.ListOptions{})
+		if err != nil {
+			msgs = append(msgs, analyzeMessage{levelWarning, "PodDisruptionBudget",
+				fmt.Sprintf("failed to list pod disruption budgets in %s: %v", ns, err)})
+			continue
+		}
+		pods, err := client.Kube().CoreV1().Pods(ns).List(ctx, metav1.ListOptions{})
+		if err != nil {
+			msgs = append(msgs, analyzeMessage{levelWarning, "Pod",
+				fmt.Sprintf("failed to list pods in %s: %v", ns, err)})
+			continue
+		}
+		msgs = append(msgs, analyzeHighAvailability(deployments.Items, budgets.Items, pods.Items)...)
+	}
+	return msgs
+}
+
+// meshCriticalRole names a workload whose loss takes the mesh, or a whole
+// gateway's traffic, with it.
+func meshCriticalRole(deployment appsv1.Deployment) string {
+	labels := deployment.Spec.Template.Labels
+	switch {
+	case labels["app"] == "dubbod":
+		return "control plane"
+	case labels["app.kubernetes.io/name"] == "dxgate":
+		return "gateway"
+	default:
+		return ""
+	}
+}
+
+// analyzeHighAvailability reports mesh-critical workloads that a single node
+// drain, upgrade or eviction can take offline. It checks three things that all
+// have to hold together: more than one replica, a disruption budget so
+// voluntary evictions cannot remove them all at once, and pods that actually
+// landed on different nodes.
+func analyzeHighAvailability(deployments []appsv1.Deployment, budgets []policyv1.PodDisruptionBudget, pods []corev1.Pod) []analyzeMessage {
+	msgs := []analyzeMessage{}
+	for _, deployment := range deployments {
+		role := meshCriticalRole(deployment)
+		if role == "" {
+			continue
+		}
+		resource := fmt.Sprintf("Deployment %s/%s", deployment.Namespace, deployment.Name)
+
+		replicas := int32(1)
+		if deployment.Spec.Replicas != nil {
+			replicas = *deployment.Spec.Replicas
+		}
+		if replicas == 0 {
+			// Deliberately scaled to zero; availability is not the question.
+			continue
+		}
+		if replicas < 2 {
+			msgs = append(msgs, analyzeMessage{levelWarning, resource,
+				fmt.Sprintf("%s runs a single replica: any node drain, upgrade or eviction takes it offline", role)})
+			continue
+		}
+
+		selector, err := metav1.LabelSelectorAsSelector(deployment.Spec.Selector)
+		if err != nil {
+			continue
+		}
+		if !hasDisruptionBudget(budgets, deployment.Namespace, deployment.Spec.Template.Labels) {
+			msgs = append(msgs, analyzeMessage{levelWarning, resource,
+				fmt.Sprintf("%s has %d replicas but no PodDisruptionBudget: a node drain can evict them all at once", role, replicas)})
+		}
+		if node, single := singleNode(pods, deployment.Namespace, selector); single {
+			msgs = append(msgs, analyzeMessage{levelWarning, resource,
+				fmt.Sprintf("all %s replicas are scheduled on node %s: losing it takes the %s down despite the replica count", role, node, role)})
+		}
+	}
+	return msgs
+}
+
+func hasDisruptionBudget(budgets []policyv1.PodDisruptionBudget, namespace string, podLabels map[string]string) bool {
+	for _, budget := range budgets {
+		if budget.Namespace != namespace || budget.Spec.Selector == nil {
+			continue
+		}
+		selector, err := metav1.LabelSelectorAsSelector(budget.Spec.Selector)
+		if err != nil || selector.Empty() {
+			continue
+		}
+		if selector.Matches(labels.Set(podLabels)) {
+			return true
+		}
+	}
+	return false
+}
+
+// singleNode reports the node every running replica shares, if they share one.
+// Fewer than two running pods is not evidence of bad placement, so it is not
+// reported.
+func singleNode(pods []corev1.Pod, namespace string, selector labels.Selector) (string, bool) {
+	node := ""
+	count := 0
+	for _, pod := range pods {
+		if pod.Namespace != namespace || pod.DeletionTimestamp != nil {
+			continue
+		}
+		if pod.Status.Phase != corev1.PodRunning || pod.Spec.NodeName == "" {
+			continue
+		}
+		if !selector.Matches(labels.Set(pod.Labels)) {
+			continue
+		}
+		if node == "" {
+			node = pod.Spec.NodeName
+		} else if pod.Spec.NodeName != node {
+			return "", false
+		}
+		count++
+	}
+	return node, count > 1
 }
 
 // analyzeHTTPRoutes reports backendRefs pointing at services or ports that do not exist.
