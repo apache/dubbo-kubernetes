@@ -1,0 +1,59 @@
+# Licensed to the Apache Software Foundation (ASF) under one or more
+# contributor license agreements.  See the NOTICE file distributed with
+# this work for additional information regarding copyright ownership.
+# The ASF licenses this file to You under the Apache License, Version 2.0
+# (the "License"); you may not use this file except in compliance with
+# the License.  You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+# A queue consumer: it pulls work from Kafka and calls other mesh services, but
+# nothing calls it. That is what makes it safe to scale to zero — no caller can
+# be left holding a request against an endpoint that no longer exists.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: order-consumer
+  namespace: autoscaling
+  labels:
+    app: order-consumer
+spec:
+  # No replicas field: KEDA owns the replica count through the ScaledObject.
+  # Setting it here makes two controllers fight over the same number.
+  selector:
+    matchLabels:
+      app: order-consumer
+  template:
+    metadata:
+      labels:
+        app: order-consumer
+    spec:
+      # The inbound sidecar drains in two phases (5s endpoint withdrawal, then
+      # up to 25s for in-flight connections). Anything below 30s here lets
+      # kubelet send SIGKILL mid-drain.
+      terminationGracePeriodSeconds: 40
+      containers:
+        - name: consumer
+          # Replace with your own consumer image.
+          image: kdubbo/order-consumer:latest
+          imagePullPolicy: IfNotPresent
+          env:
+            - name: KAFKA_BOOTSTRAP_SERVERS
+              value: kafka.kafka.svc.cluster.local:9092
+            - name: KAFKA_TOPIC
+              value: orders
+            - name: KAFKA_CONSUMER_GROUP
+              value: order-consumer
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi

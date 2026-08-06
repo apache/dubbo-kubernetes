@@ -10,7 +10,9 @@ Dubbo service mesh enables workloads to join natively, receive policies from the
 
 > [!WARNING]
 > The current version is in the **Alpha** phase.
+> 
 > Releases `0.4.6–0.4.9` will be in the **Beta** phase.
+> 
 > Release `0.5.0` will be the first **RC** version.
 
 Dubbo’s control plane provides an abstraction layer over the underlying cluster management platform.

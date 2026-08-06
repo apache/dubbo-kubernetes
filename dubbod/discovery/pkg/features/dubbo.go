@@ -63,6 +63,10 @@ var (
 		"Name of the default GatewayClass").Get()
 	DxgateImage = env.Register("DUBBO_DXGATE_IMAGE", "kdubbo/dxgate:latest",
 		"Container image used for managed Dubbo Gateway API data-plane deployments").Get()
+	DxgateReplicas = env.Register("DUBBO_DXGATE_REPLICAS", 2,
+		"Default replica count for managed Dubbo Gateway API data-plane deployments. Two or more keeps a"+
+			" gateway serving while one replica is drained; individual gateways override it with the"+
+			" gateway.dubbo.apache.org/replicas annotation").Get()
 	StatusMaxWorkers = env.Register("DUBBO_STATUS_MAX_WORKERS", 100, "The maximum number of workers"+
 		" for status update").Get()
 )
