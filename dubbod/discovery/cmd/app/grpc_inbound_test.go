@@ -29,6 +29,7 @@ import (
 	"net"
 	"net/http"
 	"net/http/httptest"
+	neturl "net/url"
 	"os"
 	"path/filepath"
 	"testing"
@@ -48,7 +49,7 @@ func TestGRPCInboundRequiresClientCertificateAndProxiesHTTP(t *testing.T) {
 	writePEM(t, filepath.Join(dir, "client-cert.pem"), "CERTIFICATE", clientCert.Raw)
 	writePEM(t, filepath.Join(dir, "client-key.pem"), "RSA PRIVATE KEY", x509.MarshalPKCS1PrivateKey(clientKey))
 
-	tlsConfig, err := grpcInboundTLSConfigFromBootstrap(&xdsresolver.BootstrapConfig{
+	certs, err := newGRPCInboundCertStore(&xdsresolver.BootstrapConfig{
 		CertProviders: map[string]xdsresolver.FileWatcherCertConfig{
 			"default": {
 				CertificateFile:   filepath.Join(dir, "cert-chain.pem"),
@@ -58,8 +59,9 @@ func TestGRPCInboundRequiresClientCertificateAndProxiesHTTP(t *testing.T) {
 		},
 	})
 	if err != nil {
-		t.Fatalf("grpcInboundTLSConfigFromBootstrap() failed: %v", err)
+		t.Fatalf("newGRPCInboundCertStore() failed: %v", err)
 	}
+	tlsConfig := certs.tlsConfig(nil)
 
 	upstream := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		_, _ = fmt.Fprintln(w, "nginx v1")
@@ -136,7 +138,7 @@ func TestGRPCInboundPermissiveAcceptsPlaintextAndMTLS(t *testing.T) {
 	writePEM(t, filepath.Join(dir, "client-cert.pem"), "CERTIFICATE", clientCert.Raw)
 	writePEM(t, filepath.Join(dir, "client-key.pem"), "RSA PRIVATE KEY", x509.MarshalPKCS1PrivateKey(clientKey))
 
-	tlsConfig, err := grpcInboundTLSConfigFromBootstrap(&xdsresolver.BootstrapConfig{
+	certs, err := newGRPCInboundCertStore(&xdsresolver.BootstrapConfig{
 		CertProviders: map[string]xdsresolver.FileWatcherCertConfig{
 			"default": {
 				CertificateFile:   filepath.Join(dir, "cert-chain.pem"),
@@ -146,8 +148,9 @@ func TestGRPCInboundPermissiveAcceptsPlaintextAndMTLS(t *testing.T) {
 		},
 	})
 	if err != nil {
-		t.Fatalf("grpcInboundTLSConfigFromBootstrap() failed: %v", err)
+		t.Fatalf("newGRPCInboundCertStore() failed: %v", err)
 	}
+	tlsConfig := certs.tlsConfig(nil)
 
 	upstream := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		_, _ = fmt.Fprintln(w, "nginx v1")
@@ -223,11 +226,88 @@ func TestGRPCInboundMTLSModeFromRuntimeConfig(t *testing.T) {
 		t.Fatalf("os.WriteFile() failed: %v", err)
 	}
 
-	if got, ok := grpcInboundMTLSModeFromRuntimeConfig(path, 80); !ok || got != grpcInboundMTLSModePermissive {
-		t.Fatalf("mode for 80 = %q, %v; want PERMISSIVE, true", got, ok)
+	if got, err := loadGRPCInboundMTLSMode(path, 80); err != nil || got != grpcInboundMTLSModePermissive {
+		t.Fatalf("mode for 80 = %q, %v; want PERMISSIVE, nil", got, err)
 	}
-	if got, ok := grpcInboundMTLSModeFromRuntimeConfig(path, 8080); !ok || got != grpcInboundMTLSModeStrict {
-		t.Fatalf("mode for 8080 = %q, %v; want STRICT, true", got, ok)
+	if got, err := loadGRPCInboundMTLSMode(path, 8080); err != nil || got != grpcInboundMTLSModeStrict {
+		t.Fatalf("mode for 8080 = %q, %v; want STRICT, nil", got, err)
+	}
+}
+
+func TestGRPCInboundModeStoreDoesNotDowngradeOnReadFailure(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "dubbo-grpc-xds.json")
+	if err := os.WriteFile(path, []byte(`{"services":[{"ports":[{"port":8080,"mtlsMode":"STRICT"}]}]}`), 0o600); err != nil {
+		t.Fatalf("os.WriteFile() failed: %v", err)
+	}
+	store := newGRPCInboundModeStore(path, 8080)
+
+	if got := store.current(); got != grpcInboundMTLSModeStrict {
+		t.Fatalf("mode before first load = %q, want STRICT", got)
+	}
+	if err := store.reload(); err != nil {
+		t.Fatalf("reload() failed: %v", err)
+	}
+	if got := store.current(); got != grpcInboundMTLSModeStrict {
+		t.Fatalf("mode after load = %q, want STRICT", got)
+	}
+
+	// A truncated write must not relax the policy to PERMISSIVE.
+	if err := os.WriteFile(path, []byte(`{"services":`), 0o600); err != nil {
+		t.Fatalf("os.WriteFile(truncated) failed: %v", err)
+	}
+	if err := store.reload(); err == nil {
+		t.Fatalf("reload() on malformed config returned nil error")
+	}
+	if got := store.current(); got != grpcInboundMTLSModeStrict {
+		t.Fatalf("mode after failed reload = %q, want STRICT", got)
+	}
+}
+
+func TestGRPCInboundModeStoreMissingConfigIsPermissive(t *testing.T) {
+	store := newGRPCInboundModeStore(filepath.Join(t.TempDir(), "absent.json"), 8080)
+	if err := store.reload(); err != nil {
+		t.Fatalf("reload() on absent config failed: %v", err)
+	}
+	if got := store.current(); got != grpcInboundMTLSModePermissive {
+		t.Fatalf("mode for absent config = %q, want PERMISSIVE", got)
+	}
+}
+
+func TestGRPCInboundCertStoreReloadsRotatedCertificate(t *testing.T) {
+	caCert, caKey := newTestCA(t)
+	firstCert, firstKey := newSignedCert(t, caCert, caKey, "grpc-inbound")
+	dir := t.TempDir()
+	writePEM(t, filepath.Join(dir, "root-cert.pem"), "CERTIFICATE", caCert.Raw)
+	writePEM(t, filepath.Join(dir, "cert-chain.pem"), "CERTIFICATE", firstCert.Raw)
+	writePEM(t, filepath.Join(dir, "key.pem"), "RSA PRIVATE KEY", x509.MarshalPKCS1PrivateKey(firstKey))
+
+	store, err := newGRPCInboundCertStore(&xdsresolver.BootstrapConfig{
+		CertProviders: map[string]xdsresolver.FileWatcherCertConfig{
+			"default": {
+				CertificateFile:   filepath.Join(dir, "cert-chain.pem"),
+				PrivateKeyFile:    filepath.Join(dir, "key.pem"),
+				CACertificateFile: filepath.Join(dir, "root-cert.pem"),
+			},
+		},
+	})
+	if err != nil {
+		t.Fatalf("newGRPCInboundCertStore() failed: %v", err)
+	}
+	before, _ := store.current()
+
+	rotatedCert, rotatedKey := newSignedCert(t, caCert, caKey, "grpc-inbound")
+	writePEM(t, filepath.Join(dir, "cert-chain.pem"), "CERTIFICATE", rotatedCert.Raw)
+	writePEM(t, filepath.Join(dir, "key.pem"), "RSA PRIVATE KEY", x509.MarshalPKCS1PrivateKey(rotatedKey))
+	if err := store.reload(); err != nil {
+		t.Fatalf("reload() failed: %v", err)
+	}
+
+	after, _ := store.current()
+	if string(before.Certificate[0]) == string(after.Certificate[0]) {
+		t.Fatalf("certificate was not reloaded after rotation")
+	}
+	if string(after.Certificate[0]) != string(rotatedCert.Raw) {
+		t.Fatalf("reloaded certificate does not match the rotated one")
 	}
 }
 
@@ -297,4 +377,182 @@ func writePEM(t *testing.T, path, typ string, der []byte) {
 	if err := pem.Encode(file, &pem.Block{Type: typ, Bytes: der}); err != nil {
 		t.Fatalf("pem.Encode(%s) failed: %v", path, err)
 	}
+}
+
+func TestGRPCInboundDefaultAcceptTimeoutIsSet(t *testing.T) {
+	t.Setenv("DUBBO_GRPC_INBOUND_ACCEPT_TIMEOUT", "")
+	cmd := newGRPCInboundCommand()
+	flag := cmd.Flags().Lookup("accept-timeout")
+	if flag == nil {
+		t.Fatalf("accept-timeout flag is missing")
+	}
+	if got, want := flag.DefValue, grpcInboundAcceptTimeout.String(); got != want {
+		t.Fatalf("accept-timeout default = %q, want %q", got, want)
+	}
+}
+
+func TestGRPCInboundPeerPolicy(t *testing.T) {
+	caCert, caKey := newTestCA(t)
+	local := newSPIFFECert(t, caCert, caKey, "spiffe://cluster.local/ns/default/sa/reviews")
+	foreign := newSPIFFECert(t, caCert, caKey, "spiffe://evil.example/ns/default/sa/reviews")
+	other := newSPIFFECert(t, caCert, caKey, "spiffe://cluster.local/ns/default/sa/ratings")
+	noIdentity, _ := newSignedCert(t, caCert, caKey, "no-spiffe")
+
+	cases := []struct {
+		name    string
+		policy  *grpcInboundPeerPolicy
+		peer    *x509.Certificate
+		wantErr bool
+	}{
+		{
+			name:   "nil policy allows any peer",
+			policy: nil,
+			peer:   foreign,
+		},
+		{
+			name:   "empty policy allows any peer",
+			policy: &grpcInboundPeerPolicy{},
+			peer:   foreign,
+		},
+		{
+			name:   "matching trust domain is allowed",
+			policy: &grpcInboundPeerPolicy{trustDomain: "cluster.local"},
+			peer:   local,
+		},
+		{
+			name:    "foreign trust domain is rejected",
+			policy:  &grpcInboundPeerPolicy{trustDomain: "cluster.local"},
+			peer:    foreign,
+			wantErr: true,
+		},
+		{
+			name:    "certificate without SPIFFE identity is rejected",
+			policy:  &grpcInboundPeerPolicy{trustDomain: "cluster.local"},
+			peer:    noIdentity,
+			wantErr: true,
+		},
+		{
+			name: "listed principal is allowed",
+			policy: &grpcInboundPeerPolicy{
+				trustDomain: "cluster.local",
+				allowed:     map[string]struct{}{"spiffe://cluster.local/ns/default/sa/reviews": {}},
+			},
+			peer: local,
+		},
+		{
+			name: "unlisted principal is rejected",
+			policy: &grpcInboundPeerPolicy{
+				trustDomain: "cluster.local",
+				allowed:     map[string]struct{}{"spiffe://cluster.local/ns/default/sa/reviews": {}},
+			},
+			peer:    other,
+			wantErr: true,
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			err := tc.policy.verifyPeerCertificate(nil, [][]*x509.Certificate{{tc.peer}})
+			if tc.wantErr && err == nil {
+				t.Fatalf("verifyPeerCertificate() = nil, want error")
+			}
+			if !tc.wantErr && err != nil {
+				t.Fatalf("verifyPeerCertificate() = %v, want nil", err)
+			}
+		})
+	}
+}
+
+func TestGRPCInboundPeerPolicyRejectsEmptyChain(t *testing.T) {
+	policy := &grpcInboundPeerPolicy{trustDomain: "cluster.local"}
+	if err := policy.verifyPeerCertificate(nil, nil); err == nil {
+		t.Fatalf("verifyPeerCertificate() with no chain = nil, want error")
+	}
+}
+
+func TestParseGRPCInboundPrincipals(t *testing.T) {
+	allowed, err := parseGRPCInboundPrincipals("ns/default/sa/reviews, spiffe://other.mesh/ns/x/sa/y", "cluster.local")
+	if err != nil {
+		t.Fatalf("parseGRPCInboundPrincipals() failed: %v", err)
+	}
+	for _, want := range []string{
+		"spiffe://cluster.local/ns/default/sa/reviews",
+		"spiffe://other.mesh/ns/x/sa/y",
+	} {
+		if _, ok := allowed[want]; !ok {
+			t.Fatalf("principal %q missing from %v", want, allowed)
+		}
+	}
+
+	if got, err := parseGRPCInboundPrincipals("", ""); err != nil || got != nil {
+		t.Fatalf("parseGRPCInboundPrincipals(empty) = %v, %v; want nil, nil", got, err)
+	}
+	if _, err := parseGRPCInboundPrincipals("ns/default/sa/reviews", ""); err == nil {
+		t.Fatalf("shorthand principal without trust domain returned nil error")
+	}
+}
+
+func TestGRPCInboundCertStoreTrustDomain(t *testing.T) {
+	caCert, caKey := newTestCA(t)
+	leaf, key := newSPIFFECertWithKey(t, caCert, caKey, "spiffe://cluster.local/ns/default/sa/reviews")
+	dir := t.TempDir()
+	writePEM(t, filepath.Join(dir, "root-cert.pem"), "CERTIFICATE", caCert.Raw)
+	writePEM(t, filepath.Join(dir, "cert-chain.pem"), "CERTIFICATE", leaf.Raw)
+	writePEM(t, filepath.Join(dir, "key.pem"), "RSA PRIVATE KEY", x509.MarshalPKCS1PrivateKey(key))
+
+	store, err := newGRPCInboundCertStore(&xdsresolver.BootstrapConfig{
+		CertProviders: map[string]xdsresolver.FileWatcherCertConfig{
+			"default": {
+				CertificateFile:   filepath.Join(dir, "cert-chain.pem"),
+				PrivateKeyFile:    filepath.Join(dir, "key.pem"),
+				CACertificateFile: filepath.Join(dir, "root-cert.pem"),
+			},
+		},
+	})
+	if err != nil {
+		t.Fatalf("newGRPCInboundCertStore() failed: %v", err)
+	}
+	if got, want := store.trustDomain(), "cluster.local"; got != want {
+		t.Fatalf("trustDomain() = %q, want %q", got, want)
+	}
+}
+
+func newSPIFFECert(t *testing.T, caCert *x509.Certificate, caKey *rsa.PrivateKey, id string) *x509.Certificate {
+	t.Helper()
+	cert, _ := newSPIFFECertWithKey(t, caCert, caKey, id)
+	return cert
+}
+
+func newSPIFFECertWithKey(t *testing.T, caCert *x509.Certificate, caKey *rsa.PrivateKey, id string) (*x509.Certificate, *rsa.PrivateKey) {
+	t.Helper()
+	uri, err := neturl.Parse(id)
+	if err != nil {
+		t.Fatalf("neturl.Parse(%s) failed: %v", id, err)
+	}
+	key, err := rsa.GenerateKey(rand.Reader, 2048)
+	if err != nil {
+		t.Fatalf("rsa.GenerateKey() failed: %v", err)
+	}
+	serial, err := rand.Int(rand.Reader, big.NewInt(1<<62))
+	if err != nil {
+		t.Fatalf("rand.Int() failed: %v", err)
+	}
+	tmpl := &x509.Certificate{
+		SerialNumber: serial,
+		Subject:      pkix.Name{CommonName: id},
+		NotBefore:    time.Now().Add(-time.Minute),
+		NotAfter:     time.Now().Add(time.Hour),
+		KeyUsage:     x509.KeyUsageDigitalSignature | x509.KeyUsageKeyEncipherment,
+		ExtKeyUsage:  []x509.ExtKeyUsage{x509.ExtKeyUsageServerAuth, x509.ExtKeyUsageClientAuth},
+		URIs:         []*neturl.URL{uri},
+	}
+	der, err := x509.CreateCertificate(rand.Reader, tmpl, caCert, &key.PublicKey, caKey)
+	if err != nil {
+		t.Fatalf("x509.CreateCertificate(%s) failed: %v", id, err)
+	}
+	cert, err := x509.ParseCertificate(der)
+	if err != nil {
+		t.Fatalf("x509.ParseCertificate(%s) failed: %v", id, err)
+	}
+	return cert, key
 }
