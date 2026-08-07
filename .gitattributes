@@ -1,0 +1,13 @@
+# Generated files. Marked so they collapse in review diffs and are excluded
+# from language statistics; the source of truth is the .proto / metadata.yaml
+# beside them.
+#
+# They are deliberately left mergeable. Forcing a conflict on every generated
+# file would block a pull request whenever two branches touch the same API,
+# which is exactly when merging is most routine. `make check-generate` is the
+# real guard: it regenerates everything and fails with a diff if the committed
+# output no longer matches, so a bad merge or a hand-edit is caught there
+# rather than becoming a compile error in a file nobody edited.
+*.pb.go                                       linguist-generated=true
+*.gen.go                                      linguist-generated=true
+kubernetes/customresourcedefinitions.gen.yaml linguist-generated=true

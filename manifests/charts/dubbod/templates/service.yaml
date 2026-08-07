@@ -23,6 +23,13 @@
 {{- $multicluster := $global.multicluster | default dict }}
 {{- $remoteAccess := $multicluster.remoteAccess | default dict }}
 {{- $managementPort := int (coalesce $management.port $defaultManagement.port 26080) }}
+{{- $defaultActivation := $defaultGlobal.activation | default dict }}
+{{- $activation := $global.activation | default dict }}
+{{- /* coalesce skips zero, so an explicit 0 has to be read with hasKey or the off switch silently falls back to the default. */ -}}
+{{- $activationPort := int (coalesce $defaultActivation.port 26030) }}
+{{- if hasKey $activation "port" }}
+{{- $activationPort = int $activation.port }}
+{{- end }}
 {{- $remoteAccessEnabled := coalesce $remoteAccess.enabled $defaultRemoteAccess.enabled false }}
 {{- $remoteAccessServiceType := coalesce $remoteAccess.serviceType $defaultRemoteAccess.serviceType "LoadBalancer" }}
 {{- $remoteAccessGRPCPort := int (coalesce $remoteAccess.grpcPort $defaultRemoteAccess.grpcPort 26010) }}
@@ -72,6 +79,54 @@ spec:
       protocol: TCP
   selector:
     app: dubbod
+{{- if gt $activationPort 0 }}
+---
+# Separate Service because KEDA dials this by name from its own namespace; it
+# has no reason to see the management API, and the two scale independently.
+# Load balanced on purpose: KEDA needs exactly one replica to answer.
+apiVersion: v1
+kind: Service
+metadata:
+  name: dubbod-activation
+  namespace: dubbo-system
+  labels:
+    app: dubbod
+spec:
+  ports:
+    - port: {{ $activationPort }}
+      name: grpc-activation
+      targetPort: {{ $activationPort }}
+      protocol: TCP
+  selector:
+    app: dubbod
+---
+# Headless companion, for gateways rather than KEDA.
+#
+# A gateway must report its pending requests to every replica: KEDA's
+# activation stream lands on one replica chosen by the load-balanced Service
+# above, and a report that reached only a different replica would leave those
+# requests waiting for a scale-up nobody asked for. Resolving this name yields
+# one A record per pod, which is how a gateway finds them all.
+apiVersion: v1
+kind: Service
+metadata:
+  name: dubbod-activation-replicas
+  namespace: dubbo-system
+  labels:
+    app: dubbod
+spec:
+  clusterIP: None
+  # Report to replicas that are still starting as well: a gateway holding a
+  # request cannot wait for readiness to settle before asking for a scale-up.
+  publishNotReadyAddresses: true
+  ports:
+    - port: {{ $activationPort }}
+      name: grpc-activation
+      targetPort: {{ $activationPort }}
+      protocol: TCP
+  selector:
+    app: dubbod
+{{- end }}
 {{- if $remoteAccessEnabled }}
 ---
 apiVersion: v1

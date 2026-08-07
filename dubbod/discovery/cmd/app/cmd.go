@@ -145,6 +145,10 @@ func addFlags(c *cobra.Command) {
 		"managementAddr",
 		":26080",
 		"Management API HTTP address")
+	c.PersistentFlags().StringVar(&serverArgs.ServerOptions.ActivationAddr,
+		"activationAddr",
+		":26030",
+		"KEDA external scaler gRPC address for on-demand activation; empty disables it")
 	c.PersistentFlags().StringVar(&serverArgs.ServerOptions.HTTPSAddr,
 		"httpsAddr",
 		":26017",

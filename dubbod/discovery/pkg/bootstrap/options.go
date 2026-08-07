@@ -57,6 +57,9 @@ type DiscoveryServerOptions struct {
 	HTTPSAddr      string
 	GRPCAddr       string
 	SecureGRPCAddr string
+	// ActivationAddr serves KEDA's external scaler contract. Empty disables it,
+	// which is how a cluster without KEDA runs unchanged.
+	ActivationAddr string
 	TLSOptions     TLSOptions
 }
 

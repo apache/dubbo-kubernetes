@@ -25,6 +25,16 @@ BIN_DIR     ?= bin
 GOTESTFLAGS           ?= -race
 GOLANGCI_LINT_VERSION ?= v2.6.2
 
+# Code generation. protoc-gen-go must match the google.golang.org/protobuf in
+# go.mod, and protoc must match the version already recorded in the generated
+# headers: a mismatch rewrites every file and turns `make check-generate` into
+# a permanent failure.
+PROTOC_VERSION         ?= v33.0
+PROTOC_GEN_GO_VERSION  ?= v1.36.11
+GOIMPORTS_VERSION      ?= latest
+TOOL_BIN               ?= $(CURDIR)/$(BIN_DIR)/tools
+OPERATOR_APIS_DIR      := operator/pkg/apis
+
 HUB       ?= kdubbo
 IMAGE_TAG ?= debug
 IMAGE     ?= $(HUB)/dubbod:$(IMAGE_TAG)

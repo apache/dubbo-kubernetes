@@ -100,6 +100,61 @@ func (r *Registry) Report(reporter string, target Target, pending int64) {
 	notify(subscribers, total)
 }
 
+// ReportSnapshot replaces everything a gateway previously reported.
+//
+// A target missing from the snapshot has drained at that gateway, so it must be
+// cleared rather than left at its last value. Report cannot express that: it
+// only ever speaks about one target, and a gateway with nothing pending would
+// have no message to send.
+func (r *Registry) ReportSnapshot(reporter string, pending map[Target]int64) {
+	type notification struct {
+		subscribers []chan int64
+		total       int64
+	}
+
+	r.mu.Lock()
+	now := r.now()
+	touched := map[Target]struct{}{}
+
+	// Drop this reporter from targets it no longer mentions.
+	for target, byReporter := range r.targets {
+		if _, ok := byReporter[reporter]; !ok {
+			continue
+		}
+		if _, still := pending[target]; still {
+			continue
+		}
+		delete(byReporter, reporter)
+		touched[target] = struct{}{}
+	}
+
+	for target, count := range pending {
+		if count < 0 {
+			count = 0
+		}
+		byReporter, ok := r.targets[target]
+		if !ok {
+			byReporter = map[string]report{}
+			r.targets[target] = byReporter
+		}
+		byReporter[reporter] = report{pending: count, received: now}
+		touched[target] = struct{}{}
+	}
+
+	notifications := make([]notification, 0, len(touched))
+	for target := range touched {
+		notifications = append(notifications, notification{
+			subscribers: r.snapshotSubscribersLocked(target),
+			total:       r.totalLocked(target),
+		})
+	}
+	r.mu.Unlock()
+
+	for _, item := range notifications {
+		notify(item.subscribers, item.total)
+	}
+}
+
 // Forget drops a gateway's reports, for a clean shutdown that should not wait
 // out the TTL.
 func (r *Registry) Forget(reporter string) {

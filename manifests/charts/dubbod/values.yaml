@@ -54,6 +54,11 @@ _internal_default_values_not_set:
       # gateway.dubbo.apache.org/replicas annotation.
       replicaCount: 2
 
+    activation:
+      # KEDA external scaler for on-demand activation. Set port to 0 to disable
+      # it; the rest of the control plane is unaffected either way.
+      port: 26030
+
     configValidation: true
 
     multicluster:

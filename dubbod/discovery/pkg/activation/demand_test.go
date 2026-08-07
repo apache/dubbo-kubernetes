@@ -215,3 +215,67 @@ func receive(t *testing.T, updates <-chan int64) int64 {
 		return 0
 	}
 }
+
+func TestReportSnapshotReplacesTheWholeReporterView(t *testing.T) {
+	registry := NewRegistry()
+	reviews := Target{Namespace: "app", Name: "reviews"}
+
+	registry.ReportSnapshot("gateway-a", map[Target]int64{orders: 3, reviews: 2})
+	if got := registry.Pending(orders); got != 3 {
+		t.Fatalf("orders pending = %d, want 3", got)
+	}
+	if got := registry.Pending(reviews); got != 2 {
+		t.Fatalf("reviews pending = %d, want 2", got)
+	}
+
+	// A target absent from the new snapshot has drained; there is no separate
+	// clear message, so its absence is what has to clear it.
+	registry.ReportSnapshot("gateway-a", map[Target]int64{orders: 1})
+	if got := registry.Pending(orders); got != 1 {
+		t.Fatalf("orders pending after replacement = %d, want 1", got)
+	}
+	if got := registry.Pending(reviews); got != 0 {
+		t.Fatalf("reviews pending after omission = %d, want 0", got)
+	}
+
+	// An empty snapshot means the gateway drained everything.
+	registry.ReportSnapshot("gateway-a", nil)
+	if got := registry.Pending(orders); got != 0 {
+		t.Fatalf("orders pending after empty snapshot = %d, want 0", got)
+	}
+}
+
+// Snapshots replace only the reporting gateway's own view; a broadcast from
+// one gateway must never clear another's demand.
+func TestReportSnapshotLeavesOtherReportersAlone(t *testing.T) {
+	registry := NewRegistry()
+
+	registry.ReportSnapshot("gateway-a", map[Target]int64{orders: 2})
+	registry.ReportSnapshot("gateway-b", map[Target]int64{orders: 3})
+	if got := registry.Pending(orders); got != 5 {
+		t.Fatalf("pending = %d, want 5", got)
+	}
+
+	registry.ReportSnapshot("gateway-a", nil)
+	if got := registry.Pending(orders); got != 3 {
+		t.Fatalf("pending after gateway-a drained = %d, want 3", got)
+	}
+}
+
+func TestReportSnapshotNotifiesSubscribers(t *testing.T) {
+	registry := NewRegistry()
+	updates, cancel := registry.Subscribe(orders)
+	defer cancel()
+
+	registry.ReportSnapshot("gateway-a", map[Target]int64{orders: 4})
+	if got := receive(t, updates); got != 4 {
+		t.Fatalf("update = %d, want 4", got)
+	}
+
+	// Dropping the target must wake the subscriber too, or a KEDA stream would
+	// never learn the workload can scale back down.
+	registry.ReportSnapshot("gateway-a", nil)
+	if got := receive(t, updates); got != 0 {
+		t.Fatalf("drain update = %d, want 0", got)
+	}
+}

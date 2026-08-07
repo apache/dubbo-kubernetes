@@ -24,6 +24,13 @@ rules:
   - apiGroups: [ "networking.dubbo.apache.org" ]
     verbs: [ "get", "watch", "list" ]
     resources: [ "*" ]
+  # The activation controller publishes readiness back onto the policy. Without
+  # the status subresource the conditions are computed and then silently
+  # dropped, leaving an operator with no way to tell a working policy from a
+  # broken one.
+  - apiGroups: [ "networking.dubbo.apache.org" ]
+    verbs: [ "get", "update", "patch" ]
+    resources: [ "serviceactivationpolicies/status" ]
   - apiGroups: [ "telemetry.dubbo.apache.org" ]
     verbs: [ "get", "watch", "list" ]
     resources: [ "*" ]
