@@ -368,10 +368,10 @@ github.com/jtolds/gls v4.20.0+incompatible/go.mod h1:QJZ7F/aHp+rZTRtaJ1ow/lLfFfV
 github.com/julienschmidt/httprouter v1.2.0/go.mod h1:SYymIcj16QtmaHHD7aYtjjsJG7VTCxuUUipMqKk8s4w=
 github.com/kballard/go-shellquote v0.0.0-20180428030007-95032a82bc51 h1:Z9n2FFNUXsshfwJMBgNA0RU6/i7WVaAegv3PtuIHPMs=
 github.com/kballard/go-shellquote v0.0.0-20180428030007-95032a82bc51/go.mod h1:CzGEWj7cYgsdH8dAjBGEr58BoE7ScuLd+fwFZ44+/x8=
-github.com/kdubbo/api v0.0.0-20260728161804-a5971782efe0 h1:t4bS0hQfyiu3QdsL+frOw/KbOjmvQERPTaziWHhLc3U=
-github.com/kdubbo/api v0.0.0-20260728161804-a5971782efe0/go.mod h1:8BtJiIovg7QCPsCxXcw3gDf922VcvYq5ihOSvj49Rq8=
-github.com/kdubbo/client-go v0.0.0-20260729004545-0427ad75f167 h1:j5nY/UzzGztfLEPrXbNvohGO53PVaRhoIK1GrtrikOs=
-github.com/kdubbo/client-go v0.0.0-20260729004545-0427ad75f167/go.mod h1:/wrQJoD+yhTTBi/5sC8rHLK+62mk4vOnLaYZ1Sf+DOQ=
+github.com/kdubbo/api v0.0.0-20260806182421-754eac4e05d4 h1:zewrXkOD5XpbL6+QWLAbxsiVFSvpAivN5UQOoMNXBpk=
+github.com/kdubbo/api v0.0.0-20260806182421-754eac4e05d4/go.mod h1:8BtJiIovg7QCPsCxXcw3gDf922VcvYq5ihOSvj49Rq8=
+github.com/kdubbo/client-go v0.0.0-20260807013041-7abbf3125711 h1:ofQz1xUC5DZyh+3lVPIFdipjKxe6jQ9uQbNMYoLInaI=
+github.com/kdubbo/client-go v0.0.0-20260807013041-7abbf3125711/go.mod h1:ogHgHroSROD3HwYPBKS8c2dpcfd4cZxpwZrzTSCXjXs=
 github.com/kdubbo/xds-api v0.0.0-20260728161804-af6dbc11367a h1:WfpZeq43xfNY+6icInQxNSNDNLsbDj3QebyvLD9OmL8=
 github.com/kdubbo/xds-api v0.0.0-20260728161804-af6dbc11367a/go.mod h1:o2HDUgL1ntaDbWomZ4cD2tt8jBamuG2qRtjXOa1zZ0Q=
 github.com/kevinburke/ssh_config v1.2.0 h1:x584FjTGwHzMwvHx18PXxbBVzfnxogHaAReU4gf13a4=

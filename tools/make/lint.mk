@@ -71,3 +71,33 @@ check-clean-repo: ## Fail if the working tree is dirty.
 
 .PHONY: check-tidy
 check-tidy: tidy check-clean-repo ## go mod tidy, then fail if it changed anything.
+
+.PHONY: generate
+generate: generate-proto generate-schema ## Re-run every code generator.
+
+.PHONY: generate-proto
+generate-proto: ## Regenerate the operator values API from its .proto.
+	@command -v protoc >/dev/null 2>&1 || { \
+		echo "protoc not found; install $(PROTOC_VERSION) from https://github.com/protocolbuffers/protobuf/releases"; \
+		exit 1; \
+	}
+	@GOBIN=$(TOOL_BIN) go install google.golang.org/protobuf/cmd/protoc-gen-go@$(PROTOC_GEN_GO_VERSION)
+	@cd $(OPERATOR_APIS_DIR) && PATH="$(TOOL_BIN):$$PATH" protoc \
+		--proto_path=proto \
+		--proto_path=$$(go list -f '{{ .Dir }}' -m k8s.io/api) \
+		--proto_path=$$(go list -f '{{ .Dir }}' -m k8s.io/apimachinery) \
+		--go_out=. proto/values_types.proto
+	@# go_package is a full import path and protoc has no paths=source_relative
+	@# here, so the output lands under a mirrored directory tree.
+	mv $(OPERATOR_APIS_DIR)/dubbo.apache.org/dubbo/operator/pkg/apis/values_types.pb.go \
+		$(OPERATOR_APIS_DIR)/values_types.pb.go
+	rm -rf $(OPERATOR_APIS_DIR)/dubbo.apache.org
+
+.PHONY: generate-schema
+generate-schema: ## Regenerate the resource schema from metadata.yaml.
+	@GOBIN=$(TOOL_BIN) go install golang.org/x/tools/cmd/goimports@$(GOIMPORTS_VERSION)
+	@PATH="$(TOOL_BIN):$$PATH" go run ./pkg/config/schema/codegen/tools/collections.main.go
+
+.PHONY: check-generate
+check-generate: generate check-clean-repo ## Regenerate, then fail if anything changed.
+	@echo "Generated sources are up to date."

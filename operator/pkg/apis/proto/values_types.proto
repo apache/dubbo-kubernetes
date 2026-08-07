@@ -28,6 +28,15 @@ message ManagementConfig {
   int64 port = 1;
 }
 
+message ActivationConfig {
+  // gRPC port serving KEDA's external scaler contract. Zero disables it.
+  //
+  // Wrapped so an explicit 0 is distinguishable from an unset field: a bare
+  // int64 drops its zero value, which would make the off switch unreachable
+  // through the operator API.
+  google.protobuf.Int64Value port = 1;
+}
+
 message ProxyConfig {
   string clusterDomain = 1;
 }
@@ -60,6 +69,12 @@ message MeshCNIConfig {
   string refreshInterval = 11;
 }
 
+message GatewayConfig {
+  // Default replica count for managed dxgate deployments. Individual Gateways
+  // override it with the gateway.dubbo.apache.org/replicas annotation.
+  google.protobuf.Int32Value replicaCount = 1;
+}
+
 message GlobalConfig {
   ProxyConfig proxy = 1;
 
@@ -72,6 +87,13 @@ message GlobalConfig {
   MulticlusterConfig multicluster = 5;
 
   ProxylessConfig proxyless = 6;
+
+  GatewayConfig gateway = 7;
+
+  // Field numbers are part of the wire format, so two branches must never
+  // claim the same one: 7 already belongs to gateway, and reusing it would
+  // produce a proto that compiles while silently reinterpreting data.
+  ActivationConfig activation = 8;
 }
 
 message RemoteAccessConfig {
@@ -124,6 +146,11 @@ message Values {
 
   // Revision for rendered control plane resources.
   string revision = 2;
+
+  // Number of dubbod replicas. Two by default; a PodDisruptionBudget and
+  // topology spread are added automatically above one. Wrapped so an explicit
+  // 1 is distinguishable from an unset field.
+  google.protobuf.Int32Value replicaCount = 3;
 }
 
 // IntOrString is a type that can hold an int32 or a string.  When used in

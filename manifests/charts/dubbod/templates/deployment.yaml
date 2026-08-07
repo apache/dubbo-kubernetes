@@ -29,6 +29,13 @@
 {{- $remoteAccess := $multicluster.remoteAccess | default dict }}
 {{- $eastWestGateway := $multicluster.eastWestGateway | default dict }}
 {{- $managementPort := int (coalesce $management.port $defaultManagement.port 26080) }}
+{{- $defaultActivation := $defaultGlobal.activation | default dict }}
+{{- $activation := $global.activation | default dict }}
+{{- /* coalesce skips zero, so an explicit 0 has to be read with hasKey or the off switch silently falls back to the default. */ -}}
+{{- $activationPort := int (coalesce $defaultActivation.port 26030) }}
+{{- if hasKey $activation "port" }}
+{{- $activationPort = int $activation.port }}
+{{- end }}
 {{- $replicaCount := int (coalesce .Values.replicaCount $defaults.replicaCount 1) }}
 {{- $remoteAccessCertificateHosts := $remoteAccess.certificateHosts | default $defaultRemoteAccess.certificateHosts | default (list) }}
 {{- $eastWestGateways := $eastWestGateway.gateways | default $defaultEastWestGateway.gateways | default (list) }}
@@ -77,6 +84,15 @@ spec:
             - cluster.local
             - --managementAddr
             - ":{{ $managementPort }}"
+{{- if gt $activationPort 0 }}
+            - --activationAddr
+            - ":{{ $activationPort }}"
+{{- else }}
+            # Port 0 turns the KEDA scaler off; an empty address is how dubbod
+            # skips the listener entirely.
+            - --activationAddr
+            - ""
+{{- end }}
           ports:
             - containerPort: 8080
               protocol: TCP
@@ -84,6 +100,11 @@ spec:
             - containerPort: {{ $managementPort }}
               protocol: TCP
               name: management
+{{- if gt $activationPort 0 }}
+            - containerPort: {{ $activationPort }}
+              protocol: TCP
+              name: activation
+{{- end }}
             - containerPort: 26010
               protocol: TCP
               name: grpc-xds

@@ -1,0 +1,75 @@
+// Licensed to the Apache Software Foundation (ASF) under one or more
+// contributor license agreements.  See the NOTICE file distributed with
+// this work for additional information regarding copyright ownership.
+// The ASF licenses this file to You under the Apache License, Version 2.0
+// (the "License"); you may not use this file except in compliance with
+// the License.  You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+//
+// Regenerate with:
+//
+//   protoc -I . --go_out=. --go_opt=paths=source_relative \
+//     --go-grpc_out=. --go-grpc_opt=paths=source_relative demand.proto
+
+syntax = "proto3";
+
+package dubbo.activation.v1alpha1;
+
+option go_package = "github.com/apache/dubbo-kubernetes/dubbod/discovery/pkg/activation/demandpb";
+
+// ActivationDemand carries the requests a gateway is holding for Services that
+// have no endpoints, so the control plane can tell KEDA to start them.
+//
+// A gateway must report to every control-plane replica, not just one. KEDA
+// opens its activation stream against a single replica chosen by the Service,
+// and a report that only reached a different replica would leave those requests
+// waiting for a scale-up nobody asked for. Reports are idempotent snapshots
+// precisely so broadcasting them is safe.
+service ActivationDemand {
+  // Report streams demand snapshots for the lifetime of the gateway.
+  //
+  // The stream itself is the liveness signal: when it ends, the control plane
+  // drops that gateway's demand immediately instead of waiting for it to age
+  // out, so a gateway that shuts down cleanly cannot hold a workload up.
+  rpc Report(stream DemandSnapshot) returns (ReportSummary) {}
+}
+
+// DemandSnapshot is the complete set of targets one gateway is holding
+// requests for. It replaces that gateway's previous snapshot rather than
+// adding to it, which is what lets a lost or duplicated message converge on
+// the next send instead of skewing the total permanently.
+message DemandSnapshot {
+  // Stable identity of the reporting gateway, unique across replicas. Pod name
+  // is the expected value; two gateways sharing an identity would overwrite
+  // each other's counts.
+  string reporter = 1;
+
+  // Targets with requests waiting. A target absent from a snapshot has no
+  // pending requests at that gateway; there is no separate clear message.
+  repeated TargetDemand targets = 2;
+}
+
+message TargetDemand {
+  // Namespace of the Service being activated.
+  string namespace = 1;
+
+  // Name of the Service being activated.
+  string service = 2;
+
+  // Requests this gateway is currently holding for the target.
+  int64 pending = 3;
+}
+
+// ReportSummary is returned once the stream closes. It exists so a gateway can
+// tell an orderly shutdown from a connection that was cut.
+message ReportSummary {
+  // Number of snapshots accepted on the stream.
+  int64 snapshots = 1;
+}

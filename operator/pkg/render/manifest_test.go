@@ -57,6 +57,94 @@ func TestTelemetryValidationWebhookDoesNotRequireRevisionLabel(t *testing.T) {
 	t.Fatal("Telemetry validation webhook not rendered")
 }
 
+// The activation scaler is only reachable if the flag, the container port and
+// the Service KEDA dials all agree on one number. Each is written in a
+// different template, so a mismatch renders cleanly and fails only at runtime.
+func TestGenerateManifestWiresActivationScalerEndToEnd(t *testing.T) {
+	manifests, _, err := GenerateManifest(nil, []string{"values.global.activation.port=26031"}, nil, nil)
+	if err != nil {
+		t.Fatalf("GenerateManifest() error = %v", err)
+	}
+
+	deployment := findManifest(t, manifests, "Deployment", "dubbod")
+	containers, ok, err := unstructured.NestedSlice(deployment.Object, "spec", "template", "spec", "containers")
+	if err != nil || !ok || len(containers) == 0 {
+		t.Fatalf("deployment containers missing: ok=%v err=%v", ok, err)
+	}
+	execute := containers[0].(map[string]interface{})
+
+	args, _, _ := unstructured.NestedStringSlice(execute, "args")
+	if !hasArgValue(args, "--activationAddr", ":26031") {
+		t.Fatalf("args = %v, want --activationAddr :26031", args)
+	}
+
+	ports, ok, err := unstructured.NestedSlice(execute, "ports")
+	if err != nil || !ok {
+		t.Fatalf("container ports missing: ok=%v err=%v", ok, err)
+	}
+	if !hasContainerPort(ports, "activation", 26031) {
+		t.Fatal("dubbod deployment missing activation containerPort 26031")
+	}
+
+	service := findManifest(t, manifests, "Service", "dubbod-activation")
+	port, _, _ := unstructured.NestedInt64(findPort(t, service, "grpc-activation"), "port")
+	if port != 26031 {
+		t.Fatalf("dubbod-activation port = %d, want 26031", port)
+	}
+
+	// Gateways broadcast their demand to every replica, so they need a name
+	// that resolves to all of them. A load-balanced Service would deliver each
+	// report to one arbitrary replica, and KEDA's stream is on another.
+	replicas := findManifest(t, manifests, "Service", "dubbod-activation-replicas")
+	clusterIP, _, _ := unstructured.NestedString(replicas.Object, "spec", "clusterIP")
+	if clusterIP != "None" {
+		t.Fatalf("dubbod-activation-replicas clusterIP = %q, want None", clusterIP)
+	}
+	notReady, _, _ := unstructured.NestedBool(replicas.Object, "spec", "publishNotReadyAddresses")
+	if !notReady {
+		t.Fatal("dubbod-activation-replicas must publish not-ready addresses so a held request is not blocked on readiness")
+	}
+}
+
+// Port zero is the documented off switch. It has to remove the listener, the
+// port and the Service together; leaving a Service behind would publish an
+// endpoint that refuses every connection.
+func TestGenerateManifestDisablesActivationAtPortZero(t *testing.T) {
+	manifests, _, err := GenerateManifest(nil, []string{"values.global.activation.port=0"}, nil, nil)
+	if err != nil {
+		t.Fatalf("GenerateManifest() error = %v", err)
+	}
+	if hasManifest(manifests, "Service", "dubbod-activation") {
+		t.Fatal("dubbod-activation Service rendered while activation is disabled")
+	}
+	if hasManifest(manifests, "Service", "dubbod-activation-replicas") {
+		t.Fatal("dubbod-activation-replicas Service rendered while activation is disabled")
+	}
+
+	deployment := findManifest(t, manifests, "Deployment", "dubbod")
+	containers, _, _ := unstructured.NestedSlice(deployment.Object, "spec", "template", "spec", "containers")
+	execute := containers[0].(map[string]interface{})
+	args, _, _ := unstructured.NestedStringSlice(execute, "args")
+	if !hasArgValue(args, "--activationAddr", "") {
+		t.Fatalf("args = %v, want --activationAddr with an empty value", args)
+	}
+	ports, _, _ := unstructured.NestedSlice(execute, "ports")
+	for _, raw := range ports {
+		if name, _, _ := unstructured.NestedString(raw.(map[string]interface{}), "name"); name == "activation" {
+			t.Fatal("activation containerPort rendered while activation is disabled")
+		}
+	}
+}
+
+func hasArgValue(args []string, flag, value string) bool {
+	for i := 0; i < len(args)-1; i++ {
+		if args[i] == flag && args[i+1] == value {
+			return true
+		}
+	}
+	return false
+}
+
 func TestGenerateManifestExposesDubbodPrometheusScrapeEndpoint(t *testing.T) {
 	manifests, _, err := GenerateManifest(nil, nil, nil, nil)
 	if err != nil {

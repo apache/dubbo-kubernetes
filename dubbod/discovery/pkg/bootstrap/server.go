@@ -30,6 +30,7 @@ import (
 
 	"github.com/apache/dubbo-kubernetes/dubbod/discovery/pkg/status"
 
+	"github.com/apache/dubbo-kubernetes/dubbod/discovery/pkg/activation"
 	"github.com/apache/dubbo-kubernetes/dubbod/discovery/pkg/features"
 	dubbogrpc "github.com/apache/dubbo-kubernetes/dubbod/discovery/pkg/grpc"
 	"github.com/apache/dubbo-kubernetes/dubbod/discovery/pkg/keycertbundle"
@@ -130,6 +131,7 @@ type Server struct {
 	proxylessGRPCWorkloadController *proxylessGRPCWorkloadController
 	proxylessGRPCRemoteControllers  *multicluster.Component[*proxylessGRPCClusterController]
 	statusManager                   *status.Manager
+	activation                      *activation.Server
 }
 
 type readinessFlags struct {
@@ -246,6 +248,10 @@ func NewServer(args *DubboArgs, initFuncs ...func(*Server)) (*Server, error) {
 	}
 	if err := s.initManagementServer(args.ServerOptions.ManagementAddr); err != nil {
 		return nil, fmt.Errorf("error initializing Management Server: %v", err)
+	}
+
+	if err := s.initActivation(args); err != nil {
+		return nil, fmt.Errorf("error initializing activation scaler: %v", err)
 	}
 
 	// Initialize monitoring server

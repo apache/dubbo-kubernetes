@@ -42,6 +42,7 @@ var (
 	Secret                         = config.GroupVersionKind{Group: "", Version: "v1", Kind: "Secret"}
 	Service                        = config.GroupVersionKind{Group: "", Version: "v1", Kind: "Service"}
 	ServiceAccount                 = config.GroupVersionKind{Group: "", Version: "v1", Kind: "ServiceAccount"}
+	ServiceActivationPolicy        = config.GroupVersionKind{Group: "networking.dubbo.apache.org", Version: "v1alpha3", Kind: "ServiceActivationPolicy"}
 	ServiceEntry                   = config.GroupVersionKind{Group: "networking.dubbo.apache.org", Version: "v1alpha3", Kind: "ServiceEntry"}
 	StatefulSet                    = config.GroupVersionKind{Group: "apps", Version: "v1", Kind: "StatefulSet"}
 	Telemetry                      = config.GroupVersionKind{Group: "telemetry.dubbo.apache.org", Version: "v1alpha1", Kind: "Telemetry"}
@@ -116,6 +117,8 @@ func ToGVR(g config.GroupVersionKind) (schema.GroupVersionResource, bool) {
 		return gvr.Service, true
 	case ServiceAccount:
 		return gvr.ServiceAccount, true
+	case ServiceActivationPolicy:
+		return gvr.ServiceActivationPolicy, true
 	case ServiceEntry:
 		return gvr.ServiceEntry, true
 	case StatefulSet:
@@ -187,6 +190,8 @@ func MustToKind(g config.GroupVersionKind) kind.Kind {
 		return kind.Service
 	case ServiceAccount:
 		return kind.ServiceAccount
+	case ServiceActivationPolicy:
+		return kind.ServiceActivationPolicy
 	case ServiceEntry:
 		return kind.ServiceEntry
 	case StatefulSet:
@@ -269,6 +274,8 @@ func FromGVR(g schema.GroupVersionResource) (config.GroupVersionKind, bool) {
 		return Service, true
 	case gvr.ServiceAccount:
 		return ServiceAccount, true
+	case gvr.ServiceActivationPolicy:
+		return ServiceActivationPolicy, true
 	case gvr.ServiceEntry:
 		return ServiceEntry, true
 	case gvr.StatefulSet:

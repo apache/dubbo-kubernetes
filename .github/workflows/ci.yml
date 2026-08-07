@@ -35,6 +35,10 @@ concurrency:
 
 env:
   GOLANGCI_LINT_VERSION: v2.6.2
+  # Must match PROTOC_VERSION in tools/make/common.mk: protoc stamps its own
+  # version into every generated file, so a different one here rewrites them
+  # all and make check-generate can never pass.
+  PROTOC_VERSION: v33.0
 
 jobs:
   lint:
@@ -82,6 +86,19 @@ jobs:
 
       - name: Check go.mod/go.sum are tidy
         run: make check-tidy
+
+      # Generated sources are never merged line by line (see .gitattributes);
+      # they are regenerated. This proves the committed output still matches
+      # what the generators produce, so a hand-edited or stale generated file
+      # fails here with a diff instead of later as a compile error.
+      - name: Install protoc
+        uses: arduino/setup-protoc@v3
+        with:
+          version: ${{ env.PROTOC_VERSION }}
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Check generated sources are up to date
+        run: make check-generate
 
       - name: Check License Header
         uses: apache/skywalking-eyes/header@v0.6.0

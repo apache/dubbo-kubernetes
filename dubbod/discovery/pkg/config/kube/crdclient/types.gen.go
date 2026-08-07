@@ -85,6 +85,11 @@ func create(c kube.Client, cfg config.Config, objMeta metav1.ObjectMeta) (metav1
 			ObjectMeta: objMeta,
 			Spec:       *(cfg.Spec.(*githubcomkdubboapisecurityv1alpha3.RequestAuthentication)),
 		}, metav1.CreateOptions{})
+	case gvk.ServiceActivationPolicy:
+		return c.Dubbo().NetworkingV1alpha3().ServiceActivationPolicies(cfg.Namespace).Create(context.TODO(), &apigithubcomapachedubbokubernetesapinetworkingv1alpha3.ServiceActivationPolicy{
+			ObjectMeta: objMeta,
+			Spec:       *(cfg.Spec.(*githubcomkdubboapinetworkingv1alpha3.ServiceActivationPolicy)),
+		}, metav1.CreateOptions{})
 	case gvk.ServiceEntry:
 		return c.Dubbo().NetworkingV1alpha3().ServiceEntries(cfg.Namespace).Create(context.TODO(), &apigithubcomapachedubbokubernetesapinetworkingv1alpha3.ServiceEntry{
 			ObjectMeta: objMeta,
@@ -157,6 +162,11 @@ func update(c kube.Client, cfg config.Config, objMeta metav1.ObjectMeta) (metav1
 			ObjectMeta: objMeta,
 			Spec:       *(cfg.Spec.(*githubcomkdubboapisecurityv1alpha3.RequestAuthentication)),
 		}, metav1.UpdateOptions{})
+	case gvk.ServiceActivationPolicy:
+		return c.Dubbo().NetworkingV1alpha3().ServiceActivationPolicies(cfg.Namespace).Update(context.TODO(), &apigithubcomapachedubbokubernetesapinetworkingv1alpha3.ServiceActivationPolicy{
+			ObjectMeta: objMeta,
+			Spec:       *(cfg.Spec.(*githubcomkdubboapinetworkingv1alpha3.ServiceActivationPolicy)),
+		}, metav1.UpdateOptions{})
 	case gvk.ServiceEntry:
 		return c.Dubbo().NetworkingV1alpha3().ServiceEntries(cfg.Namespace).Update(context.TODO(), &apigithubcomapachedubbokubernetesapinetworkingv1alpha3.ServiceEntry{
 			ObjectMeta: objMeta,
@@ -221,6 +231,11 @@ func updateStatus(c kube.Client, cfg config.Config, objMeta metav1.ObjectMeta) (
 		}, metav1.UpdateOptions{})
 	case gvk.RequestAuthentication:
 		return c.Dubbo().SecurityV1alpha3().RequestAuthentications(cfg.Namespace).UpdateStatus(context.TODO(), &apigithubcomapachedubbokubernetesapisecurityv1alpha3.RequestAuthentication{
+			ObjectMeta: objMeta,
+			Status:     *(cfg.Status.(*githubcomkdubboapimetav1alpha1.DubboStatus)),
+		}, metav1.UpdateOptions{})
+	case gvk.ServiceActivationPolicy:
+		return c.Dubbo().NetworkingV1alpha3().ServiceActivationPolicies(cfg.Namespace).UpdateStatus(context.TODO(), &apigithubcomapachedubbokubernetesapinetworkingv1alpha3.ServiceActivationPolicy{
 			ObjectMeta: objMeta,
 			Status:     *(cfg.Status.(*githubcomkdubboapimetav1alpha1.DubboStatus)),
 		}, metav1.UpdateOptions{})
@@ -399,6 +414,21 @@ func patch(c kube.Client, orig config.Config, origMeta metav1.ObjectMeta, mod co
 		}
 		return c.Dubbo().SecurityV1alpha3().RequestAuthentications(orig.Namespace).
 			Patch(context.TODO(), orig.Name, typ, patchBytes, metav1.PatchOptions{FieldManager: "pilot-discovery"})
+	case gvk.ServiceActivationPolicy:
+		oldRes := &apigithubcomapachedubbokubernetesapinetworkingv1alpha3.ServiceActivationPolicy{
+			ObjectMeta: origMeta,
+			Spec:       *(orig.Spec.(*githubcomkdubboapinetworkingv1alpha3.ServiceActivationPolicy)),
+		}
+		modRes := &apigithubcomapachedubbokubernetesapinetworkingv1alpha3.ServiceActivationPolicy{
+			ObjectMeta: modMeta,
+			Spec:       *(mod.Spec.(*githubcomkdubboapinetworkingv1alpha3.ServiceActivationPolicy)),
+		}
+		patchBytes, err := genPatchBytes(oldRes, modRes, typ)
+		if err != nil {
+			return nil, err
+		}
+		return c.Dubbo().NetworkingV1alpha3().ServiceActivationPolicies(orig.Namespace).
+			Patch(context.TODO(), orig.Name, typ, patchBytes, metav1.PatchOptions{FieldManager: "pilot-discovery"})
 	case gvk.ServiceEntry:
 		oldRes := &apigithubcomapachedubbokubernetesapinetworkingv1alpha3.ServiceEntry{
 			ObjectMeta: origMeta,
@@ -475,6 +505,8 @@ func delete(c kube.Client, typ config.GroupVersionKind, name, namespace string, 
 		return c.GatewayAPI().GatewayV1beta1().ReferenceGrants(namespace).Delete(context.TODO(), name, deleteOptions)
 	case gvk.RequestAuthentication:
 		return c.Dubbo().SecurityV1alpha3().RequestAuthentications(namespace).Delete(context.TODO(), name, deleteOptions)
+	case gvk.ServiceActivationPolicy:
+		return c.Dubbo().NetworkingV1alpha3().ServiceActivationPolicies(namespace).Delete(context.TODO(), name, deleteOptions)
 	case gvk.ServiceEntry:
 		return c.Dubbo().NetworkingV1alpha3().ServiceEntries(namespace).Delete(context.TODO(), name, deleteOptions)
 	case gvk.Telemetry:
@@ -965,6 +997,25 @@ var translationMap = map[config.GroupVersionKind]func(r runtime.Object) config.C
 				Generation:        obj.Generation,
 			},
 			Spec: obj,
+		}
+	},
+	gvk.ServiceActivationPolicy: func(r runtime.Object) config.Config {
+		obj := r.(*apigithubcomapachedubbokubernetesapinetworkingv1alpha3.ServiceActivationPolicy)
+		return config.Config{
+			Meta: config.Meta{
+				GroupVersionKind:  gvk.ServiceActivationPolicy,
+				Name:              obj.Name,
+				Namespace:         obj.Namespace,
+				Labels:            obj.Labels,
+				Annotations:       obj.Annotations,
+				ResourceVersion:   obj.ResourceVersion,
+				CreationTimestamp: obj.CreationTimestamp.Time,
+				OwnerReferences:   obj.OwnerReferences,
+				UID:               string(obj.UID),
+				Generation:        obj.Generation,
+			},
+			Spec:   &obj.Spec,
+			Status: &obj.Status,
 		}
 	},
 	gvk.ServiceEntry: func(r runtime.Object) config.Config {
