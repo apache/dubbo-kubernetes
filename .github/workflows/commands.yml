@@ -81,7 +81,7 @@ jobs:
       # when slash-command comments and merges use a custom bot identity.
       - name: Record maintainer approval
         if: github.event.issue.pull_request
-        uses: actions/github-script@v7
+        uses: actions/github-script@v9
         with:
           github-token: ${{ github.token }}
           script: |
@@ -121,7 +121,7 @@ jobs:
             });
 
       - name: Dispatch command
-        uses: actions/github-script@v7
+        uses: actions/github-script@v9
         with:
           github-token: ${{ steps.bot-token.outputs.token || github.token }}
           script: |
