@@ -501,6 +501,47 @@ func TestServiceTypeForGatewayUsesAnnotation(t *testing.T) {
 	}
 }
 
+func TestGatewayReplicas(t *testing.T) {
+	tests := []struct {
+		name       string
+		annotation string
+		fallback   int32
+		want       int32
+	}{
+		{name: "unset takes the installed default", fallback: 2, want: 2},
+		{name: "installed default is honored", fallback: 5, want: 5},
+		{name: "explicit count wins", annotation: "4", fallback: 2, want: 4},
+		{name: "zero scales the gateway down deliberately", annotation: "0", fallback: 2, want: 0},
+		{name: "negative falls back to the default", annotation: "-1", fallback: 2, want: 2},
+		{name: "garbage falls back to the default", annotation: "many", fallback: 2, want: 2},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			meta := metav1.ObjectMeta{}
+			if test.annotation != "" {
+				meta.Annotations = map[string]string{replicasAnnotation: test.annotation}
+			}
+			got := gatewayReplicasWithDefault(gatewayv1.Gateway{ObjectMeta: meta}, test.fallback)
+			if got != test.want {
+				t.Fatalf("gatewayReplicasWithDefault() = %d, want %d", got, test.want)
+			}
+		})
+	}
+}
+
+// TestInstalledGatewayReplicasRejectsUnusableSettings guards the mesh-wide
+// default: zero would make every gateway default to serving no traffic at all,
+// which is never what an operator means by "the default".
+func TestInstalledGatewayReplicasRejectsUnusableSettings(t *testing.T) {
+	if got := installedGatewayReplicas(); got < 1 {
+		t.Fatalf("installedGatewayReplicas() = %d, want at least 1", got)
+	}
+	if got := gatewayReplicas(gatewayv1.Gateway{}); got < 1 {
+		t.Fatalf("gatewayReplicas() with no annotation = %d, want at least 1", got)
+	}
+}
+
 func TestObservabilityConfigForGatewayDefaults(t *testing.T) {
 	cfg := resolveGatewayObservability(gatewayv1.Gateway{
 		ObjectMeta: metav1.ObjectMeta{Name: "public", Namespace: "app"},
@@ -699,6 +740,78 @@ func TestKubeGatewayTemplateRendersDxgateResources(t *testing.T) {
 	if !strings.Contains(rendered[2], "DXGATE_OTEL_ENDPOINT") ||
 		!strings.Contains(rendered[2], `value: "http://tracing.dubbo-system.svc:4317"`) {
 		t.Fatalf("deployment did not render dxgate OTEL endpoint:\n%s", rendered[2])
+	}
+}
+
+// TestKubeGatewayTemplateRendersHighAvailabilityResources covers the path a
+// real reconcile takes: gatewayReplicas defaults to 2, which must produce a
+// disruption budget and spread the pods. At one replica the budget has to be
+// omitted, or minAvailable 1 blocks every voluntary eviction of that pod.
+func TestKubeGatewayTemplateRendersHighAvailabilityResources(t *testing.T) {
+	templatePath := filepath.Join("..", "..", "..", "..", "..", "..", "manifests", "charts", "dubbod", "files", "kube-gateway.yaml")
+	raw, err := os.ReadFile(templatePath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	templates, err := inject.ParseTemplates(inject.RawTemplates{"gateway": string(raw)})
+	if err != nil {
+		t.Fatal(err)
+	}
+	controller := &DeploymentController{
+		injectConfig: func() inject.Config {
+			return inject.Config{Templates: templates}
+		},
+	}
+	input := TemplateInput{
+		Gateway: &gatewayv1.Gateway{
+			ObjectMeta: metav1.ObjectMeta{Name: "public", Namespace: "app"},
+		},
+		DeploymentName:      "public-dubbo",
+		ServiceAccount:      "public-dubbo",
+		Ports:               []corev1.ServicePort{{Name: "http", Port: 80, TargetPort: intstr.FromInt(15080)}},
+		ServiceType:         corev1.ServiceTypeLoadBalancer,
+		Replicas:            gatewayReplicas(gatewayv1.Gateway{}),
+		Revision:            "default",
+		BootstrapConfig:     "{}\n",
+		BootstrapConfigHash: "abc123",
+		DxgateImage:         "kdubbo/dxgate:test",
+	}
+
+	rendered, err := controller.render("gateway", input)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(rendered) != 5 {
+		t.Fatalf("rendered %d resources, want 5 including the disruption budget", len(rendered))
+	}
+	joined := strings.Join(rendered, "\n---\n")
+	for _, want := range []string{
+		"replicas: 2",
+		"kind: PodDisruptionBudget",
+		"minAvailable: 1",
+		"podAntiAffinity",
+		"topologySpreadConstraints",
+		"whenUnsatisfiable: ScheduleAnyway",
+	} {
+		if !strings.Contains(joined, want) {
+			t.Fatalf("high availability output missing %q:\n%s", want, joined)
+		}
+	}
+
+	input.Replicas = 1
+	rendered, err = controller.render("gateway", input)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(rendered) != 4 {
+		t.Fatalf("rendered %d resources at one replica, want 4 without a disruption budget", len(rendered))
+	}
+	joined = strings.Join(rendered, "\n---\n")
+	if strings.Contains(joined, "kind: PodDisruptionBudget") {
+		t.Fatalf("disruption budget rendered for a single replica:\n%s", joined)
+	}
+	if strings.Contains(joined, "topologySpreadConstraints") {
+		t.Fatalf("topology spread rendered for a single replica:\n%s", joined)
 	}
 }
 

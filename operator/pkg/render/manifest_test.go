@@ -33,6 +33,108 @@ func TestGenerateManifestUsesEmbeddedInstallerAssets(t *testing.T) {
 	}
 }
 
+// TestGenerateManifestDefaultsToHighlyAvailableControlPlane pins the default
+// posture: a single dubbod makes every node drain or upgrade a control-plane
+// outage, during which no pod can be injected and no xDS update is served.
+func TestGenerateManifestDefaultsToHighlyAvailableControlPlane(t *testing.T) {
+	manifests, _, err := GenerateManifest(nil, nil, nil, nil)
+	if err != nil {
+		t.Fatalf("GenerateManifest() error = %v", err)
+	}
+
+	deployment := findManifest(t, manifests, "Deployment", "dubbod")
+	replicas, ok, err := unstructured.NestedInt64(deployment.Object, "spec", "replicas")
+	if err != nil || !ok {
+		t.Fatalf("replicas missing: ok=%v err=%v", ok, err)
+	}
+	if replicas < 2 {
+		t.Fatalf("dubbod replicas = %d, want at least 2", replicas)
+	}
+
+	// The budget only protects the control plane if it is actually rendered at
+	// the default replica count.
+	budget := findManifest(t, manifests, "PodDisruptionBudget", "dubbod")
+	minAvailable, ok, err := unstructured.NestedInt64(budget.Object, "spec", "minAvailable")
+	if err != nil || !ok {
+		t.Fatalf("minAvailable missing: ok=%v err=%v", ok, err)
+	}
+	if minAvailable != 1 {
+		t.Fatalf("dubbod PodDisruptionBudget minAvailable = %d, want 1", minAvailable)
+	}
+
+	constraints, ok, err := unstructured.NestedSlice(deployment.Object, "spec", "template", "spec", "topologySpreadConstraints")
+	if err != nil || !ok || len(constraints) == 0 {
+		t.Fatalf("topologySpreadConstraints missing: ok=%v err=%v", ok, err)
+	}
+	for _, raw := range constraints {
+		constraint := raw.(map[string]interface{})
+		// Spreading must stay advisory, or a single-node cluster leaves the
+		// second replica permanently Pending.
+		if policy, _, _ := unstructured.NestedString(constraint, "whenUnsatisfiable"); policy != "ScheduleAnyway" {
+			t.Fatalf("whenUnsatisfiable = %q, want ScheduleAnyway", policy)
+		}
+	}
+}
+
+// TestGenerateManifestSingleReplicaOmitsDisruptionBudget guards the other
+// direction: a budget of minAvailable 1 over a single replica blocks every
+// voluntary eviction, so node drains hang instead of proceeding.
+func TestGenerateManifestSingleReplicaOmitsDisruptionBudget(t *testing.T) {
+	manifests, _, err := GenerateManifest(nil, []string{"values.replicaCount=1"}, nil, nil)
+	if err != nil {
+		t.Fatalf("GenerateManifest() error = %v", err)
+	}
+	for _, set := range manifests {
+		for _, item := range set.Manifests {
+			if item.GetKind() == "PodDisruptionBudget" && item.GetName() == "dubbod" {
+				t.Fatal("PodDisruptionBudget rendered for a single-replica control plane")
+			}
+		}
+	}
+}
+
+// TestGenerateManifestPassesGatewayReplicaDefault walks the whole chain the
+// gateway replica default travels: chart values, the operator API schema, and
+// the environment variable dubbod reads at runtime. A break anywhere in it is
+// silent, because the controller simply falls back to its own constant.
+func TestGenerateManifestPassesGatewayReplicaDefault(t *testing.T) {
+	for _, test := range []struct {
+		name string
+		set  []string
+		want string
+	}{
+		{name: "default", want: "2"},
+		{name: "override", set: []string{"values.global.gateway.replicaCount=3"}, want: "3"},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			manifests, _, err := GenerateManifest(nil, test.set, nil, nil)
+			if err != nil {
+				t.Fatalf("GenerateManifest() error = %v", err)
+			}
+			deployment := findManifest(t, manifests, "Deployment", "dubbod")
+			containers, ok, err := unstructured.NestedSlice(deployment.Object, "spec", "template", "spec", "containers")
+			if err != nil || !ok || len(containers) == 0 {
+				t.Fatalf("deployment containers missing: ok=%v err=%v", ok, err)
+			}
+			env, ok, err := unstructured.NestedSlice(containers[0].(map[string]interface{}), "env")
+			if err != nil || !ok {
+				t.Fatalf("container env missing: ok=%v err=%v", ok, err)
+			}
+			for _, raw := range env {
+				entry := raw.(map[string]interface{})
+				if name, _, _ := unstructured.NestedString(entry, "name"); name != "DUBBO_DXGATE_REPLICAS" {
+					continue
+				}
+				if value, _, _ := unstructured.NestedString(entry, "value"); value != test.want {
+					t.Fatalf("DUBBO_DXGATE_REPLICAS = %q, want %q", value, test.want)
+				}
+				return
+			}
+			t.Fatal("DUBBO_DXGATE_REPLICAS not rendered")
+		})
+	}
+}
+
 func TestTelemetryValidationWebhookDoesNotRequireRevisionLabel(t *testing.T) {
 	manifests, _, err := GenerateManifest(nil, nil, nil, nil)
 	if err != nil {

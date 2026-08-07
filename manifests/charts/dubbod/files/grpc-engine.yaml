@@ -120,6 +120,20 @@ spec:
     - name: grpc-inbound
       containerPort: 15080
       protocol: TCP
+    - name: dxplane-admin
+      containerPort: 15020
+      protocol: TCP
+    # Failing readiness is what withdraws this pod from its EndpointSlice while
+    # the listener is still up, so callers whose EDS has not caught up keep
+    # succeeding through the drain. periodSeconds x failureThreshold must stay
+    # below the sidecar's termination drain delay (5s by default), or the pod
+    # closes its listener before kubelet has noticed it is going away.
+    readinessProbe:
+      httpGet:
+        path: /readyz
+        port: 15020
+      periodSeconds: 2
+      failureThreshold: 2
     volumeMounts:
     - name: dubbo-xds
       mountPath: /etc/dubbo/proxy
