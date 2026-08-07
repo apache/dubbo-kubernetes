@@ -33,6 +33,7 @@ const (
 	Secret
 	Service
 	ServiceAccount
+	ServiceActivationPolicy
 	ServiceEntry
 	StatefulSet
 	Telemetry
@@ -100,6 +101,8 @@ func (k Kind) String() string {
 		return "Service"
 	case ServiceAccount:
 		return "ServiceAccount"
+	case ServiceActivationPolicy:
+		return "ServiceActivationPolicy"
 	case ServiceEntry:
 		return "ServiceEntry"
 	case StatefulSet:
@@ -175,6 +178,8 @@ func FromString(s string) Kind {
 		return Service
 	case "ServiceAccount":
 		return ServiceAccount
+	case "ServiceActivationPolicy":
+		return ServiceActivationPolicy
 	case "ServiceEntry":
 		return ServiceEntry
 	case "StatefulSet":

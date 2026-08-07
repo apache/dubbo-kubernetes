@@ -90,6 +90,10 @@ func getGvk(obj any) (config.GroupVersionKind, bool) {
 		return gvk.Service, true
 	case *k8sioapicorev1.ServiceAccount:
 		return gvk.ServiceAccount, true
+	case *githubcomkdubboapinetworkingv1alpha3.ServiceActivationPolicy:
+		return gvk.ServiceActivationPolicy, true
+	case *apigithubcomapachedubbokubernetesapinetworkingv1alpha3.ServiceActivationPolicy:
+		return gvk.ServiceActivationPolicy, true
 	case *githubcomkdubboapinetworkingv1alpha3.ServiceEntry:
 		return gvk.ServiceEntry, true
 	case *apigithubcomapachedubbokubernetesapinetworkingv1alpha3.ServiceEntry:
