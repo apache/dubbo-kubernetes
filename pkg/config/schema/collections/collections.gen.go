@@ -449,6 +449,21 @@ var (
 		ValidateProto: validation.EmptyValidate,
 	}.MustBuild()
 
+	ServiceActivationPolicy = resource.Builder{
+		Identifier: "ServiceActivationPolicy",
+		Group:      "networking.dubbo.apache.org",
+		Kind:       "ServiceActivationPolicy",
+		Plural:     "serviceactivationpolicies",
+		Version:    "v1alpha3",
+		Proto:      "dubbo.networking.v1alpha3.ServiceActivationPolicy", StatusProto: "dubbo.meta.v1alpha1.DubboStatus",
+		ReflectType: reflect.TypeOf(&githubcomkdubboapinetworkingv1alpha3.ServiceActivationPolicy{}).Elem(), StatusType: reflect.TypeOf(&githubcomkdubboapimetav1alpha1.DubboStatus{}).Elem(),
+		ProtoPackage: "github.com/kdubbo/api/networking/v1alpha3", StatusPackage: "github.com/kdubbo/api/meta/v1alpha1",
+		ClusterScoped: false,
+		Synthetic:     false,
+		Builtin:       false,
+		ValidateProto: validation.EmptyValidate,
+	}.MustBuild()
+
 	ServiceEntry = resource.Builder{
 		Identifier: "ServiceEntry",
 		Group:      "networking.dubbo.apache.org",
@@ -553,6 +568,7 @@ var (
 		MustAdd(Secret).
 		MustAdd(Service).
 		MustAdd(ServiceAccount).
+		MustAdd(ServiceActivationPolicy).
 		MustAdd(ServiceEntry).
 		MustAdd(StatefulSet).
 		MustAdd(Telemetry).
@@ -594,6 +610,7 @@ var (
 		MustAdd(FaultInjectionPolicy).
 		MustAdd(PeerAuthentication).
 		MustAdd(RequestAuthentication).
+		MustAdd(ServiceActivationPolicy).
 		MustAdd(ServiceEntry).
 		MustAdd(Telemetry).
 		MustAdd(WorkloadEntry).
@@ -611,6 +628,7 @@ var (
 			MustAdd(PeerAuthentication).
 			MustAdd(ReferenceGrant).
 			MustAdd(RequestAuthentication).
+			MustAdd(ServiceActivationPolicy).
 			MustAdd(ServiceEntry).
 			MustAdd(Telemetry).
 			MustAdd(WorkloadEntry).
@@ -628,6 +646,7 @@ var (
 				MustAdd(PeerAuthentication).
 				MustAdd(ReferenceGrant).
 				MustAdd(RequestAuthentication).
+				MustAdd(ServiceActivationPolicy).
 				MustAdd(ServiceEntry).
 				MustAdd(Telemetry).
 				MustAdd(WorkloadEntry).

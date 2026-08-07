@@ -86,6 +86,8 @@ func GetWriteClient[T runtime.Object](c ClientGetter, namespace string) ktypes.W
 		return c.Kube().CoreV1().Services(namespace).(ktypes.WriteAPI[T])
 	case *k8sioapicorev1.ServiceAccount:
 		return c.Kube().CoreV1().ServiceAccounts(namespace).(ktypes.WriteAPI[T])
+	case *apigithubcomapachedubbokubernetesapinetworkingv1alpha3.ServiceActivationPolicy:
+		return c.Dubbo().NetworkingV1alpha3().ServiceActivationPolicies(namespace).(ktypes.WriteAPI[T])
 	case *apigithubcomapachedubbokubernetesapinetworkingv1alpha3.ServiceEntry:
 		return c.Dubbo().NetworkingV1alpha3().ServiceEntries(namespace).(ktypes.WriteAPI[T])
 	case *k8sioapiappsv1.StatefulSet:
@@ -155,6 +157,8 @@ func GetClient[T, TL runtime.Object](c ClientGetter, namespace string) ktypes.Re
 		return c.Kube().CoreV1().Services(namespace).(ktypes.ReadWriteAPI[T, TL])
 	case *k8sioapicorev1.ServiceAccount:
 		return c.Kube().CoreV1().ServiceAccounts(namespace).(ktypes.ReadWriteAPI[T, TL])
+	case *apigithubcomapachedubbokubernetesapinetworkingv1alpha3.ServiceActivationPolicy:
+		return c.Dubbo().NetworkingV1alpha3().ServiceActivationPolicies(namespace).(ktypes.ReadWriteAPI[T, TL])
 	case *apigithubcomapachedubbokubernetesapinetworkingv1alpha3.ServiceEntry:
 		return c.Dubbo().NetworkingV1alpha3().ServiceEntries(namespace).(ktypes.ReadWriteAPI[T, TL])
 	case *k8sioapiappsv1.StatefulSet:
@@ -224,6 +228,8 @@ func gvrToObject(g schema.GroupVersionResource) runtime.Object {
 		return &k8sioapicorev1.Service{}
 	case gvr.ServiceAccount:
 		return &k8sioapicorev1.ServiceAccount{}
+	case gvr.ServiceActivationPolicy:
+		return &apigithubcomapachedubbokubernetesapinetworkingv1alpha3.ServiceActivationPolicy{}
 	case gvr.ServiceEntry:
 		return &apigithubcomapachedubbokubernetesapinetworkingv1alpha3.ServiceEntry{}
 	case gvr.StatefulSet:
@@ -425,6 +431,13 @@ func getInformerFiltered(c ClientGetter, opts ktypes.InformerOptions, g schema.G
 		}
 		w = func(options metav1.ListOptions) (watch.Interface, error) {
 			return c.Kube().CoreV1().ServiceAccounts(opts.Namespace).Watch(context.Background(), options)
+		}
+	case gvr.ServiceActivationPolicy:
+		l = func(options metav1.ListOptions) (runtime.Object, error) {
+			return c.Dubbo().NetworkingV1alpha3().ServiceActivationPolicies(opts.Namespace).List(context.Background(), options)
+		}
+		w = func(options metav1.ListOptions) (watch.Interface, error) {
+			return c.Dubbo().NetworkingV1alpha3().ServiceActivationPolicies(opts.Namespace).Watch(context.Background(), options)
 		}
 	case gvr.ServiceEntry:
 		l = func(options metav1.ListOptions) (runtime.Object, error) {
