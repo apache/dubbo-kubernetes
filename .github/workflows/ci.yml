@@ -44,7 +44,7 @@ jobs:
     if: github.repository == 'apache/dubbo-kubernetes'
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Set up Go
         uses: actions/setup-go@v5
@@ -67,7 +67,7 @@ jobs:
     if: github.repository == 'apache/dubbo-kubernetes'
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Set up Go
         uses: actions/setup-go@v5
@@ -96,7 +96,7 @@ jobs:
       id-token: write
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Set up Go
         uses: actions/setup-go@v5
@@ -131,7 +131,7 @@ jobs:
     if: github.repository == 'apache/dubbo-kubernetes'
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Set up Go
         uses: actions/setup-go@v5
@@ -161,7 +161,7 @@ jobs:
             goarch: arm64
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Set up Go
         uses: actions/setup-go@v5
@@ -183,7 +183,7 @@ jobs:
     if: github.repository == 'apache/dubbo-kubernetes'
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Install Helm
         run: tools/ci/install-helm.sh v3.16.4
@@ -198,7 +198,7 @@ jobs:
     if: github.repository == 'apache/dubbo-kubernetes'
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Install Helm
         run: tools/ci/install-helm.sh v3.16.4
