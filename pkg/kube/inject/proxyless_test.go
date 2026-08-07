@@ -21,6 +21,7 @@ import (
 	"runtime"
 	"strings"
 	"testing"
+	"time"
 
 	telemetryconfig "github.com/apache/dubbo-kubernetes/pkg/config/telemetry"
 	meshv1alpha1 "github.com/kdubbo/api/mesh/v1alpha1"
@@ -243,6 +244,10 @@ func assertNoArgs(t *testing.T, pod *corev1.Pod) {
 	}
 }
 
+// proxylessDrainDelay mirrors the sidecar's default termination drain delay.
+// The readiness probe must detect termination inside this window.
+const proxylessDrainDelay = 5 * time.Second
+
 func assertGRPCInboundContainer(t *testing.T, pod *corev1.Pod) {
 	t.Helper()
 	container := FindContainer(ProxylessGRPCInboundContainerName, pod.Spec.Containers)
@@ -259,6 +264,40 @@ func assertGRPCInboundContainer(t *testing.T, pod *corev1.Pod) {
 	if !hasMount(container.VolumeMounts, ProxylessXDSVolumeName, ProxylessXDSMountPath, true) {
 		t.Fatalf("grpc-inbound proxyless xds mount missing")
 	}
+	assertDrainReadinessProbe(t, container)
+}
+
+// assertDrainReadinessProbe checks the probe that withdraws a terminating pod
+// from its EndpointSlice. Without it the sidecar's drain delay is inert: kubelet
+// never observes the 503, so the endpoint is still published when the listener
+// closes.
+func assertDrainReadinessProbe(t *testing.T, container *corev1.Container) {
+	t.Helper()
+	probe := container.ReadinessProbe
+	if probe == nil || probe.HTTPGet == nil {
+		t.Fatalf("grpc-inbound readiness probe missing")
+	}
+	if probe.HTTPGet.Path != "/readyz" || probe.HTTPGet.Port.IntValue() != ProxylessGRPCInboundAdminPort {
+		t.Fatalf("grpc-inbound readiness probe = %s:%v, want /readyz:%d",
+			probe.HTTPGet.Path, probe.HTTPGet.Port, ProxylessGRPCInboundAdminPort)
+	}
+	// The probe has to fail before the sidecar stops accepting, otherwise the
+	// endpoint is withdrawn only after the listener is already gone.
+	if detection := time.Duration(probe.PeriodSeconds*probe.FailureThreshold) * time.Second; detection >= proxylessDrainDelay {
+		t.Fatalf("readiness detection window = %v, want less than the %v drain delay", detection, proxylessDrainDelay)
+	}
+	if !hasContainerPort(container.Ports, ProxylessGRPCInboundAdminPort) {
+		t.Fatalf("grpc-inbound admin port %d not declared", ProxylessGRPCInboundAdminPort)
+	}
+}
+
+func hasContainerPort(ports []corev1.ContainerPort, want int) bool {
+	for _, port := range ports {
+		if int(port.ContainerPort) == want {
+			return true
+		}
+	}
+	return false
 }
 
 func TestAddApplicationContainerConfigInjectsProxylessGRPCContract(t *testing.T) {

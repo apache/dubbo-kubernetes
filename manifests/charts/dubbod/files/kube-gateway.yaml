@@ -50,7 +50,7 @@ metadata:
     app.kubernetes.io/managed-by: dubbod
     gateway.networking.k8s.io/gateway-name: {{ .Gateway.Name }}
 spec:
-  replicas: 1
+  replicas: {{ .Replicas }}
   selector:
     matchLabels:
       app.kubernetes.io/name: dxgate
@@ -73,6 +73,35 @@ spec:
         prometheus.io/port: "26021"
     spec:
       serviceAccountName: {{ .ServiceAccount }}
+{{- if gt (int .Replicas) 1 }}
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - weight: 100
+              podAffinityTerm:
+                topologyKey: kubernetes.io/hostname
+                labelSelector:
+                  matchLabels:
+                    app.kubernetes.io/name: dxgate
+                    app.kubernetes.io/instance: {{ .DeploymentName }}
+      # Advisory spread: a single-node or single-zone cluster still schedules
+      # every replica rather than leaving the gateway short.
+      topologySpreadConstraints:
+        - maxSkew: 1
+          topologyKey: topology.kubernetes.io/zone
+          whenUnsatisfiable: ScheduleAnyway
+          labelSelector:
+            matchLabels:
+              app.kubernetes.io/name: dxgate
+              app.kubernetes.io/instance: {{ .DeploymentName }}
+        - maxSkew: 1
+          topologyKey: kubernetes.io/hostname
+          whenUnsatisfiable: ScheduleAnyway
+          labelSelector:
+            matchLabels:
+              app.kubernetes.io/name: dxgate
+              app.kubernetes.io/instance: {{ .DeploymentName }}
+{{- end }}
       containers:
       - name: dxgate
         image: {{ .DxgateImage }}
@@ -187,4 +216,23 @@ spec:
     nodePort: {{ .NodePort }}
 {{- end }}
     protocol: {{ .Protocol | default "TCP" }}
+{{- end }}
+{{- if gt (int .Replicas) 1 }}
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: {{ .DeploymentName }}
+  namespace: {{ .Gateway.Namespace }}
+  labels:
+    app.kubernetes.io/name: dxgate
+    app.kubernetes.io/instance: {{ .DeploymentName }}
+    app.kubernetes.io/managed-by: dubbod
+    gateway.networking.k8s.io/gateway-name: {{ .Gateway.Name }}
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: dxgate
+      app.kubernetes.io/instance: {{ .DeploymentName }}
 {{- end }}
