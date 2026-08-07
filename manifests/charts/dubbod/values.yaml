@@ -16,9 +16,12 @@
 _internal_default_values_not_set:
   revision: ""
 
-  # Number of dubbod replicas. Set >= 2 for a highly available control plane;
-  # a PodDisruptionBudget (minAvailable: 1) is created automatically then.
-  replicaCount: 1
+  # Number of dubbod replicas. Two by default: a single replica makes every
+  # node drain, upgrade or eviction a full control-plane outage, during which
+  # no workload can be injected and no xDS update is served. At >= 2 a
+  # PodDisruptionBudget (minAvailable: 1) and topology spread are added
+  # automatically. Set to 1 only for local development.
+  replicaCount: 2
 
   global:
     proxy:
@@ -44,6 +47,12 @@ _internal_default_values_not_set:
 
     management:
       port: 26080
+
+    gateway:
+      # Default replica count for every managed dxgate Deployment. An
+      # individual Gateway overrides it with the
+      # gateway.dubbo.apache.org/replicas annotation.
+      replicaCount: 2
 
     activation:
       # KEDA external scaler for on-demand activation. Set port to 0 to disable
