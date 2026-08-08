@@ -39,7 +39,7 @@ func (s *Server) initActivation(args *DubboArgs) error {
 		return nil
 	}
 
-	controller := activation.NewController(s.kubeClient, s.activation.Scaler(), s.activation.Registry())
+	controller := activation.NewController(s.kubeClient)
 	s.addStartFunc("activation policy controller", func(stop <-chan struct{}) error {
 		go controller.Run(stop)
 		return nil

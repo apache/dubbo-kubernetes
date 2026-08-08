@@ -37,12 +37,12 @@ const (
 	// and replayed at all.
 	ConditionEligible = "Eligible"
 
-	// ConditionScalerReady covers KEDA: whether it is listening for activation
-	// on this target.
+	// ConditionScalerReady covers KEDA: whether the referenced ScaledObject is
+	// ready to obtain activation metrics.
 	ConditionScalerReady = "ScalerReady"
 
-	// ConditionActivatorReady covers the gateways: whether any of them is in a
-	// position to catch a request for this target.
+	// ConditionActivatorReady covers the data plane: whether a managed Gateway
+	// in the target namespace is programmed to catch requests.
 	ConditionActivatorReady = "ActivatorReady"
 )
 
@@ -57,23 +57,23 @@ type ServiceLookup interface {
 	HasService(namespace, name string) bool
 }
 
-// StreamLookup reports whether KEDA holds an activation stream for a target.
-type StreamLookup interface {
-	Subscribed(Target) bool
+// ScalerStatusLookup reports whether the policy's autoscaler is ready.
+type ScalerStatusLookup interface {
+	ScalerReady(*clientnetworking.ServiceActivationPolicy) bool
 }
 
-// ReporterLookup reports how many gateways stand ready to hold requests for a
-// target.
-type ReporterLookup interface {
-	Reporters(Target) int
+// ActivatorStatusLookup reports whether a managed gateway is programmed for
+// the policy's namespace.
+type ActivatorStatusLookup interface {
+	ActivatorReady(*clientnetworking.ServiceActivationPolicy) bool
 }
 
 // PolicyEvaluator turns a policy plus live state into the conditions published
 // on its status.
 type PolicyEvaluator struct {
 	Services  ServiceLookup
-	Streams   StreamLookup
-	Reporters ReporterLookup
+	Scaler    ScalerStatusLookup
+	Activator ActivatorStatusLookup
 }
 
 // Evaluate returns the conditions for one policy, in a stable order so an
@@ -99,15 +99,14 @@ func (e PolicyEvaluator) Evaluate(policy *clientnetworking.ServiceActivationPoli
 		return conditions
 	}
 
-	target := targetOf(policy)
 	eligible, eligibleReason := eligible(spec)
 	conditions = append(conditions, condition(ConditionEligible, eligible, eligibleReason, generation))
 
-	scalerReady := e.Streams != nil && e.Streams.Subscribed(target)
+	scalerReady := e.Scaler != nil && e.Scaler.ScalerReady(policy)
 	conditions = append(conditions,
 		condition(ConditionScalerReady, scalerReady, scalerReason(scalerReady), generation))
 
-	activatorReady := e.Reporters != nil && e.Reporters.Reporters(target) > 0
+	activatorReady := e.Activator != nil && e.Activator.ActivatorReady(policy)
 	conditions = append(conditions,
 		condition(ConditionActivatorReady, activatorReady, activatorReason(activatorReady), generation))
 
@@ -154,18 +153,16 @@ func eligible(spec *networking.ServiceActivationPolicy) (bool, string) {
 
 func scalerReason(ready bool) string {
 	if ready {
-		return "ScalerSubscribed"
+		return "ScaledObjectReady"
 	}
-	// The usual cause is a ScaledObject that does not point its external
-	// trigger at this scaler, or points it at a different Service.
-	return "ScalerNotSubscribed"
+	return "ScaledObjectNotReady"
 }
 
 func activatorReason(ready bool) string {
 	if ready {
-		return "GatewayReporting"
+		return "GatewayProgrammed"
 	}
-	return "NoGatewayReporting"
+	return "NoProgrammedGateway"
 }
 
 // targetOf resolves the Service a policy activates. The namespace comes from

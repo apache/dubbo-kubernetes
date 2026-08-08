@@ -441,6 +441,12 @@ func TestDeploymentControllerBuildDxgateBootstrapConfigUsesXDSAddressAnnotation(
 	if cfg.ClusterID != "remote" {
 		t.Fatalf("clusterID = %q, want remote", cfg.ClusterID)
 	}
+	if diff := cmp.Diff(
+		[]string{"xds.dubbo.apache.org/grpc/lds/inbound/0.0.0.0:15080"},
+		cfg.ListenerNames,
+	); diff != "" {
+		t.Fatalf("listener names (-want +got):\n%s", diff)
+	}
 }
 
 func TestExtractServicePortsTargetsGRPCInbound(t *testing.T) {
@@ -612,13 +618,29 @@ func TestObservabilityConfigForGatewayInvalidAccessLogAnnotationsFallBack(t *tes
 	}
 }
 
-func TestGetDefaultNameUsesFixedDxgateGatewayName(t *testing.T) {
+func TestGetDefaultNameKeepsCanonicalActivatorAndIsolatesOtherGateways(t *testing.T) {
 	spec := &gatewayv1.GatewaySpec{GatewayClassName: "dubbo"}
-	if got := getDefaultName("httpbin-gateway", spec, false); got != "dxgate-gateway" {
-		t.Fatalf("default name = %q, want dxgate-gateway", got)
+	if got := getDefaultName("dxgate-gateway", spec, false); got != "dxgate-gateway" {
+		t.Fatalf("canonical name = %q, want dxgate-gateway", got)
 	}
-	if got := getDefaultName("foo-gateway", spec, true); got != "dxgate-gateway" {
-		t.Fatalf("default name with suffix disabled = %q, want dxgate-gateway", got)
+	if got := getDefaultName("public", spec, false); got != "public-dubbo" {
+		t.Fatalf("derived name = %q, want public-dubbo", got)
+	}
+	if got := getDefaultName("private", spec, true); got != "private" {
+		t.Fatalf("name with suffix disabled = %q, want private", got)
+	}
+}
+
+func TestManagedGatewayResourceCleanupRequiresMatchingGateway(t *testing.T) {
+	labels := map[string]string{
+		"gateway.dubbo.apache.org/managed":       "dubbo.apache.org-gateway-controller",
+		"gateway.networking.k8s.io/gateway-name": "public",
+	}
+	if !isManagedGatewayResourceFor(labels, "public") {
+		t.Fatal("matching managed resource was not recognized")
+	}
+	if isManagedGatewayResourceFor(labels, "dxgate-gateway") {
+		t.Fatal("cleanup would delete another Gateway's resources")
 	}
 }
 

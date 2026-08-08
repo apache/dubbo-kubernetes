@@ -228,6 +228,51 @@ jobs:
           UPGRADE_FROM_VERSION: '0.4.3'
         run: make test-e2e
 
+  activation-e2e:
+    name: Activation E2E (KEDA)
+    runs-on: ubuntu-24.04-arm
+    timeout-minutes: 45
+    if: github.repository == 'apache/dubbo-kubernetes'
+    env:
+      DOCKER_DEFAULT_PLATFORM: linux/arm64
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Verify native ARM64 runner
+        run: |
+          test "$(uname -m)" = "aarch64"
+          test "$(docker info --format '{{.Architecture}}')" = "aarch64"
+
+      # Pin the data plane source that implements request holding and demand
+      # reporting. A floating main branch could make a control-plane PR pass
+      # against behavior it did not declare.
+      - name: Checkout dxgate
+        uses: actions/checkout@v4
+        with:
+          repository: kdubbo/dxgate
+          ref: d683797f44c9ba4c6e1eb6cdb2da21460b00cbfd
+          path: .e2e/dxgate
+
+      - name: Build dxgate activation image
+        run: docker build -t kdubbo/dxgate:ga-e2e .e2e/dxgate
+
+      - name: Install Helm
+        run: tools/ci/install-helm.sh v3.16.4
+
+      - name: Install kind
+        run: tools/ci/install-kind.sh v0.30.0
+
+      - name: Run real KEDA activation
+        env:
+          ACTIVATION_E2E: '1'
+          CLUSTER_NAME: dubbo-activation-ga
+          DXGATE_IMAGE: kdubbo/dxgate:ga-e2e
+          IMAGE: kdubbo/dubbod:activation-ga-e2e
+          UPGRADE_FROM_IMAGE: kdubbo/dubbod:activation-ga-e2e
+          UPGRADE_FROM_VERSION: '0.4.3'
+        run: make test-e2e
+
   required:
     name: CI Required
     runs-on: ubuntu-slim
@@ -243,6 +288,7 @@ jobs:
       - build
       - helm
       - e2e
+      - activation-e2e
     steps:
       - name: Verify required jobs passed
         env:
@@ -253,6 +299,7 @@ jobs:
           BUILD_RESULT: ${{ needs.build.result }}
           HELM_RESULT: ${{ needs.helm.result }}
           E2E_RESULT: ${{ needs.e2e.result }}
+          ACTIVATION_E2E_RESULT: ${{ needs.activation-e2e.result }}
         run: |
           failed=0
           for job_result in \
@@ -262,7 +309,8 @@ jobs:
             "performance=${PERFORMANCE_RESULT}" \
             "build=${BUILD_RESULT}" \
             "helm=${HELM_RESULT}" \
-            "e2e=${E2E_RESULT}"; do
+            "e2e=${E2E_RESULT}" \
+            "activation-e2e=${ACTIVATION_E2E_RESULT}"; do
             job="${job_result%%=*}"
             result="${job_result#*=}"
             echo "${job}: ${result}"

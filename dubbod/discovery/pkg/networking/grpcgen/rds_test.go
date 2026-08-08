@@ -296,6 +296,45 @@ func TestGatewayRDSRoutesActivationAuthorityToOriginalCluster(t *testing.T) {
 	}
 }
 
+func TestGatewayInboundTargetPortIncludesActivationRoutes(t *testing.T) {
+	target := newRDSTestService("payment", "app", "payment.app.svc.cluster.local", 8080)
+	activator := newRDSTestService(
+		model.ActivationGatewayServiceName,
+		"app",
+		"dxgate-gateway.app.svc.cluster.local",
+		80,
+	)
+	activator.Attributes.Labels = map[string]string{
+		"gateway.networking.k8s.io/gateway-name": "dxgate-gateway",
+	}
+	push := newRDSTestPushContext(t, []config.Config{
+		newActivationPolicyConfig("payment", "app", "payment"),
+	}, []*model.Service{target, activator})
+	proxy := &model.Proxy{
+		ID:              "dxgate-gateway.app",
+		Type:            model.Router,
+		ConfigNamespace: "app",
+		ServiceTargets: []model.ServiceTarget{{
+			Service: activator,
+			Port: model.ServiceInstancePort{
+				ServicePort: activator.Ports[0],
+				TargetPort:  15080,
+			},
+		}},
+	}
+
+	rc := buildHTTPRoute(proxy, push, "15080")
+	if rc == nil {
+		t.Fatal("buildHTTPRoute() returned nil")
+	}
+	for _, virtualHost := range rc.GetVirtualHosts() {
+		if virtualHost.GetName() == "activation|payment.app.svc.cluster.local|8080" {
+			return
+		}
+	}
+	t.Fatalf("activation virtual host not found on Gateway targetPort: %v", rc.GetVirtualHosts())
+}
+
 func newRDSTestPushContext(t *testing.T, configs []config.Config, services []*model.Service) *model.PushContext {
 	t.Helper()
 

@@ -49,6 +49,10 @@ _internal_default_values_not_set:
       port: 26080
 
     gateway:
+      # Image used by managed Gateway deployments. Keep it independently
+      # configurable from dubbod/CNI so a gateway can be rolled forward or
+      # back without replacing the control plane.
+      image: "kdubbo/dxgate:latest"
       # Default replica count for every managed dxgate Deployment. An
       # individual Gateway overrides it with the
       # gateway.dubbo.apache.org/replicas annotation.
