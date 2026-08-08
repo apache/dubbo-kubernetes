@@ -246,4 +246,56 @@ log "restoring the VM endpoint health"
   || fail "could not restore VM health status"
 retry "recovered VM endpoint in /debug/endpointz" check_vm_health HEALTHY
 
+# --- On-demand activation -----------------------------------------------
+#
+# Everything here failed silently in ways unit tests cannot see: a CRD that is
+# registered in Go but missing from the chart, a headless Service that is not
+# actually headless, or a gateway that never learns where to report. Each is a
+# working control plane that simply never activates anything.
+
+log "asserting the activation CRD is installed"
+"${KUBECTL[@]}" get crd serviceactivationpolicies.networking.dubbo.apache.org >/dev/null \
+  || fail "ServiceActivationPolicy CRD is missing; the chart's CRD bundle is out of sync with the Go schema"
+
+log "asserting both activation Services exist, one of them headless"
+"${KUBECTL[@]}" -n "${SYSTEM_NS}" get svc dubbod-activation >/dev/null \
+  || fail "dubbod-activation Service not found"
+ACTIVATION_HEADLESS_IP="$("${KUBECTL[@]}" -n "${SYSTEM_NS}" get svc dubbod-activation-replicas -o jsonpath='{.spec.clusterIP}')"
+# A VIP here would silently break scale-up: a gateway would report to whichever
+# replica the VIP picked, and KEDA polls a replica chosen independently.
+[[ "${ACTIVATION_HEADLESS_IP}" == "None" ]] \
+  || fail "dubbod-activation-replicas has clusterIP ${ACTIVATION_HEADLESS_IP}, want None (headless)"
+ACTIVATION_NOT_READY="$("${KUBECTL[@]}" -n "${SYSTEM_NS}" get svc dubbod-activation-replicas -o jsonpath='{.spec.publishNotReadyAddresses}')"
+[[ "${ACTIVATION_NOT_READY}" == "true" ]] \
+  || fail "dubbod-activation-replicas does not publish not-ready addresses; a starting replica would miss reports"
+
+log "applying a ServiceActivationPolicy through the validating webhook"
+"${KUBECTL[@]}" -n "${APP_NS}" apply -f "${ROOT}/tests/e2e/testdata/activation-policy.yaml" \
+  || fail "valid ServiceActivationPolicy was rejected"
+
+# The controller is what turns a policy into scaler state; if it is not running
+# the policy is inert and nothing else in this section would notice.
+check_policy_accepted() {
+  "${KUBECTL[@]}" -n "${APP_NS}" get serviceactivationpolicy httpbin \
+    -o jsonpath='{.status.conditions[?(@.type=="Accepted")].status}' | grep -qx True
+}
+log "asserting the policy controller writes status back"
+retry "Accepted condition on the policy" check_policy_accepted
+
+log "asserting a managed gateway is told where to report demand"
+"${KUBECTL[@]}" -n "${APP_NS}" apply -f "${ROOT}/tests/e2e/testdata/gateway.yaml" \
+  || fail "Gateway was rejected"
+check_gateway_deployment() { "${KUBECTL[@]}" -n "${APP_NS}" get deploy dxgate-gateway >/dev/null; }
+retry "managed gateway deployment" check_gateway_deployment
+GATEWAY_ENV="$("${KUBECTL[@]}" -n "${APP_NS}" get deploy dxgate-gateway \
+  -o jsonpath='{.spec.template.spec.containers[0].env[?(@.name=="DXGATE_ACTIVATION_CONTROL_PLANE")].value}')"
+[[ "${GATEWAY_ENV}" == dubbod-activation-replicas.* ]] \
+  || fail "gateway reports to '${GATEWAY_ENV}', want the headless activation Service"
+# Reports are attributed per reporter; without a distinct identity two gateway
+# replicas overwrite each other's counts instead of adding to them.
+"${KUBECTL[@]}" -n "${APP_NS}" get deploy dxgate-gateway \
+  -o jsonpath='{.spec.template.spec.containers[0].env[?(@.name=="POD_NAME")].valueFrom.fieldRef.fieldPath}' \
+  | grep -qx metadata.name \
+  || fail "gateway does not inject POD_NAME; demand reports would not be attributable to a replica"
+
 log "e2e smoke test passed"

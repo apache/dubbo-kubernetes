@@ -111,7 +111,7 @@ spec:
           value: /etc/dxgate/bootstrap.json
         - name: DXGATE_HTTP_ADDR
           value: 0.0.0.0:8080
-        - name: DXGATE_ADMIN_ADDR
+        - name: DXGATE_UI_ADDR
           value: 0.0.0.0:26021
         - name: DXGATE_GATEWAY_NAME
           value: {{ .Gateway.Name | quote }}
@@ -131,6 +131,15 @@ spec:
           value: {{ .AccessLog | quote }}
         - name: DXGATE_ACCESS_LOG_FORMAT
           value: {{ .AccessLogFormat | quote }}
+{{- if .ActivationControlPlane }}
+        # On-demand activation. Absent, the gateway fails a request for a
+        # scaled-to-zero backend immediately, which is the behaviour every
+        # gateway had before activation existed.
+        - name: DXGATE_ACTIVATION_CONTROL_PLANE
+          value: {{ .ActivationControlPlane | quote }}
+        - name: DXGATE_ACTIVATION_HOLD_TIMEOUT
+          value: {{ .ActivationHoldTimeout | quote }}
+{{- end }}
         - name: POD_NAME
           valueFrom:
             fieldRef:

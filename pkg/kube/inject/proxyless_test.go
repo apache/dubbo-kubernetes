@@ -269,25 +269,40 @@ func assertGRPCInboundContainer(t *testing.T, pod *corev1.Pod) {
 
 // assertDrainReadinessProbe checks the probe that withdraws a terminating pod
 // from its EndpointSlice. Without it the sidecar's drain delay is inert: kubelet
-// never observes the 503, so the endpoint is still published when the listener
-// closes.
+// never observes the listener closing, so the endpoint is still published
+// after the data-plane port is gone.
 func assertDrainReadinessProbe(t *testing.T, container *corev1.Container) {
 	t.Helper()
 	probe := container.ReadinessProbe
-	if probe == nil || probe.HTTPGet == nil {
+	if probe == nil || probe.TCPSocket == nil {
 		t.Fatalf("grpc-inbound readiness probe missing")
 	}
-	if probe.HTTPGet.Path != "/readyz" || probe.HTTPGet.Port.IntValue() != ProxylessGRPCInboundAdminPort {
-		t.Fatalf("grpc-inbound readiness probe = %s:%v, want /readyz:%d",
-			probe.HTTPGet.Path, probe.HTTPGet.Port, ProxylessGRPCInboundAdminPort)
+	if probe.TCPSocket.Port.IntValue() != ProxylessGRPCInboundPort {
+		t.Fatalf("grpc-inbound readiness probe = %v, want TCP port %d",
+			probe.TCPSocket.Port, ProxylessGRPCInboundPort)
 	}
 	// The probe has to fail before the sidecar stops accepting, otherwise the
 	// endpoint is withdrawn only after the listener is already gone.
 	if detection := time.Duration(probe.PeriodSeconds*probe.FailureThreshold) * time.Second; detection >= proxylessDrainDelay {
 		t.Fatalf("readiness detection window = %v, want less than the %v drain delay", detection, proxylessDrainDelay)
 	}
-	if !hasContainerPort(container.Ports, ProxylessGRPCInboundAdminPort) {
-		t.Fatalf("grpc-inbound admin port %d not declared", ProxylessGRPCInboundAdminPort)
+	if !hasContainerPort(container.Ports, ProxylessGRPCInboundPort) {
+		t.Fatalf("grpc-inbound port %d not declared", ProxylessGRPCInboundPort)
+	}
+}
+
+func TestGetProxyImageFallsBackToSharedCNIImage(t *testing.T) {
+	values := map[string]any{
+		"global": map[string]any{
+			"proxyless": map[string]any{
+				"cni": map[string]any{
+					"image": "kdubbo/dubbod:test",
+				},
+			},
+		},
+	}
+	if got := getProxyImage(values, "default"); got != "kdubbo/dubbod:test" {
+		t.Fatalf("getProxyImage() = %q, want shared CNI image", got)
 	}
 }
 

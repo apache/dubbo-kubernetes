@@ -1,0 +1,49 @@
+# Licensed to the Apache Software Foundation (ASF) under one or more
+# contributor license agreements.  See the NOTICE file distributed with
+# this work for additional information regarding copyright ownership.
+# The ASF licenses this file to You under the Apache License, Version 2.0
+# (the "License"); you may not use this file except in compliance with
+# the License.  You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+apiVersion: v1
+kind: Pod
+metadata:
+  name: payment-client
+  namespace: e2e
+  labels:
+    app: payment-client
+    proxyless.dubbo.apache.org/inject: "true"
+  annotations:
+    inject.dubbo.apache.org/templates: grpc-engine
+spec:
+  restartPolicy: Never
+  initContainers:
+    - name: wait-for-bootstrap
+      image: kdubbo/activation-e2e:latest
+      imagePullPolicy: IfNotPresent
+      args: ["sleep"]
+  containers:
+    - name: client
+      image: kdubbo/activation-client:latest
+      imagePullPolicy: IfNotPresent
+      args:
+        - grpc-outbound
+        - "1"
+        - --host
+        - payment.e2e.svc.cluster.local
+        - --port
+        - "8080"
+        - --path
+        - /health
+        - --wait-timeout
+        - 90s
+        - --request-timeout
+        - 90s

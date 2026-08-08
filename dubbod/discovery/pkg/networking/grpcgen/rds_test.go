@@ -244,6 +244,58 @@ func TestBuildHTTPRouteSetsServiceFaultInjectionPolicy(t *testing.T) {
 	}
 }
 
+func TestGatewayRDSRoutesActivationAuthorityToOriginalCluster(t *testing.T) {
+	target := newRDSTestService("payment", "app", "payment.app.svc.cluster.local", 8080)
+	activator := newRDSTestService(
+		model.ActivationGatewayServiceName,
+		"app",
+		"dxgate-gateway.app.svc.cluster.local",
+		80,
+	)
+	push := newRDSTestPushContext(t, []config.Config{
+		newActivationPolicyConfig("payment", "app", "payment"),
+	}, []*model.Service{target, activator})
+	proxy := &model.Proxy{
+		ID:              "router~10.0.0.9~dxgate-gateway.app~app.svc.cluster.local",
+		Type:            model.Router,
+		ConfigNamespace: "app",
+		ServiceTargets: []model.ServiceTarget{{
+			Service: activator,
+			Port: model.ServiceInstancePort{
+				ServicePort: activator.Ports[0],
+				TargetPort:  80,
+			},
+		}},
+	}
+
+	rc := buildHTTPRoute(proxy, push, "outbound|80||dxgate-gateway.app.svc.cluster.local")
+	if rc == nil {
+		t.Fatal("buildHTTPRoute() returned nil")
+	}
+	var activation *route.VirtualHost
+	for _, virtualHost := range rc.GetVirtualHosts() {
+		if virtualHost.GetName() == "activation|payment.app.svc.cluster.local|8080" {
+			activation = virtualHost
+			break
+		}
+	}
+	if activation == nil {
+		t.Fatalf("activation virtual host not found: %v", rc.GetVirtualHosts())
+	}
+	if rc.GetVirtualHosts()[0].GetName() != activation.GetName() {
+		t.Fatalf("first virtual host = %q, want activation route before wildcard routes", rc.GetVirtualHosts()[0].GetName())
+	}
+	if !contains(activation.GetDomains(), "payment.app.svc.cluster.local:8080") {
+		t.Fatalf("activation domains = %v, want target authority", activation.GetDomains())
+	}
+	if len(activation.GetRoutes()) != 1 {
+		t.Fatalf("activation routes = %d, want 1", len(activation.GetRoutes()))
+	}
+	if got := activation.GetRoutes()[0].GetRoute().GetCluster(); got != "outbound|8080||payment.app.svc.cluster.local" {
+		t.Fatalf("activation cluster = %q, want original service cluster", got)
+	}
+}
+
 func newRDSTestPushContext(t *testing.T, configs []config.Config, services []*model.Service) *model.PushContext {
 	t.Helper()
 

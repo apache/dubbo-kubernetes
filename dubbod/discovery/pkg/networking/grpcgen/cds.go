@@ -168,6 +168,12 @@ func (b *clusterBuilder) build() []*cluster.Cluster {
 	if newDefaultCluster != nil {
 		defaultCluster = newDefaultCluster
 	}
+	if b.requiresPeerAuthenticationMTLS() {
+		b.applyPeerAuthenticationMTLS(defaultCluster)
+		for _, subsetCluster := range subsetClusters {
+			b.applyPeerAuthenticationMTLS(subsetCluster)
+		}
+	}
 	if b.node != nil && b.node.IsRouter() {
 		b.applyBackendTLSPolicy(defaultCluster)
 		for _, subsetCluster := range subsetClusters {
@@ -182,6 +188,31 @@ func (b *clusterBuilder) build() []*cluster.Cluster {
 	log.Debugf("generated %d clusters total (1 default + %d subsets) for %s",
 		len(result), len(subsetClusters), b.defaultClusterName)
 	return result
+}
+
+func (b *clusterBuilder) requiresPeerAuthenticationMTLS() bool {
+	if b.push == nil || b.push.AuthenticationPolicies == nil || b.svc == nil {
+		return false
+	}
+	return b.push.AuthenticationPolicies.EffectiveMutualTLSMode(
+		b.svc.Attributes.Namespace, nil, uint32(b.portNum),
+	) == model.MTLSStrict
+}
+
+func (b *clusterBuilder) applyPeerAuthenticationMTLS(c *cluster.Cluster) {
+	if c == nil || c.TransportSocket != nil {
+		return
+	}
+	tlsContext := b.buildUpstreamTLSContext(c, nil)
+	if tlsContext == nil {
+		log.Warnf("failed to build automatic mTLS context for STRICT PeerAuthentication on cluster %s", c.Name)
+		return
+	}
+	c.TransportSocket = &core.TransportSocket{
+		Name:       "transport_sockets.tls",
+		ConfigType: &core.TransportSocket_TypedConfig{TypedConfig: protoconv.MessageToAny(tlsContext)},
+	}
+	log.Debugf("applied automatic mTLS to cluster %s for STRICT PeerAuthentication", c.Name)
 }
 
 func (b *clusterBuilder) edsCluster(name string) *cluster.Cluster {
@@ -447,6 +478,15 @@ func (b *clusterBuilder) buildUpstreamTLSContext(c *cluster.Cluster, tlsSettings
 		sans = b.push.ServiceAccounts(b.svc.Hostname, b.svc.Attributes.Namespace)
 		if len(sans) == 0 && b.hostname != b.svc.Hostname {
 			sans = b.push.ServiceAccounts(b.hostname, b.svc.Attributes.Namespace)
+		}
+		if b.push.ServiceActivationEnabled(b.svc.Attributes.Namespace, b.svc.Attributes.Name) {
+			pinned := sets.New(sans...)
+			pinned.InsertAll(b.push.ActivationBackendSANs(
+				b.svc.Attributes.Namespace,
+				b.svc.Attributes.Name,
+			)...)
+			pinned.InsertAll(b.push.ActivationGatewaySANs(b.svc.Attributes.Namespace)...)
+			sans = sets.SortedList(pinned)
 		}
 		if len(sans) == 0 {
 			log.Warnf("no SPIFFE identities found for %s; upstream TLS for cluster %s will not verify peer SAN", b.svc.Hostname, c.Name)

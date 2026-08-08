@@ -77,6 +77,7 @@ type PushContext struct {
 	httpRouteIndex         httpRouteIndex
 	backendTLSPolicyIndex  backendTLSPolicyIndex
 	faultInjectionIndex    faultInjectionPolicyIndex
+	serviceActivationIndex serviceActivationPolicyIndex
 	destinationRuleIndex   destinationRuleIndex
 	serviceAccounts        map[serviceAccountKey][]string
 	AuthenticationPolicies *AuthenticationPolicies
@@ -165,6 +166,12 @@ type BackendTLSSettings struct {
 	SNI string
 }
 
+const ActivationGatewayServiceName = "dxgate-gateway"
+
+type serviceActivationPolicyIndex struct {
+	services map[string][]string
+}
+
 type destinationRuleIndex struct {
 	namespaceLocal      map[string]*consolidatedSubRules
 	exportedByNamespace map[string]*consolidatedSubRules
@@ -180,9 +187,12 @@ func NewPushContext() *PushContext {
 		ServiceIndex:          newServiceIndex(),
 		virtualServiceIndex:   newVirtualServiceIndex(),
 		backendTLSPolicyIndex: backendTLSPolicyIndex{serviceTLS: map[string]BackendTLSSettings{}},
-		destinationRuleIndex:  newDestinationRuleIndex(),
-		serviceAccounts:       map[serviceAccountKey][]string{},
-		ProxyStatus:           map[string]map[string]ProxyPushStatus{},
+		serviceActivationIndex: serviceActivationPolicyIndex{
+			services: map[string][]string{},
+		},
+		destinationRuleIndex: newDestinationRuleIndex(),
+		serviceAccounts:      map[serviceAccountKey][]string{},
+		ProxyStatus:          map[string]map[string]ProxyPushStatus{},
 	}
 }
 
@@ -594,6 +604,7 @@ func (ps *PushContext) createNewContext(env *Environment) {
 	ps.initHTTPRoutes(env)
 	ps.initBackendTLSPolicies(env)
 	ps.initFaultInjectionPolicies(env)
+	ps.initServiceActivationPolicies(env)
 	ps.initAuthenticationPolicies(env)
 }
 
@@ -664,6 +675,14 @@ func (ps *PushContext) updateContext(env *Environment, oldPushContext *PushConte
 		ps.initFaultInjectionPolicies(env)
 	} else {
 		ps.faultInjectionIndex = oldPushContext.faultInjectionIndex
+	}
+
+	serviceActivationPoliciesChanged := pushReq != nil && HasConfigsOfKind(pushReq.ConfigsUpdated, kind.ServiceActivationPolicy)
+	if serviceActivationPoliciesChanged {
+		log.Debugf("ServiceActivationPolicies changed, re-initializing activation index")
+		ps.initServiceActivationPolicies(env)
+	} else {
+		ps.serviceActivationIndex = oldPushContext.serviceActivationIndex
 	}
 
 	authnPoliciesChanged := pushReq != nil && (pushReq.Full || authPolicyKindsChanged(pushReq.ConfigsUpdated))
@@ -1018,6 +1037,106 @@ func backendTLSPolicyServiceKey(namespace, name string) string {
 // is sorted and already expanded with trust domain aliases.
 func (ps *PushContext) ServiceAccounts(hostname host.Name, namespace string) []string {
 	return ps.serviceAccounts[serviceAccountKey{hostname: hostname, namespace: namespace}]
+}
+
+// ServiceActivationEnabled reports whether a structurally valid policy targets
+// this Service. The live ActivatorReady condition cannot gate routing: the first
+// cold request is what makes an Activator report demand for this target.
+func (ps *PushContext) ServiceActivationEnabled(namespace, name string) bool {
+	if ps == nil {
+		return false
+	}
+	_, found := ps.serviceActivationIndex.services[backendTLSPolicyServiceKey(namespace, name)]
+	return found
+}
+
+// ActivationGatewayService returns the dedicated namespace-local Activator.
+func (ps *PushContext) ActivationGatewayService(namespace string) *Service {
+	if ps == nil {
+		return nil
+	}
+	for _, namespaces := range ps.ServiceIndex.HostnameAndNamespace {
+		if svc := namespaces[namespace]; svc != nil && svc.Attributes.Name == ActivationGatewayServiceName {
+			return svc
+		}
+	}
+	return nil
+}
+
+// ActivationGatewaySANs is stable across cold/hot EDS transitions. Keeping the
+// backend and Activator identities in one CDS validation context avoids a TLS
+// verification window while the endpoint assignment changes.
+func (ps *PushContext) ActivationGatewaySANs(namespace string) []string {
+	if ps == nil || ps.Mesh == nil || namespace == "" {
+		return nil
+	}
+	identities := sets.New(spiffe.MustGenSpiffeURI(ps.Mesh, namespace, ActivationGatewayServiceName))
+	return sets.SortedList(spiffe.ExpandWithTrustDomains(identities, ps.Mesh.TrustDomainAliases))
+}
+
+// ActivationBackendSANs returns the backend identities declared by the policy.
+// Unlike endpoint-derived identities, these remain available when dubbod starts
+// while the target has zero endpoints.
+func (ps *PushContext) ActivationBackendSANs(namespace, name string) []string {
+	if ps == nil || ps.Mesh == nil || namespace == "" {
+		return nil
+	}
+	accounts, found := ps.serviceActivationIndex.services[backendTLSPolicyServiceKey(namespace, name)]
+	if !found {
+		return nil
+	}
+	identities := sets.New[string]()
+	for _, account := range accounts {
+		account = strings.TrimSpace(account)
+		if account == "" {
+			continue
+		}
+		if strings.HasPrefix(account, "spiffe://") {
+			identities.Insert(account)
+			continue
+		}
+		generated := sets.New(spiffe.MustGenSpiffeURI(ps.Mesh, namespace, account))
+		identities.InsertAll(sets.SortedList(
+			spiffe.ExpandWithTrustDomains(generated, ps.Mesh.TrustDomainAliases),
+		)...)
+	}
+	return sets.SortedList(identities)
+}
+
+func (ps *PushContext) ActivatedServices(namespace string) []*Service {
+	if ps == nil {
+		return nil
+	}
+	out := make([]*Service, 0)
+	for _, namespaces := range ps.ServiceIndex.HostnameAndNamespace {
+		svc := namespaces[namespace]
+		if svc != nil && ps.ServiceActivationEnabled(namespace, svc.Attributes.Name) {
+			out = append(out, svc)
+		}
+	}
+	return SortServicesByCreationTime(out)
+}
+
+func (ps *PushContext) initServiceActivationPolicies(env *Environment) {
+	ps.serviceActivationIndex = serviceActivationPolicyIndex{services: map[string][]string{}}
+	if env == nil {
+		return
+	}
+	for _, cfg := range sortConfigByCreationTime(env.List(gvk.ServiceActivationPolicy, NamespaceAll)) {
+		spec, ok := cfg.Spec.(*networking.ServiceActivationPolicy)
+		if !ok || spec == nil || spec.GetTargetRef() == nil || spec.GetAutoscalerRef() == nil {
+			continue
+		}
+		target := spec.GetTargetRef()
+		if strings.TrimSpace(target.GetName()) == "" ||
+			(target.GetKind() != "" && !strings.EqualFold(target.GetKind(), "Service")) ||
+			strings.TrimSpace(target.GetGroup()) != "" ||
+			strings.TrimSpace(spec.GetAutoscalerRef().GetName()) == "" {
+			continue
+		}
+		ps.serviceActivationIndex.services[backendTLSPolicyServiceKey(cfg.Namespace, target.GetName())] =
+			append([]string(nil), spec.GetBackendServiceAccounts()...)
+	}
 }
 
 func (ps *PushContext) initServiceAccounts(env *Environment, services []*Service) {

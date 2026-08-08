@@ -1,0 +1,54 @@
+# Licensed to the Apache Software Foundation (ASF) under one or more
+# contributor license agreements.  See the NOTICE file distributed with
+# this work for additional information regarding copyright ownership.
+# The ASF licenses this file to You under the Apache License, Version 2.0
+# (the "License"); you may not use this file except in compliance with
+# the License.  You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+# Declares that payment may be scaled to zero and that requests for it should
+# be held rather than failed. Without this the gateway still holds the request
+# — it cannot tell a cold Service from a dead one on its own — but the control
+# plane publishes no scaler metric for the target, so nothing scales up and the
+# request only ever times out.
+apiVersion: networking.dubbo.apache.org/v1alpha3
+kind: ServiceActivationPolicy
+metadata:
+  name: payment
+  namespace: activation
+spec:
+  targetRef:
+    kind: Service
+    name: payment
+  # The autoscaler that owns the replica count. Activation reports demand; it
+  # never writes replicas itself, so this must name the object that does.
+  autoscalerRef:
+    group: keda.sh
+    kind: ScaledObject
+    name: payment
+  # Constant mTLS allowlist used before endpoints exist and while EDS switches
+  # between the Activator and the hot backend.
+  backendServiceAccounts:
+    - payment
+  # Unary only. A stream cannot be replayed after the target comes up, so
+  # holding one would buy a cold start at the cost of a broken stream.
+  protocols:
+    - HTTP
+    - GRPC_UNARY
+  # Shorter than the caller's own deadline, longer than a cold start. A request
+  # whose caller has already given up gains nothing from being held longer.
+  requestTimeout: 30s
+  # Per-target share of the gateway's activation backlog. Caps how much of the
+  # gateway one cold target can occupy.
+  maxPendingRequests: 100
+  # Requests are failed when activation cannot proceed. KEEP_MIN_REPLICAS is the
+  # alternative: keep one replica alive so the question never arises, at the
+  # cost of never actually reaching zero.
+  failurePolicy: REJECT
