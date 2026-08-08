@@ -39,6 +39,7 @@
 {{- $replicaCount := int (coalesce .Values.replicaCount $defaults.replicaCount 1) }}
 {{- $gateway := $global.gateway | default dict }}
 {{- $defaultGateway := $defaultGlobal.gateway | default dict }}
+{{- $gatewayImage := coalesce $gateway.image $defaultGateway.image "kdubbo/dxgate:latest" }}
 {{- $gatewayReplicas := int (coalesce $gateway.replicaCount $defaultGateway.replicaCount 2) }}
 {{- $remoteAccessCertificateHosts := $remoteAccess.certificateHosts | default $defaultRemoteAccess.certificateHosts | default (list) }}
 {{- $eastWestGateways := $eastWestGateway.gateways | default $defaultEastWestGateway.gateways | default (list) }}
@@ -140,6 +141,8 @@ spec:
               value: default
             - name: DUBBO_CERT_PROVIDER
               value: dubbod
+            - name: DUBBO_DXGATE_IMAGE
+              value: {{ $gatewayImage | quote }}
 {{- if gt (len $remoteAccessCertificateHosts) 0 }}
             - name: DUBBOD_CUSTOM_HOST
               value: {{ join "," $remoteAccessCertificateHosts | quote }}

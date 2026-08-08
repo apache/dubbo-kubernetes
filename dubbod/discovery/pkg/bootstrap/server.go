@@ -535,6 +535,13 @@ func (s *Server) initRegistryEventHandlers() {
 			Namespace: cfg.Namespace,
 		}
 
+		if configKind == kind.ServiceActivationPolicy &&
+			event == model.EventUpdate &&
+			cfg.Generation == prev.Generation {
+			log.Debugf("ignoring status-only update for %s/%s/%s", configKey.Kind, configKey.Namespace, configKey.Name)
+			return
+		}
+
 		// Log the config change
 		log.Infof("%s event for %s/%s/%s", event, configKey.Kind, configKey.Namespace, configKey.Name)
 
@@ -553,11 +560,22 @@ func (s *Server) initRegistryEventHandlers() {
 			configKind == kind.ServiceActivationPolicy
 
 		// Trigger ConfigUpdate to push changes to all connected proxies
-		s.XDSServer.ConfigUpdate(&model.PushRequest{
+		pushRequest := &model.PushRequest{
 			ConfigsUpdated: sets.New(configKey),
 			Reason:         model.NewReasonStats(model.DependentResource),
 			Full:           needsFullPush,
-		})
+		}
+		if configKind == kind.ServiceActivationPolicy {
+			pushRequest.Forced = true
+			pushRequest.ServiceActivationPolicyUpdates = map[model.ConfigKey]model.ServiceActivationPolicyUpdate{
+				configKey: {
+					Config:   cfg,
+					Previous: prev,
+					Deleted:  event == model.EventDelete,
+				},
+			}
+		}
+		s.XDSServer.ConfigUpdate(pushRequest)
 	}
 	schemas := collections.Dubbo.All()
 	if features.EnableGatewayAPI {

@@ -14,10 +14,8 @@
 # limitations under the License.
 
 # Declares that payment may be scaled to zero and that requests for it should
-# be held rather than failed. Without this the gateway still holds the request
-# — it cannot tell a cold Service from a dead one on its own — but the control
-# plane publishes no scaler metric for the target, so nothing scales up and the
-# request only ever times out.
+# be held rather than failed. Without this, EDS is not rewritten to the
+# Activator and the control plane publishes no scaler metric for the target.
 apiVersion: networking.dubbo.apache.org/v1alpha3
 kind: ServiceActivationPolicy
 metadata:

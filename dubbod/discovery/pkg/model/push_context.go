@@ -87,14 +87,21 @@ type PushContext struct {
 }
 
 type PushRequest struct {
-	Reason           ReasonStats
-	ConfigsUpdated   sets.Set[ConfigKey]
-	AddressesUpdated sets.Set[string]
-	Forced           bool
-	Full             bool
-	Push             *PushContext
-	Start            time.Time
-	Delta            ResourceDelta
+	Reason                         ReasonStats
+	ConfigsUpdated                 sets.Set[ConfigKey]
+	ServiceActivationPolicyUpdates map[ConfigKey]ServiceActivationPolicyUpdate
+	AddressesUpdated               sets.Set[string]
+	Forced                         bool
+	Full                           bool
+	Push                           *PushContext
+	Start                          time.Time
+	Delta                          ResourceDelta
+}
+
+type ServiceActivationPolicyUpdate struct {
+	Config   config.Config
+	Previous config.Config
+	Deleted  bool
 }
 
 type XDSUpdater interface {
@@ -310,6 +317,18 @@ func (pr *PushRequest) Merge(other *PushRequest) *PushRequest {
 	} else {
 		pr.AddressesUpdated.Merge(other.AddressesUpdated)
 	}
+	if len(other.ServiceActivationPolicyUpdates) > 0 {
+		if pr.ServiceActivationPolicyUpdates == nil {
+			pr.ServiceActivationPolicyUpdates = make(map[ConfigKey]ServiceActivationPolicyUpdate)
+		}
+		for key, update := range other.ServiceActivationPolicyUpdates {
+			if existing, found := pr.ServiceActivationPolicyUpdates[key]; found &&
+				existing.Previous.Spec != nil {
+				update.Previous = existing.Previous
+			}
+			pr.ServiceActivationPolicyUpdates[key] = update
+		}
+	}
 
 	pr.Delta = mergeResourceDelta(pr.Delta, other.Delta)
 
@@ -357,6 +376,12 @@ func (pr *PushRequest) Copy() *PushRequest {
 	}
 	if pr.AddressesUpdated != nil {
 		out.AddressesUpdated = pr.AddressesUpdated.Copy()
+	}
+	if pr.ServiceActivationPolicyUpdates != nil {
+		out.ServiceActivationPolicyUpdates = make(map[ConfigKey]ServiceActivationPolicyUpdate, len(pr.ServiceActivationPolicyUpdates))
+		for key, update := range pr.ServiceActivationPolicyUpdates {
+			out.ServiceActivationPolicyUpdates[key] = update
+		}
 	}
 	out.Delta = copyResourceDelta(pr.Delta)
 	return &out
@@ -432,6 +457,7 @@ func (ps *PushContext) InitContext(env *Environment, oldPushContext *PushContext
 
 	if pushReq == nil || oldPushContext == nil || !oldPushContext.InitDone.Load() || pushReq.Forced {
 		ps.createNewContext(env)
+		ps.applyServiceActivationPolicyUpdates(pushReq)
 	} else {
 		ps.updateContext(env, oldPushContext, pushReq)
 	}
@@ -609,13 +635,14 @@ func (ps *PushContext) createNewContext(env *Environment) {
 }
 
 func (ps *PushContext) updateContext(env *Environment, oldPushContext *PushContext, pushReq *PushRequest) {
-	// Check if services have changed based on:
-	// 1. ServiceEntry updates in ConfigsUpdated
-	// 2. Address changes
-	// 3. Actual service count changes from environment (for Kubernetes Service changes)
-	// servicesChanged := pushReq != nil && (HasConfigsOfKind(pushReq.ConfigsUpdated, kind.ServiceEntry) ||
-	// 	len(pushReq.AddressesUpdated) > 0)
-	servicesChanged := pushReq != nil && len(pushReq.AddressesUpdated) > 0
+	// A Service may appear after a policy in the same informer burst. Rebuild
+	// the registry on the explicit Service event even when the total count was
+	// already visible through env.Services(); otherwise one HA replica can keep
+	// an activation RDS snapshot that permanently omits the new backend.
+	servicesChanged := pushReq != nil &&
+		(len(pushReq.AddressesUpdated) > 0 ||
+			HasConfigsOfKind(pushReq.ConfigsUpdated, kind.Service) ||
+			HasConfigsOfKind(pushReq.ConfigsUpdated, kind.ServiceEntry))
 
 	// Also check if the actual number of services has changed
 	// This handles cases where Kubernetes Services are added/removed without ServiceEntry updates
@@ -677,13 +704,8 @@ func (ps *PushContext) updateContext(env *Environment, oldPushContext *PushConte
 		ps.faultInjectionIndex = oldPushContext.faultInjectionIndex
 	}
 
-	serviceActivationPoliciesChanged := pushReq != nil && HasConfigsOfKind(pushReq.ConfigsUpdated, kind.ServiceActivationPolicy)
-	if serviceActivationPoliciesChanged {
-		log.Debugf("ServiceActivationPolicies changed, re-initializing activation index")
-		ps.initServiceActivationPolicies(env)
-	} else {
-		ps.serviceActivationIndex = oldPushContext.serviceActivationIndex
-	}
+	ps.serviceActivationIndex = copyServiceActivationPolicyIndex(oldPushContext.serviceActivationIndex)
+	ps.applyServiceActivationPolicyUpdates(pushReq)
 
 	authnPoliciesChanged := pushReq != nil && (pushReq.Full || authPolicyKindsChanged(pushReq.ConfigsUpdated))
 	if authnPoliciesChanged || oldPushContext == nil || oldPushContext.AuthenticationPolicies == nil {
@@ -1122,22 +1144,60 @@ func (ps *PushContext) initServiceActivationPolicies(env *Environment) {
 	if env == nil {
 		return
 	}
-	for _, cfg := range sortConfigByCreationTime(env.List(gvk.ServiceActivationPolicy, NamespaceAll)) {
-		spec, ok := cfg.Spec.(*networking.ServiceActivationPolicy)
-		if !ok || spec == nil || spec.GetTargetRef() == nil || spec.GetAutoscalerRef() == nil {
-			continue
-		}
-		target := spec.GetTargetRef()
-		if strings.TrimSpace(target.GetName()) == "" ||
-			(target.GetKind() != "" && !strings.EqualFold(target.GetKind(), "Service")) ||
-			strings.TrimSpace(target.GetGroup()) != "" ||
-			strings.TrimSpace(spec.GetAutoscalerRef().GetName()) == "" ||
-			len(spec.GetBackendServiceAccounts()) == 0 {
-			continue
-		}
-		ps.serviceActivationIndex.services[backendTLSPolicyServiceKey(cfg.Namespace, target.GetName())] =
-			append([]string(nil), spec.GetBackendServiceAccounts()...)
+	configs := sortConfigByCreationTime(env.List(gvk.ServiceActivationPolicy, NamespaceAll))
+	for _, cfg := range configs {
+		ps.upsertServiceActivationPolicy(cfg)
 	}
+	log.Debugf("activation policy index rebuilt: configs=%d services=%d", len(configs), len(ps.serviceActivationIndex.services))
+}
+
+func copyServiceActivationPolicyIndex(in serviceActivationPolicyIndex) serviceActivationPolicyIndex {
+	out := serviceActivationPolicyIndex{services: make(map[string][]string, len(in.services))}
+	for key, accounts := range in.services {
+		out.services[key] = append([]string(nil), accounts...)
+	}
+	return out
+}
+
+func (ps *PushContext) applyServiceActivationPolicyUpdates(pushReq *PushRequest) {
+	if pushReq == nil {
+		return
+	}
+	for _, update := range pushReq.ServiceActivationPolicyUpdates {
+		if update.Previous.Spec != nil {
+			ps.deleteServiceActivationPolicy(update.Previous)
+		}
+		if update.Deleted {
+			ps.deleteServiceActivationPolicy(update.Config)
+			continue
+		}
+		ps.upsertServiceActivationPolicy(update.Config)
+	}
+}
+
+func (ps *PushContext) deleteServiceActivationPolicy(cfg config.Config) {
+	spec, ok := cfg.Spec.(*networking.ServiceActivationPolicy)
+	if ok && spec != nil && spec.GetTargetRef() != nil {
+		delete(ps.serviceActivationIndex.services,
+			backendTLSPolicyServiceKey(cfg.Namespace, spec.GetTargetRef().GetName()))
+	}
+}
+
+func (ps *PushContext) upsertServiceActivationPolicy(cfg config.Config) {
+	spec, ok := cfg.Spec.(*networking.ServiceActivationPolicy)
+	if !ok || spec == nil || spec.GetTargetRef() == nil || spec.GetAutoscalerRef() == nil {
+		return
+	}
+	target := spec.GetTargetRef()
+	if strings.TrimSpace(target.GetName()) == "" ||
+		(target.GetKind() != "" && !strings.EqualFold(target.GetKind(), "Service")) ||
+		strings.TrimSpace(target.GetGroup()) != "" ||
+		strings.TrimSpace(spec.GetAutoscalerRef().GetName()) == "" ||
+		len(spec.GetBackendServiceAccounts()) == 0 {
+		return
+	}
+	ps.serviceActivationIndex.services[backendTLSPolicyServiceKey(cfg.Namespace, target.GetName())] =
+		append([]string(nil), spec.GetBackendServiceAccounts()...)
 }
 
 func (ps *PushContext) initServiceAccounts(env *Environment, services []*Service) {

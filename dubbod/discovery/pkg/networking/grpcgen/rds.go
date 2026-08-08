@@ -179,18 +179,24 @@ func buildHTTPRoute(node *model.Proxy, push *model.PushContext, routeName string
 	// For regular service Pods, use NonForwardingAction to handle requests directly
 	// Also check if this is a Gateway Pod by checking service name (fallback for when node.Type is not Router)
 	isGatewayPod := false
+	isGatewayDataPort := parsedPort == 80
+	gatewayListenerPort := parsedPort
 	var gatewayName, gatewayNamespace string
-	// Try to find Gateway Pod's service and extract Gateway name from labels
+	// Resolve the listener's Service port from the generated Gateway Service.
+	// dxgate binds the Service targetPort (15080 by default), while Gateway API
+	// parentRefs and HTTPRoutes refer to the public listener port (for example 80).
 	for _, st := range node.ServiceTargets {
-		if strings.Contains(strings.ToLower(st.Service.Attributes.Name), "gateway") {
+		if st.Service == nil {
+			continue
+		}
+		if name, ok := st.Service.Attributes.Labels["gateway.networking.k8s.io/gateway-name"]; ok {
 			isGatewayPod = true
-			// Try to get Gateway name from service labels
-			if len(st.Service.Attributes.Labels) > 0 {
-				if name, ok := st.Service.Attributes.Labels["gateway.networking.k8s.io/gateway-name"]; ok {
-					gatewayName = name
-					gatewayNamespace = st.Service.Attributes.Namespace
-					break
-				}
+			if st.Port.ServicePort != nil && st.Port.TargetPort == uint32(parsedPort) {
+				gatewayName = name
+				gatewayNamespace = st.Service.Attributes.Namespace
+				gatewayListenerPort = st.Port.Port
+				isGatewayDataPort = true
+				break
 			}
 		}
 	}
@@ -200,10 +206,8 @@ func buildHTTPRoute(node *model.Proxy, push *model.PushContext, routeName string
 		}
 		log.Infof("Gateway Pod inbound listener, routeName=%s, port=%d, gateway=%s/%s", routeName, parsedPort, gatewayNamespace, gatewayName)
 
-		// CRITICAL: Only apply HTTPRoute to the Gateway listener port (80)
-		// Other ports (26012, 26021, etc.) are service ports and should not use HTTPRoute
-		if parsedPort != 80 {
-			log.Debugf("Gateway Pod inbound listener port %d is not 80, skipping HTTPRoute (this is a service port, not Gateway listener)", parsedPort)
+		if !isGatewayDataPort {
+			log.Debugf("Gateway Pod inbound listener port %d is not a Gateway Service targetPort, skipping HTTPRoute", parsedPort)
 			// Return empty route config for non-Gateway ports
 			return &route.RouteConfiguration{
 				Name: routeName,
@@ -236,8 +240,8 @@ func buildHTTPRoute(node *model.Proxy, push *model.PushContext, routeName string
 		log.Debugf("Gateway Pod inbound listener, found %d HTTPRoute(s) with wildcard match", len(allHTTPRoutes))
 
 		// Filter HTTPRoutes by parentRef to match this Gateway
-		httpRoutes := filterHTTPRoutesByGateway(allHTTPRoutes, gatewayName, gatewayNamespace, parsedPort)
-		log.Debugf("Gateway Pod inbound listener, filtered to %d HTTPRoute(s) matching gateway %s/%s port %d", len(httpRoutes), gatewayNamespace, gatewayName, parsedPort)
+		httpRoutes := filterHTTPRoutesByGateway(allHTTPRoutes, gatewayName, gatewayNamespace, gatewayListenerPort)
+		log.Debugf("Gateway Pod inbound listener, filtered to %d HTTPRoute(s) matching gateway %s/%s listener port %d", len(httpRoutes), gatewayNamespace, gatewayName, gatewayListenerPort)
 
 		// For Gateway Pod, we also need to collect HTTPRoutes with specific hostnames
 		// because Gateway Pods route traffic based on HTTPRoute hostnames in the request
@@ -271,7 +275,7 @@ func buildHTTPRoute(node *model.Proxy, push *model.PushContext, routeName string
 				}
 			}
 
-			if routes := buildRoutesFromGatewayHTTPRoute(httpRoutes, host.Name("*"), parsedPort, nil); len(routes) > 0 {
+			if routes := buildRoutesFromGatewayHTTPRoute(httpRoutes, host.Name("*"), gatewayListenerPort, nil); len(routes) > 0 {
 				log.Infof("Gateway Pod inbound listener built %d routes from HTTPRoute", len(routes))
 				outboundRoutes = routes
 			} else {

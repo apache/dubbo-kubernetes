@@ -19,7 +19,7 @@
        EDS 下发新端点 -> dxgate 放行被扣住的请求
 ```
 
-网关是唯一能做这件事的位置。出向是 proxyless 的，调用方进程内的 gRPC xDS client 直接拿 EDS 端点建连，端点为空时当场失败，请求路径上没有任何东西活得够久去触发扩容。而进到网关的请求已经在网关自己的 task 里，可以等。
+南北向请求直接经过 dxgate。东西向请求原本由 proxyless 调用方直接读 EDS；冷服务的 EDS 现在会临时改写为专用 Activator `dxgate-gateway`，所以同一个扣流和上报机制也能接住服务间调用。后端就绪后，EDS 恢复真实端点，新请求直接访问后端。
 
 网关只负责等和上报，副本数始终由 KEDA 写。这条边界是有意的：网关重启不会把某个工作负载留在没人要求过的副本数上。
 
@@ -30,7 +30,7 @@ helm repo add kedacore https://kedacore.github.io/charts
 helm install keda kedacore/keda -n keda --create-namespace
 ```
 
-需要一个 Gateway API 的 Gateway 把流量导到 `payment`。`dubbod` 会为它拉起 dxgate，并注入 `DXGATE_ACTIVATION_CONTROL_PLANE`。
+需要一个名为 `dxgate-gateway` 的 Gateway 作为命名空间内的专用 Activator。`dubbod` 会为它拉起 dxgate，并注入 `DXGATE_ACTIVATION_CONTROL_PLANE`。其他 Gateway 使用各自派生的 Deployment/Service 名称，不会覆盖或清理 Activator 资源。
 
 ### 部署
 
@@ -60,8 +60,8 @@ time curl -s http://$GATEWAY/payment/healthz
 请求会挂住几秒——那是冷启动——然后正常返回，不是 503。同一时刻看网关：
 
 ```bash
-kubectl -n dubbo-system exec deploy/dxgate -- \
-  curl -s localhost:15021/metrics | grep dxgate_activation_requests_held
+kubectl -n activation port-forward deploy/dxgate-gateway 15021:26021
+curl -s localhost:15021/metrics | grep dxgate_activation_requests_held
 # dxgate_activation_requests_held 1
 ```
 
@@ -73,7 +73,7 @@ kubectl -n dubbo-system exec deploy/dxgate -- \
 kubectl -n activation get serviceactivationpolicy payment -o jsonpath='{.status.conditions}' | jq
 ```
 
-四个 condition：`Accepted` 策略本身合法，`Eligible` 目标可被激活，`ScalerReady` KEDA 能拿到指标，`ActivatorReady` 有网关在上报。
+四个 condition：`Accepted` 策略本身合法，`Eligible` 目标可被激活，`ScalerReady` 引用的 KEDA `ScaledObject` 已 Ready，`ActivatorReady` 同命名空间至少一个 Dubbo Gateway 已 Programmed。后两项读取 Kubernetes 共享状态，HA 副本不会因各自持有不同连接而互相覆盖。
 
 ### 三个组件各自负责什么
 
@@ -119,20 +119,26 @@ kubectl -n activation get serviceactivationpolicy payment -o jsonpath='{.status.
 
 `dxplane_connections_force_closed_total` 非零说明 25s 不够，调 `DUBBO_GRPC_INBOUND_TERMINATION_DRAIN_DURATION`。
 
-### 为什么 scaler 地址是 headless 的
+### 为什么网关上报和 KEDA 查询使用不同地址
 
 ```yaml
-scalerAddress: dubbod-activation-replicas.dubbo-system.svc.cluster.local:26030
+scalerAddress: dubbod-activation.dubbo-system.svc.cluster.local:26030
 ```
 
-不是 `dubbod-activation`。KEDA 查询会落到某一个副本上，而网关上报也只会到某一个副本——如果两边落到不同副本，KEDA 看到的 pending 永远是 0。所以网关向 headless 名解析出的**每一个**地址都上报一份，这样无论 KEDA 问到谁都能拿到数。
+ScaledObject 使用负载均衡的 `dubbod-activation`，无论 KEDA 落到哪个控制面副本都能拿到相同 pending。网关上报使用 headless 的 `dubbod-activation-replicas`，向解析出的**每一个**地址各上报一份，保证每个控制面副本都有相同数据。
 
 同理，网关必须注入 `POD_NAME`：控制面按 reporter 身份聚合，两个网关副本共用一个身份会互相覆盖。这个变量由 `kube-gateway.yaml` 自动注入。
 
-### 东西向还不行
+### 东西向和 mTLS
 
-这个样例是南北向的：请求从网关进来。
+带 `ServiceActivationPolicy` 的冷服务不会收到空 EDS。`dubbod` 把端点临时改成同命名空间 `dxgate-gateway` 的地址；Activator RDS 再按原始 Host 路由到真实服务。扩容完成后只切 EDS，不切 CDS。
 
-服务之间的调用（东西向）目前不能缩到零。调用方是 proxyless 的，直接读 EDS 建连，中间没有网关。`dubbod/discovery/pkg/xds` 还不感知激活状态，缩到零时下发的是空端点列表，调用方直接失败。
+`backendServiceAccounts` 是生产必填项。CDS 的 `MatchSubjectAltNames` 始终包含后端身份和 Activator 身份，冷/热切换期间 SAN 集合保持不变，避免证书校验窗口。不要为了省配置使用通配 SAN。
 
-所以只被其他服务调用、不经过网关的服务，仍然用 `minReplicaCount: 1`。
+### 生产边界
+
+- 只支持 HTTP 和 unary gRPC；流式 RPC、长连接、启动时间超过调用方 deadline 的服务保持 `minReplicaCount: 1`。
+- Activator 和 dubbod 都至少两个副本，并配置 PodDisruptionBudget。控制面 pending 是内存状态；全部控制面同时重启时，在网关下一次上报前 KEDA 暂时读到 0。
+- `maxPendingRequests` 和网关全局 backlog 都要压测。满载时按 `failurePolicy` 快速失败，不承诺无限排队。
+- 监控 `dxgate_activation_requests_held`、请求 4xx/5xx、KEDA ScaledObject/HPA 条件、策略的 `ScalerReady`/`ActivatorReady`。告警必须覆盖“pending 持续上升但副本仍为 0”。
+- 升级先保持目标至少一个副本，升级 CRD/base、dubbod、dxgate 后确认两种 SAN 和 Activator RDS 已下发，再恢复 `minReplicaCount: 0`。

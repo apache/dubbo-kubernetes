@@ -351,6 +351,40 @@ func TestRunSampleRequestsRetriesConfiguredStatus(t *testing.T) {
 	}
 }
 
+func TestRunSampleRequestsRejectsUnsuccessfulStatus(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		http.Error(w, "route not found", http.StatusNotFound)
+	}))
+	defer server.Close()
+
+	endpoint := endpointForServer(t, server)
+	cluster := "outbound|8080||payment.e2e.svc.cluster.local"
+	snapshot := xdsRouteSnapshot{
+		Host: "payment.e2e.svc.cluster.local",
+		Port: 8080,
+		Destinations: []xdsDestination{{
+			Cluster:   cluster,
+			Host:      "payment.e2e.svc.cluster.local",
+			Weight:    100,
+			Endpoints: []xdsEndpoint{endpoint},
+		}},
+	}
+	client := &sampleADSClient{
+		host:           snapshot.Host,
+		port:           snapshot.Port,
+		path:           "/health",
+		route:          map[string]uint32{cluster: 100},
+		endpoints:      map[string][]xdsEndpoint{cluster: {endpoint}},
+		clusterTLS:     map[string]*tlsv1.UpstreamTlsContext{},
+		requestHeaders: http.Header{},
+	}
+
+	_, err := runSampleRequestsWithOutput(context.Background(), client, snapshot, 1, 0, time.Second, nil)
+	if err == nil || err.Error() != "upstream returned HTTP status 404: route not found" {
+		t.Fatalf("runSampleRequestsWithOutput() error = %v", err)
+	}
+}
+
 func TestRunSampleRequestsRetriesConnectionFailureOnNextEndpoint(t *testing.T) {
 	goodServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		_, _ = w.Write([]byte("recovered"))

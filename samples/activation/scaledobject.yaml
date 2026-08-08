@@ -43,10 +43,10 @@ spec:
   triggers:
     - type: external
       metadata:
-        # Headless: one address per dubbod pod. The load-balanced Service would
-        # send every query to one replica, which may not be the replica the
-        # gateway reported to.
-        scalerAddress: dubbod-activation-replicas.dubbo-system.svc.cluster.local:26030
+        # Gateways report to every control-plane replica through the headless
+        # replicas Service. KEDA can therefore use the stable load-balanced
+        # Service and receive the same pending count from any replica.
+        scalerAddress: dubbod-activation.dubbo-system.svc.cluster.local:26030
         service: payment
         namespace: activation
         # Pending requests per replica before KEDA adds another. Activation from

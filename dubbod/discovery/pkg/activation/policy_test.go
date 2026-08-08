@@ -29,13 +29,15 @@ type services map[string]bool
 
 func (s services) HasService(namespace, name string) bool { return s[namespace+"/"+name] }
 
-type subscribed map[Target]bool
+type scalerStatus bool
 
-func (s subscribed) Subscribed(target Target) bool { return s[target] }
+func (s scalerStatus) ScalerReady(*clientnetworking.ServiceActivationPolicy) bool { return bool(s) }
 
-type reporters map[Target]int
+type activatorStatus bool
 
-func (r reporters) Reporters(target Target) int { return r[target] }
+func (a activatorStatus) ActivatorReady(*clientnetworking.ServiceActivationPolicy) bool {
+	return bool(a)
+}
 
 // policy builds the kube wrapper from its parts. The generated spec is a proto
 // message with an embedded mutex, so it is assembled in place rather than
@@ -83,8 +85,8 @@ func conditionsByType(t *testing.T, evaluator PolicyEvaluator, p *clientnetworki
 func TestEvaluateReportsEveryConditionTrueWhenThePathIsComplete(t *testing.T) {
 	evaluator := PolicyEvaluator{
 		Services:  services{"app/orders": true},
-		Streams:   subscribed{orders: true},
-		Reporters: reporters{orders: 2},
+		Scaler:    scalerStatus(true),
+		Activator: activatorStatus(true),
 	}
 
 	got := conditionsByType(t, evaluator, validPolicy())
@@ -164,8 +166,8 @@ func TestEvaluateReportsMissingTargetService(t *testing.T) {
 func TestEvaluateRejectsProtocolsThatCannotBeHeld(t *testing.T) {
 	evaluator := PolicyEvaluator{
 		Services:  services{"app/orders": true},
-		Streams:   subscribed{orders: true},
-		Reporters: reporters{orders: 1},
+		Scaler:    scalerStatus(true),
+		Activator: activatorStatus(true),
 	}
 
 	unknown := policy(serviceTarget("orders"), autoscaler("orders"), networking.ActivationProtocol(99))
@@ -198,27 +200,27 @@ func TestEvaluateAcceptsEveryActivatableProtocol(t *testing.T) {
 func TestEvaluateReportsScalerAndActivatorSeparately(t *testing.T) {
 	evaluator := PolicyEvaluator{
 		Services:  services{"app/orders": true},
-		Streams:   subscribed{},
-		Reporters: reporters{orders: 1},
+		Scaler:    scalerStatus(false),
+		Activator: activatorStatus(true),
 	}
 	got := conditionsByType(t, evaluator, validPolicy())
-	if want := "False/ScalerNotSubscribed"; got[ConditionScalerReady] != want {
+	if want := "False/ScaledObjectNotReady"; got[ConditionScalerReady] != want {
 		t.Fatalf("ScalerReady = %q, want %q", got[ConditionScalerReady], want)
 	}
-	if want := "True/GatewayReporting"; got[ConditionActivatorReady] != want {
+	if want := "True/GatewayProgrammed"; got[ConditionActivatorReady] != want {
 		t.Fatalf("ActivatorReady = %q, want %q", got[ConditionActivatorReady], want)
 	}
 
 	evaluator = PolicyEvaluator{
 		Services:  services{"app/orders": true},
-		Streams:   subscribed{orders: true},
-		Reporters: reporters{},
+		Scaler:    scalerStatus(true),
+		Activator: activatorStatus(false),
 	}
 	got = conditionsByType(t, evaluator, validPolicy())
-	if want := "True/ScalerSubscribed"; got[ConditionScalerReady] != want {
+	if want := "True/ScaledObjectReady"; got[ConditionScalerReady] != want {
 		t.Fatalf("ScalerReady = %q, want %q", got[ConditionScalerReady], want)
 	}
-	if want := "False/NoGatewayReporting"; got[ConditionActivatorReady] != want {
+	if want := "False/NoProgrammedGateway"; got[ConditionActivatorReady] != want {
 		t.Fatalf("ActivatorReady = %q, want %q", got[ConditionActivatorReady], want)
 	}
 }
@@ -228,8 +230,8 @@ func TestEvaluateReportsScalerAndActivatorSeparately(t *testing.T) {
 func TestEvaluateIsStableAcrossCalls(t *testing.T) {
 	evaluator := PolicyEvaluator{
 		Services:  services{"app/orders": true},
-		Streams:   subscribed{orders: true},
-		Reporters: reporters{orders: 1},
+		Scaler:    scalerStatus(true),
+		Activator: activatorStatus(true),
 	}
 	target := validPolicy()
 
@@ -240,8 +242,8 @@ func TestEvaluateIsStableAcrossCalls(t *testing.T) {
 	// A real change must still be detected.
 	changed := PolicyEvaluator{
 		Services:  services{"app/orders": true},
-		Streams:   subscribed{},
-		Reporters: reporters{orders: 1},
+		Scaler:    scalerStatus(false),
+		Activator: activatorStatus(true),
 	}
 	if SameConditions(evaluator.Evaluate(target), changed.Evaluate(target)) {
 		t.Fatal("SameConditions() reported no change after the scaler unsubscribed")

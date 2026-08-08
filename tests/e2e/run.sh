@@ -18,7 +18,7 @@
 # installs the base + dubbod Helm charts, and asserts that the control
 # plane serves xDS state for workloads and ServiceEntry configuration.
 #
-# Requirements: docker, kind, kubectl, helm.
+# Requirements: docker, kind, kubectl, helm, jq.
 #
 # Environment knobs:
 #   CLUSTER_NAME    kind cluster name           (default: dubbo-e2e)
@@ -31,6 +31,9 @@
 #   KEEP_CLUSTER    set to 1 to keep the kind cluster after the run
 #   KIND            path to the kind binary      (default: kind)
 #   KIND_NODE_IMAGE kind node image override     (default: kind release default)
+#   ACTIVATION_E2E  install KEDA and run real scale-to-zero E2E (default: 0)
+#   DXGATE_IMAGE    prebuilt dxgate image used by managed Gateways
+#   KEDA_VERSION    pinned KEDA chart/app version (default: 2.20.2)
 
 set -euo pipefail
 
@@ -48,6 +51,11 @@ UPGRADE_TMP_DIR=""
 PREVIOUS_CHART=""
 KIND="${KIND:-kind}"
 KIND_NODE_IMAGE="${KIND_NODE_IMAGE:-}"
+ACTIVATION_E2E="${ACTIVATION_E2E:-0}"
+DXGATE_IMAGE="${DXGATE_IMAGE:-kdubbo/dxgate:latest}"
+ACTIVATION_APP_IMAGE="${ACTIVATION_APP_IMAGE:-kdubbo/activation-e2e:latest}"
+ACTIVATION_CLIENT_IMAGE="${ACTIVATION_CLIENT_IMAGE:-kdubbo/activation-client:latest}"
+KEDA_VERSION="${KEDA_VERSION:-2.20.2}"
 
 log() { echo "--- $*"; }
 
@@ -119,10 +127,32 @@ if ! "${KIND}" get clusters 2>/dev/null | grep -qx "${CLUSTER_NAME}"; then
   "${KIND}" "${KIND_CREATE_ARGS[@]}"
 fi
 
+# A kept cluster is useful for debugging and repeated activation runs. Reset
+# release-scoped state so runtime-mutated webhook fields cannot conflict with
+# the next Helm install after a previous namespace was deleted.
+helm uninstall dubbod --kube-context "kind-${CLUSTER_NAME}" -n "${SYSTEM_NS}" --ignore-not-found >/dev/null 2>&1 || true
+helm uninstall dubbo-base --kube-context "kind-${CLUSTER_NAME}" -n "${SYSTEM_NS}" --ignore-not-found >/dev/null 2>&1 || true
+"${KUBECTL[@]}" delete namespace "${APP_NS}" "${SYSTEM_NS}" --ignore-not-found --wait=true >/dev/null
+"${KUBECTL[@]}" delete validatingwebhookconfiguration,mutatingwebhookconfiguration \
+  -l app=dubbod --ignore-not-found >/dev/null
+
 log "loading ${IMAGE} into kind"
 "${KIND}" load docker-image "${IMAGE}" --name "${CLUSTER_NAME}"
 if [[ "${IMAGE}" != "${UPGRADE_FROM_IMAGE}" ]]; then
   "${KIND}" load docker-image "${UPGRADE_FROM_IMAGE}" --name "${CLUSTER_NAME}"
+fi
+if [[ "${ACTIVATION_E2E}" == "1" ]]; then
+  docker image inspect "${DXGATE_IMAGE}" >/dev/null 2>&1 \
+    || fail "ACTIVATION_E2E requires prebuilt ${DXGATE_IMAGE}"
+  log "building ${ACTIVATION_APP_IMAGE}"
+  docker build -t "${ACTIVATION_APP_IMAGE}" "${ROOT}/tests/e2e/activationapp"
+  docker tag "${IMAGE}" "${ACTIVATION_CLIENT_IMAGE}"
+  log "loading activation data-plane images into kind"
+  "${KIND}" load docker-image \
+    "${DXGATE_IMAGE}" \
+    "${ACTIVATION_APP_IMAGE}" \
+    "${ACTIVATION_CLIENT_IMAGE}" \
+    --name "${CLUSTER_NAME}"
 fi
 
 log "installing Gateway API CRDs"
@@ -130,6 +160,20 @@ log "installing Gateway API CRDs"
 # Extended feature carried by the experimental CRD bundle.
 GATEWAY_API_VERSION="${GATEWAY_API_VERSION:-v1.4.1}"
 "${KUBECTL[@]}" apply --server-side -f "https://github.com/kubernetes-sigs/gateway-api/releases/download/${GATEWAY_API_VERSION}/experimental-install.yaml"
+
+if [[ "${ACTIVATION_E2E}" == "1" ]]; then
+  log "installing KEDA ${KEDA_VERSION}"
+  helm repo add kedacore https://kedacore.github.io/charts --force-update
+  helm repo update kedacore
+  helm upgrade --install keda kedacore/keda \
+    --version "${KEDA_VERSION}" \
+    --kube-context "kind-${CLUSTER_NAME}" \
+    -n keda --create-namespace
+  "${KUBECTL[@]}" -n keda rollout status deploy/keda-operator --timeout=300s \
+    || fail "KEDA operator did not become ready"
+  "${KUBECTL[@]}" -n keda rollout status deploy/keda-admission-webhooks --timeout=300s \
+    || fail "KEDA admission webhook did not become ready"
+fi
 
 log "installing base chart (CRDs)"
 helm upgrade --install dubbo-base "${ROOT}/manifests/charts/base" \
@@ -146,6 +190,7 @@ install_dubbod() {
     -n "${SYSTEM_NS}" \
     --set global.proxyless.cni.enabled=false \
     --set-string global.proxyless.cni.image="${image}" \
+    --set-string global.gateway.image="${DXGATE_IMAGE}" \
     --set replicaCount="${DUBBOD_REPLICAS}"
 }
 
@@ -285,17 +330,156 @@ retry "Accepted condition on the policy" check_policy_accepted
 log "asserting a managed gateway is told where to report demand"
 "${KUBECTL[@]}" -n "${APP_NS}" apply -f "${ROOT}/tests/e2e/testdata/gateway.yaml" \
   || fail "Gateway was rejected"
-check_gateway_deployment() { "${KUBECTL[@]}" -n "${APP_NS}" get deploy dxgate-gateway >/dev/null; }
+check_gateway_deployment() { "${KUBECTL[@]}" -n "${APP_NS}" get deploy public-dubbo >/dev/null; }
 retry "managed gateway deployment" check_gateway_deployment
-GATEWAY_ENV="$("${KUBECTL[@]}" -n "${APP_NS}" get deploy dxgate-gateway \
+GATEWAY_ENV="$("${KUBECTL[@]}" -n "${APP_NS}" get deploy public-dubbo \
   -o jsonpath='{.spec.template.spec.containers[0].env[?(@.name=="DXGATE_ACTIVATION_CONTROL_PLANE")].value}')"
 [[ "${GATEWAY_ENV}" == dubbod-activation-replicas.* ]] \
   || fail "gateway reports to '${GATEWAY_ENV}', want the headless activation Service"
 # Reports are attributed per reporter; without a distinct identity two gateway
 # replicas overwrite each other's counts instead of adding to them.
-"${KUBECTL[@]}" -n "${APP_NS}" get deploy dxgate-gateway \
+"${KUBECTL[@]}" -n "${APP_NS}" get deploy public-dubbo \
   -o jsonpath='{.spec.template.spec.containers[0].env[?(@.name=="POD_NAME")].valueFrom.fieldRef.fieldPath}' \
   | grep -qx metadata.name \
   || fail "gateway does not inject POD_NAME; demand reports would not be attributable to a replica"
+
+if [[ "${ACTIVATION_E2E}" == "1" ]]; then
+  log "asserting multiple Gateways have isolated resources"
+  "${KUBECTL[@]}" -n "${APP_NS}" get deploy dxgate-gateway public-dubbo >/dev/null \
+    || fail "canonical and public Gateway deployments do not coexist"
+  "${KUBECTL[@]}" -n "${APP_NS}" rollout status deploy/dxgate-gateway --timeout=300s \
+    || fail "canonical Activator gateway did not become ready"
+  "${KUBECTL[@]}" -n "${APP_NS}" rollout status deploy/public-dubbo --timeout=300s \
+    || fail "second managed gateway did not become ready"
+
+  log "deploying the proxyless activation target and KEDA ScaledObject"
+  "${KUBECTL[@]}" apply -f "${ROOT}/tests/e2e/testdata/eastwest-activation.yaml"
+  "${KUBECTL[@]}" apply -f "${ROOT}/tests/e2e/testdata/eastwest-activation-scaledobject.yaml"
+  "${KUBECTL[@]}" -n "${APP_NS}" wait --for=condition=Ready scaledobject/payment --timeout=180s \
+    || fail "KEDA ScaledObject did not become ready"
+
+  check_all_activators_have_payment_route() {
+    local pod pods
+    pods="$("${KUBECTL[@]}" -n "${APP_NS}" get pods \
+      -l gateway.networking.k8s.io/gateway-name=dxgate-gateway \
+      --field-selector=status.phase=Running \
+      -o jsonpath='{range .items[*]}{.metadata.name}{"\n"}{end}')"
+    [[ "$(wc -w <<<"${pods}")" -ge 2 ]] || return 1
+    while read -r pod; do
+      "${KUBECTL[@]}" get --raw \
+        "/api/v1/namespaces/${APP_NS}/pods/${pod}:26021/proxy/debug/config" \
+        | jq -e '.listeners[]
+          | select(.bind == "0.0.0.0:15080")
+          | .virtual_hosts[]
+          | select(.name == "activation|payment.e2e.svc.cluster.local|8080")' \
+        >/dev/null \
+        || return 1
+    done <<<"${pods}"
+  }
+  retry "all Activator replicas receive the payment activation route" \
+    check_all_activators_have_payment_route
+
+  check_payment_policy_runtime_ready() {
+    local conditions
+    conditions="$("${KUBECTL[@]}" -n "${APP_NS}" get serviceactivationpolicy payment \
+      -o jsonpath='{range .status.conditions[*]}{.type}={.status}{"\n"}{end}')"
+    grep -qx 'ScalerReady=True' <<<"${conditions}" &&
+      grep -qx 'ActivatorReady=True' <<<"${conditions}"
+  }
+  retry "payment policy scaler and Activator readiness" \
+    check_payment_policy_runtime_ready
+
+  check_payment_scaled_to_zero() {
+    [[ "$("${KUBECTL[@]}" -n "${APP_NS}" get deploy payment -o jsonpath='{.spec.replicas}')" == "0" ]]
+  }
+  retry "KEDA scale payment to zero" check_payment_scaled_to_zero
+
+  log "removing one control-plane and one Activator replica before cold demand"
+  "${KUBECTL[@]}" -n "${SYSTEM_NS}" delete pod \
+    "$("${KUBECTL[@]}" -n "${SYSTEM_NS}" get pod -l app=dubbod -o jsonpath='{.items[0].metadata.name}')" \
+    --wait=false
+  "${KUBECTL[@]}" -n "${APP_NS}" delete pod \
+    "$("${KUBECTL[@]}" -n "${APP_NS}" get pod \
+      -l gateway.networking.k8s.io/gateway-name=dxgate-gateway \
+      -o jsonpath='{.items[0].metadata.name}')" \
+    --wait=false
+
+  "${KUBECTL[@]}" -n "${SYSTEM_NS}" rollout status deploy/dubbod --timeout=180s \
+    || fail "control-plane replica did not recover"
+  "${KUBECTL[@]}" -n "${APP_NS}" rollout status deploy/dxgate-gateway --timeout=180s \
+    || fail "Activator replica did not recover"
+  retry "all Activator replicas retain the payment route after failover" \
+    check_all_activators_have_payment_route
+  retry "payment policy remains runtime-ready after HA failover" \
+    check_payment_policy_runtime_ready
+
+  log "sending one proxyless request while payment is at zero"
+  "${KUBECTL[@]}" -n "${APP_NS}" delete pod payment-client --ignore-not-found
+  "${KUBECTL[@]}" apply -f "${ROOT}/tests/e2e/testdata/eastwest-activation-client.yaml"
+  activation_metrics() {
+    local pod
+    while read -r pod; do
+      "${KUBECTL[@]}" get --raw \
+        "/api/v1/namespaces/${APP_NS}/pods/${pod}:26021/proxy/metrics"
+    done < <("${KUBECTL[@]}" -n "${APP_NS}" get pods \
+      -l gateway.networking.k8s.io/gateway-name=dxgate-gateway \
+      -o jsonpath='{range .items[*]}{.metadata.name}{"\n"}{end}')
+  }
+  activation_payment_requests_total() {
+    activation_metrics \
+      | awk '/^dxgate_http_route_requests_total\{/ && /cluster="outbound\|8080\|\|payment\.e2e\.svc\.cluster\.local"/ { total += $NF } END { print total + 0 }'
+  }
+  # held_requests is an instantaneous gauge and can return to zero before a
+  # polling assertion observes it. The durable proof is the complete sequence:
+  # replicas were zero above, KEDA now scales from pending demand, the request
+  # succeeds, and the Activator route counter increases.
+  check_payment_scaled_from_zero() {
+    [[ "$("${KUBECTL[@]}" -n "${APP_NS}" get deploy payment -o jsonpath='{.spec.replicas}')" -ge 1 ]]
+  }
+  retry "KEDA scale payment from zero" check_payment_scaled_from_zero
+  log "KEDA scaled payment from zero"
+  "${KUBECTL[@]}" -n "${APP_NS}" rollout status deploy/payment --timeout=180s \
+    || fail "payment did not become ready after KEDA activation"
+  "${KUBECTL[@]}" -n "${APP_NS}" wait \
+    --for=jsonpath='{.status.containerStatuses[?(@.name=="client")].state.terminated.exitCode}'=0 \
+    pod/payment-client --timeout=120s \
+    || fail "held proxyless request did not complete after automatic scale-up"
+  check_payment_client_success() {
+    "${KUBECTL[@]}" -n "${APP_NS}" logs payment-client -c client 2>/dev/null | grep -qx payment-ok
+  }
+  retry "cold proxyless response is available in the pod log" \
+    check_payment_client_success
+  COLD_ACTIVATOR_REQUESTS="$(activation_payment_requests_total)"
+  log "cold request completed through Activator (route requests=${COLD_ACTIVATOR_REQUESTS})"
+  [[ "${COLD_ACTIVATOR_REQUESTS}" -ge 1 ]] \
+    || fail "cold request completed without an Activator data-plane metric"
+
+  log "asserting EDS converges back to a direct hot path"
+  # The first ready endpoint and its EDS update are independent events. Keep
+  # one backend alive while polling the data plane, otherwise the short test
+  # cooldown can scale it back to zero before xDS convergence is observable.
+  "${KUBECTL[@]}" -n "${APP_NS}" patch scaledobject payment --type=merge \
+    -p '{"spec":{"minReplicaCount":1}}' >/dev/null
+  hot_request_bypasses_activator() {
+    local before after
+    before="$(activation_payment_requests_total)"
+    "${KUBECTL[@]}" -n "${APP_NS}" delete pod payment-client --ignore-not-found --wait=true >/dev/null
+    "${KUBECTL[@]}" apply -f "${ROOT}/tests/e2e/testdata/eastwest-activation-client.yaml" >/dev/null
+    "${KUBECTL[@]}" -n "${APP_NS}" wait \
+      --for=jsonpath='{.status.containerStatuses[?(@.name=="client")].state.terminated.exitCode}'=0 \
+      pod/payment-client --timeout=30s >/dev/null || return 1
+    check_payment_client_success || return 1
+    after="$(activation_payment_requests_total)"
+    [[ "${after}" == "${before}" ]]
+  }
+  retry "hot proxyless request bypasses the Activator after EDS convergence" \
+    hot_request_bypasses_activator
+  log "hot proxyless request bypassed the Activator"
+
+  "${KUBECTL[@]}" -n "${APP_NS}" patch scaledobject payment --type=merge \
+    -p '{"spec":{"minReplicaCount":0}}' >/dev/null
+  retry "KEDA scale payment back to zero" check_payment_scaled_to_zero
+  log "real KEDA zero-to-one-to-zero activation passed"
+fi
 
 log "e2e smoke test passed"

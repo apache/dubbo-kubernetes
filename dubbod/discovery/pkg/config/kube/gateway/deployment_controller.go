@@ -47,6 +47,7 @@ import (
 	"github.com/apache/dubbo-kubernetes/pkg/config/constants"
 	"github.com/apache/dubbo-kubernetes/pkg/config/schema/gvr"
 	telemetryconfig "github.com/apache/dubbo-kubernetes/pkg/config/telemetry"
+	"github.com/apache/dubbo-kubernetes/pkg/grpcxds"
 	"github.com/apache/dubbo-kubernetes/pkg/kube"
 	"github.com/apache/dubbo-kubernetes/pkg/kube/controllers"
 	"github.com/apache/dubbo-kubernetes/pkg/kube/inject"
@@ -457,8 +458,28 @@ func (d *DeploymentController) configureGateway(log *dubbolog.Logger, gw gateway
 		}
 	}
 
-	if err := d.cleanupLegacyGatewayResources(context.TODO(), log, gw.Namespace, legacyName, defaultName); err != nil {
+	if err := d.cleanupLegacyGatewayResources(
+		context.TODO(),
+		log,
+		gw.Namespace,
+		legacyName,
+		defaultName,
+		gw.Name,
+	); err != nil {
 		log.Warnf("failed cleaning up legacy dxgate resources %s/%s: %v", gw.Namespace, legacyName, err)
+	}
+	if defaultName != defaultDxgateGatewayName {
+		if err := d.cleanupLegacyGatewayResources(
+			context.TODO(),
+			log,
+			gw.Namespace,
+			defaultDxgateGatewayName,
+			defaultName,
+			gw.Name,
+		); err != nil {
+			log.Warnf("failed cleaning up fixed-name dxgate resources %s/%s: %v",
+				gw.Namespace, defaultDxgateGatewayName, err)
+		}
 	}
 
 	log.Infof("gateway updated successfully")
@@ -718,12 +739,13 @@ func buildDxgateBootstrapConfig(xdsAddress string, listenerNames []string, clust
 }
 
 func dxgateListenerNames(namespace, serviceName, domainSuffix string, ports []corev1.ServicePort) []string {
-	if domainSuffix == "" {
-		domainSuffix = constants.DefaultClusterLocalDomain
-	}
 	out := make([]string, 0, len(ports))
 	for _, port := range ports {
-		out = append(out, fmt.Sprintf("%s.%s.svc.%s:%d", serviceName, namespace, domainSuffix, port.Port))
+		targetPort := port.TargetPort.IntValue()
+		if targetPort <= 0 {
+			targetPort = int(port.Port)
+		}
+		out = append(out, fmt.Sprintf("%s0.0.0.0:%d", grpcxds.ServerListenerNamePrefix, targetPort))
 	}
 	sort.Strings(out)
 	return out
@@ -1258,7 +1280,14 @@ func (d *DeploymentController) canManage(gvr schema.GroupVersionResource, name, 
 	return managed, obj.GetResourceVersion()
 }
 
-func (d *DeploymentController) cleanupLegacyGatewayResources(ctx context.Context, log *dubbolog.Logger, namespace, legacyName, currentName string) error {
+func (d *DeploymentController) cleanupLegacyGatewayResources(
+	ctx context.Context,
+	log *dubbolog.Logger,
+	namespace,
+	legacyName,
+	currentName,
+	gatewayName string,
+) error {
 	if d.client == nil || legacyName == "" || legacyName == currentName {
 		return nil
 	}
@@ -1267,14 +1296,14 @@ func (d *DeploymentController) cleanupLegacyGatewayResources(ctx context.Context
 	for _, cleanup := range []struct {
 		kind string
 		name string
-		fn   func(context.Context, string, string) error
+		fn   func(context.Context, string, string, string) error
 	}{
 		{kind: "ConfigMap", name: legacyName + "-bootstrap", fn: d.deleteManagedConfigMap},
 		{kind: "ServiceAccount", name: legacyName, fn: d.deleteManagedServiceAccount},
 		{kind: "Deployment", name: legacyName, fn: d.deleteManagedDeployment},
 		{kind: "Service", name: legacyName, fn: d.deleteManagedService},
 	} {
-		if err := cleanup.fn(ctx, namespace, cleanup.name); err != nil {
+		if err := cleanup.fn(ctx, namespace, cleanup.name, gatewayName); err != nil {
 			errs = append(errs, fmt.Sprintf("%s/%s: %v", cleanup.kind, cleanup.name, err))
 		}
 	}
@@ -1286,7 +1315,7 @@ func (d *DeploymentController) cleanupLegacyGatewayResources(ctx context.Context
 	return nil
 }
 
-func (d *DeploymentController) deleteManagedConfigMap(ctx context.Context, namespace, name string) error {
+func (d *DeploymentController) deleteManagedConfigMap(ctx context.Context, namespace, name, gatewayName string) error {
 	obj, err := d.client.Kube().CoreV1().ConfigMaps(namespace).Get(ctx, name, metav1.GetOptions{})
 	if apierrors.IsNotFound(err) {
 		return nil
@@ -1294,7 +1323,7 @@ func (d *DeploymentController) deleteManagedConfigMap(ctx context.Context, names
 	if err != nil {
 		return err
 	}
-	if !isManagedGatewayResource(obj.Labels) {
+	if !isManagedGatewayResourceFor(obj.Labels, gatewayName) {
 		return nil
 	}
 	err = d.client.Kube().CoreV1().ConfigMaps(namespace).Delete(ctx, name, metav1.DeleteOptions{})
@@ -1304,7 +1333,7 @@ func (d *DeploymentController) deleteManagedConfigMap(ctx context.Context, names
 	return err
 }
 
-func (d *DeploymentController) deleteManagedServiceAccount(ctx context.Context, namespace, name string) error {
+func (d *DeploymentController) deleteManagedServiceAccount(ctx context.Context, namespace, name, gatewayName string) error {
 	obj, err := d.client.Kube().CoreV1().ServiceAccounts(namespace).Get(ctx, name, metav1.GetOptions{})
 	if apierrors.IsNotFound(err) {
 		return nil
@@ -1312,7 +1341,7 @@ func (d *DeploymentController) deleteManagedServiceAccount(ctx context.Context, 
 	if err != nil {
 		return err
 	}
-	if !isManagedGatewayResource(obj.Labels) {
+	if !isManagedGatewayResourceFor(obj.Labels, gatewayName) {
 		return nil
 	}
 	err = d.client.Kube().CoreV1().ServiceAccounts(namespace).Delete(ctx, name, metav1.DeleteOptions{})
@@ -1322,7 +1351,7 @@ func (d *DeploymentController) deleteManagedServiceAccount(ctx context.Context, 
 	return err
 }
 
-func (d *DeploymentController) deleteManagedDeployment(ctx context.Context, namespace, name string) error {
+func (d *DeploymentController) deleteManagedDeployment(ctx context.Context, namespace, name, gatewayName string) error {
 	obj, err := d.client.Kube().AppsV1().Deployments(namespace).Get(ctx, name, metav1.GetOptions{})
 	if apierrors.IsNotFound(err) {
 		return nil
@@ -1330,7 +1359,7 @@ func (d *DeploymentController) deleteManagedDeployment(ctx context.Context, name
 	if err != nil {
 		return err
 	}
-	if !isManagedGatewayResource(obj.Labels) {
+	if !isManagedGatewayResourceFor(obj.Labels, gatewayName) {
 		return nil
 	}
 	err = d.client.Kube().AppsV1().Deployments(namespace).Delete(ctx, name, metav1.DeleteOptions{})
@@ -1340,7 +1369,7 @@ func (d *DeploymentController) deleteManagedDeployment(ctx context.Context, name
 	return err
 }
 
-func (d *DeploymentController) deleteManagedService(ctx context.Context, namespace, name string) error {
+func (d *DeploymentController) deleteManagedService(ctx context.Context, namespace, name, gatewayName string) error {
 	obj, err := d.client.Kube().CoreV1().Services(namespace).Get(ctx, name, metav1.GetOptions{})
 	if apierrors.IsNotFound(err) {
 		return nil
@@ -1348,7 +1377,7 @@ func (d *DeploymentController) deleteManagedService(ctx context.Context, namespa
 	if err != nil {
 		return err
 	}
-	if !isManagedGatewayResource(obj.Labels) {
+	if !isManagedGatewayResourceFor(obj.Labels, gatewayName) {
 		return nil
 	}
 	err = d.client.Kube().CoreV1().Services(namespace).Delete(ctx, name, metav1.DeleteOptions{})
@@ -1361,6 +1390,11 @@ func (d *DeploymentController) deleteManagedService(ctx context.Context, namespa
 func isManagedGatewayResource(labels map[string]string) bool {
 	_, ok := labels["gateway.dubbo.apache.org/managed"]
 	return ok
+}
+
+func isManagedGatewayResourceFor(labels map[string]string, gatewayName string) bool {
+	return isManagedGatewayResource(labels) &&
+		labels["gateway.networking.k8s.io/gateway-name"] == gatewayName
 }
 
 func (d *DeploymentController) HandleTagChange(newTags any) {
@@ -1384,8 +1418,14 @@ func IsManaged(gw *gateway.GatewaySpec) bool {
 	return false
 }
 
-func getDefaultName(_ string, _ *gateway.GatewaySpec, _ bool) string {
-	return defaultDxgateGatewayName
+func getDefaultName(name string, kgw *gateway.GatewaySpec, disableNameSuffix bool) string {
+	// Keep the canonical Activator Service stable: proxyless cold EDS points at
+	// this namespace-local name. Every other Gateway needs its own resources or
+	// two Gateway reconciles overwrite the same Deployment, Service and config.
+	if name == defaultDxgateGatewayName {
+		return defaultDxgateGatewayName
+	}
+	return getLegacyDefaultName(name, kgw, disableNameSuffix)
 }
 
 func getLegacyDefaultName(name string, kgw *gateway.GatewaySpec, disableNameSuffix bool) string {

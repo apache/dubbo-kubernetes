@@ -80,6 +80,12 @@ func TestPushDeltaXdsAppliesRemovedResourcesToWatchedState(t *testing.T) {
 	assertWatchedNames(t, con.proxy.GetWatchedResource(v1.ClusterType), keptName, addedName)
 }
 
+func TestShouldSetWatchedResourcesTracksRoutes(t *testing.T) {
+	if !shouldSetWatchedResources(&model.WatchedResource{TypeUrl: v1.RouteType}) {
+		t.Fatal("Delta RDS responses must update watched resource names")
+	}
+}
+
 func newDeltaXDSTestServer(generator model.XdsResourceGenerator) (*DiscoveryServer, *Connection, *fakeDeltaADSStream) {
 	push := model.NewPushContext()
 	push.PushVersion = "test-version"

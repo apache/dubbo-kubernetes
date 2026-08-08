@@ -16,6 +16,7 @@
 package activation
 
 import (
+	"strings"
 	"time"
 
 	"github.com/apache/dubbo-kubernetes/pkg/kube"
@@ -32,9 +33,8 @@ import (
 var logger = log.RegisterScope("activation", "Service activation policies")
 
 // resyncInterval re-evaluates every policy periodically. Two of the four
-// conditions are derived from live state that produces no Kubernetes event at
-// all — a KEDA stream opening, a gateway starting or stopping reports — so
-// without a tick they would stay stale until the policy itself changed.
+// conditions are also re-evaluated periodically as a safety net for missed
+// informer edges.
 const resyncInterval = 30 * time.Second
 
 // Controller keeps ServiceActivationPolicy status in step with what the mesh
@@ -49,25 +49,43 @@ type Controller struct {
 	queue    controllers.Queue
 
 	evaluator PolicyEvaluator
+	readiness *clusterReadiness
 }
 
-// NewController wires the policy watch to the live scaler and gateway state.
-func NewController(client kube.Client, streams StreamLookup, reporters ReporterLookup) *Controller {
+// NewController wires policy status to cluster-visible autoscaler and Gateway
+// state, so every HA replica evaluates the same facts.
+func NewController(client kube.Client) *Controller {
+	readiness := newClusterReadiness(client)
 	c := &Controller{
-		policies: kclient.New[*clientnetworking.ServiceActivationPolicy](client),
-		services: kclient.New[*corev1.Service](client),
+		policies:  kclient.New[*clientnetworking.ServiceActivationPolicy](client),
+		services:  kclient.New[*corev1.Service](client),
+		readiness: readiness,
 	}
 	c.evaluator = PolicyEvaluator{
 		Services:  c,
-		Streams:   streams,
-		Reporters: reporters,
+		Scaler:    readiness,
+		Activator: readiness,
 	}
 
 	c.queue = controllers.NewQueue("service activation policy",
 		controllers.WithReconciler(c.Reconcile),
 		controllers.WithMaxAttempts(5))
 
-	c.policies.AddEventHandler(controllers.ObjectHandler(c.queue.AddObject))
+	c.policies.AddEventHandler(controllers.EventHandler[*clientnetworking.ServiceActivationPolicy]{
+		AddFunc: func(policy *clientnetworking.ServiceActivationPolicy) {
+			c.queue.AddObject(policy)
+		},
+		UpdateFunc: func(oldPolicy, newPolicy *clientnetworking.ServiceActivationPolicy) {
+			// Do not feed our status writes straight back into the queue.
+			// ScaledObject and Gateway informers drive runtime convergence.
+			if oldPolicy.GetGeneration() != newPolicy.GetGeneration() {
+				c.queue.AddObject(newPolicy)
+			}
+		},
+		DeleteFunc: func(policy *clientnetworking.ServiceActivationPolicy) {
+			c.queue.AddObject(policy)
+		},
+	})
 	// A policy is only accepted once its target Service exists, so a Service
 	// appearing later has to re-open the policies that were rejected for it.
 	c.services.AddEventHandler(controllers.ObjectHandler(func(o controllers.Object) {
@@ -75,6 +93,37 @@ func NewController(client kube.Client, streams StreamLookup, reporters ReporterL
 			c.queue.AddObject(policy)
 		}
 	}))
+	readiness.AddEventHandlers(
+		func(namespace, name string) {
+			for _, policy := range c.policies.List(namespace, klabels.Everything()) {
+				ref := policy.Spec.GetAutoscalerRef()
+				if ref != nil &&
+					ref.GetName() == name &&
+					strings.EqualFold(ref.GetGroup(), scaledObjectGVR.Group) &&
+					strings.EqualFold(ref.GetKind(), "ScaledObject") {
+					c.queue.AddObject(policy)
+				}
+			}
+		},
+		func(namespace string) {
+			for _, policy := range c.policies.List(namespace, klabels.Everything()) {
+				c.queue.AddObject(policy)
+			}
+		},
+		func(className string) {
+			namespaces := map[string]struct{}{}
+			for _, gateway := range readiness.gateways.List(metav1.NamespaceAll, klabels.Everything()) {
+				if string(gateway.Spec.GatewayClassName) == className {
+					namespaces[gateway.GetNamespace()] = struct{}{}
+				}
+			}
+			for namespace := range namespaces {
+				for _, policy := range c.policies.List(namespace, klabels.Everything()) {
+					c.queue.AddObject(policy)
+				}
+			}
+		},
+	)
 
 	return c
 }
@@ -85,12 +134,19 @@ func (c *Controller) HasService(namespace, name string) bool {
 }
 
 func (c *Controller) Run(stop <-chan struct{}) {
-	kube.WaitForCacheSync("activation controller", stop, c.policies.HasSynced, c.services.HasSynced)
+	kube.WaitForCacheSync(
+		"activation controller",
+		stop,
+		c.policies.HasSynced,
+		c.services.HasSynced,
+		c.readiness.HasSynced,
+	)
 
 	go c.resync(stop)
 
 	c.queue.Run(stop)
 	controllers.ShutdownAll(c.policies, c.services)
+	c.readiness.ShutdownHandlers()
 }
 
 // resync re-queues every policy on a tick, picking up scaler and gateway

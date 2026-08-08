@@ -1011,6 +1011,13 @@ func runSampleRequest(ctx context.Context, adsClient *sampleADSClient, clients *
 			}
 			continue
 		}
+		if resp.StatusCode >= http.StatusBadRequest {
+			return "", fmt.Errorf(
+				"upstream returned HTTP status %d: %s",
+				resp.StatusCode,
+				strings.TrimSpace(string(body)),
+			)
+		}
 		return strings.TrimSpace(string(body)), nil
 	}
 	return "", lastErr

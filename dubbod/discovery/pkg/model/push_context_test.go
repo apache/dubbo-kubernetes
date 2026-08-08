@@ -20,8 +20,11 @@ import (
 	"testing"
 	"time"
 
+	"github.com/apache/dubbo-kubernetes/pkg/config"
+	"github.com/apache/dubbo-kubernetes/pkg/config/schema/gvk"
 	"github.com/apache/dubbo-kubernetes/pkg/config/schema/kind"
 	"github.com/apache/dubbo-kubernetes/pkg/util/sets"
+	networking "github.com/kdubbo/api/networking/v1alpha3"
 )
 
 func TestPushRequestCopyMergePreservesQueuedUpdates(t *testing.T) {
@@ -97,5 +100,51 @@ func TestPushContextStatusJSONEmptyObject(t *testing.T) {
 	}
 	if string(data) != "{}" {
 		t.Fatalf("StatusJSON() = %s, want {}", string(data))
+	}
+}
+
+func TestApplyServiceActivationPolicyUpdates(t *testing.T) {
+	key := ConfigKey{Kind: kind.ServiceActivationPolicy, Name: "payment", Namespace: "app"}
+	policy := config.Config{
+		Meta: config.Meta{
+			GroupVersionKind: gvk.ServiceActivationPolicy,
+			Name:             key.Name,
+			Namespace:        key.Namespace,
+		},
+		Spec: &networking.ServiceActivationPolicy{
+			TargetRef: &networking.PolicyTargetReference{
+				Kind: "Service",
+				Name: "payment",
+			},
+			AutoscalerRef:          &networking.AutoscalerReference{Name: "payment"},
+			BackendServiceAccounts: []string{"payment"},
+		},
+	}
+	add := &PushRequest{
+		ServiceActivationPolicyUpdates: map[ConfigKey]ServiceActivationPolicyUpdate{
+			key: {Config: policy},
+		},
+	}
+
+	push := NewPushContext()
+	push.applyServiceActivationPolicyUpdates(add)
+	if !push.ServiceActivationEnabled("app", "payment") {
+		t.Fatal("policy event did not add payment to activation index")
+	}
+
+	remove := &PushRequest{
+		ServiceActivationPolicyUpdates: map[ConfigKey]ServiceActivationPolicyUpdate{
+			key: {Config: policy, Deleted: true},
+		},
+	}
+	merged := add.CopyMerge(remove)
+	if !merged.ServiceActivationPolicyUpdates[key].Deleted {
+		t.Fatal("later delete did not replace queued add")
+	}
+	next := NewPushContext()
+	next.serviceActivationIndex = copyServiceActivationPolicyIndex(push.serviceActivationIndex)
+	next.applyServiceActivationPolicyUpdates(merged)
+	if next.ServiceActivationEnabled("app", "payment") {
+		t.Fatal("policy delete did not remove payment from activation index")
 	}
 }
