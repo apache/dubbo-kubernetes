@@ -1131,7 +1131,8 @@ func (ps *PushContext) initServiceActivationPolicies(env *Environment) {
 		if strings.TrimSpace(target.GetName()) == "" ||
 			(target.GetKind() != "" && !strings.EqualFold(target.GetKind(), "Service")) ||
 			strings.TrimSpace(target.GetGroup()) != "" ||
-			strings.TrimSpace(spec.GetAutoscalerRef().GetName()) == "" {
+			strings.TrimSpace(spec.GetAutoscalerRef().GetName()) == "" ||
+			len(spec.GetBackendServiceAccounts()) == 0 {
 			continue
 		}
 		ps.serviceActivationIndex.services[backendTLSPolicyServiceKey(cfg.Namespace, target.GetName())] =

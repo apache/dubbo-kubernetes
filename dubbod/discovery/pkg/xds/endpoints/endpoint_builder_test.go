@@ -67,8 +67,9 @@ func TestColdActivationRewritesProxylessEDSAndSwitchesBack(t *testing.T) {
 			Namespace:        "app",
 		},
 		Spec: &networking.ServiceActivationPolicy{
-			TargetRef:     &networking.PolicyTargetReference{Kind: "Service", Name: "payment"},
-			AutoscalerRef: &networking.AutoscalerReference{Name: "payment"},
+			TargetRef:              &networking.PolicyTargetReference{Kind: "Service", Name: "payment"},
+			AutoscalerRef:          &networking.AutoscalerReference{Name: "payment"},
+			BackendServiceAccounts: []string{"payment"},
 		},
 	}}, []*model.Service{target, activator})
 
@@ -117,8 +118,9 @@ func TestColdActivationDoesNotRewriteRouterEDS(t *testing.T) {
 			Namespace:        "app",
 		},
 		Spec: &networking.ServiceActivationPolicy{
-			TargetRef:     &networking.PolicyTargetReference{Kind: "Service", Name: "payment"},
-			AutoscalerRef: &networking.AutoscalerReference{Name: "payment"},
+			TargetRef:              &networking.PolicyTargetReference{Kind: "Service", Name: "payment"},
+			AutoscalerRef:          &networking.AutoscalerReference{Name: "payment"},
+			BackendServiceAccounts: []string{"payment"},
 		},
 	}}, []*model.Service{target, activator})
 	index := model.NewEndpointIndex(model.DisabledCache{})
@@ -135,6 +137,38 @@ func TestColdActivationDoesNotRewriteRouterEDS(t *testing.T) {
 	cla := NewEndpointBuilder(clusterName, proxy, push).BuildClusterLoadAssignment(index)
 	if hasLbEndpoints(cla) {
 		t.Fatalf("router EDS contains Activator endpoints; this would create an activation self-loop")
+	}
+}
+
+func TestColdActivationRequiresDeclaredBackendIdentity(t *testing.T) {
+	targetHost := host.Name("payment.app.svc.cluster.local")
+	activatorHost := host.Name("dxgate-gateway.app.svc.cluster.local")
+	target := newEndpointTestService("payment", "app", string(targetHost), 8080)
+	activator := newEndpointTestService(model.ActivationGatewayServiceName, "app", string(activatorHost), 80)
+	push := newEndpointTestPushContext(t, []config.Config{{
+		Meta: config.Meta{
+			GroupVersionKind: gvk.ServiceActivationPolicy,
+			Name:             "payment",
+			Namespace:        "app",
+		},
+		Spec: &networking.ServiceActivationPolicy{
+			TargetRef:     &networking.PolicyTargetReference{Kind: "Service", Name: "payment"},
+			AutoscalerRef: &networking.AutoscalerReference{Name: "payment"},
+		},
+	}}, []*model.Service{target, activator})
+
+	index := model.NewEndpointIndex(model.DisabledCache{})
+	index.UpdateServiceEndpoints(model.ShardKey{}, string(activatorHost), "app", []*model.DubboEndpoint{{
+		Addresses:       []string{"10.0.0.9"},
+		EndpointPort:    15080,
+		ServicePortName: "http",
+		HealthStatus:    model.Healthy,
+	}}, false)
+
+	clusterName := model.BuildSubsetKey(model.TrafficDirectionOutbound, "", targetHost, 8080)
+	assignment := NewEndpointBuilder(clusterName, newEndpointTestProxy(), push).BuildClusterLoadAssignment(index)
+	if hasLbEndpoints(assignment) {
+		t.Fatal("activation rewrote EDS without backendServiceAccounts")
 	}
 }
 

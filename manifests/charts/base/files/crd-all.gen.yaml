@@ -418,6 +418,7 @@ spec:
             required:
             - targetRef
             - autoscalerRef
+            - backendServiceAccounts
             type: object
           status:
             properties:
