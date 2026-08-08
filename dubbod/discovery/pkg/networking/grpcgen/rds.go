@@ -31,6 +31,7 @@ import (
 	"github.com/apache/dubbo-kubernetes/pkg/util/sets"
 	route "github.com/kdubbo/xds-api/route/v1"
 	matcher "github.com/kdubbo/xds-api/type/matcher/v1"
+	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/types/known/durationpb"
 	"google.golang.org/protobuf/types/known/wrapperspb"
 	sigsk8siogatewayapiapisv1 "sigs.k8s.io/gateway-api/apis/v1"
@@ -379,9 +380,9 @@ func appendNonConflictingVirtualHosts(base, candidates []*route.VirtualHost) []*
 		if len(domains) == 0 {
 			continue
 		}
-		copy := *candidate
-		copy.Domains = domains
-		base = append(base, &copy)
+		cloned := proto.Clone(candidate).(*route.VirtualHost)
+		cloned.Domains = domains
+		base = append(base, cloned)
 	}
 	return base
 }

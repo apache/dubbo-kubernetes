@@ -30,6 +30,8 @@ spec:
     group: keda.sh
     kind: ScaledObject
     name: httpbin
+  backendServiceAccounts:
+    - httpbin
   protocols:
     - HTTP
     - GRPC_UNARY

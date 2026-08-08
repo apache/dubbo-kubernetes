@@ -19,9 +19,8 @@
 #                          assigning others requires write access)
 #   /unassign [@user ...]  remove assignees
 #   /lgtm                  (PR only) only an approver in the root OWNERS file
-#                          can record Maintainer Approval. The PR is squash
-#                          merged immediately when CI is green, or queued with
-#                          GitHub Auto-merge while required checks finish.
+#                          can record Maintainer Approval and squash merge.
+#                          CI remains informational and does not block it.
 #   /lgtm cancel           remove the `lgtm` label and reset approval
 #   /close                 close the issue/PR (author or write access)
 #   /reopen                reopen the issue/PR (author or write access)
@@ -267,14 +266,14 @@ jobs:
                   });
                   await reply(`Merged on behalf of @${commenter} via \`/lgtm\`.`);
                 } catch (mergeErr) {
-                  core.info(`Merge deferred until CI finishes: ${mergeErr.message}`);
+                  core.info(`Merge deferred while GitHub refreshes mergeability: ${mergeErr.message}`);
                   if (!pr.auto_merge) {
                     await github.graphql(
                       `mutation($id: ID!) { enablePullRequestAutoMerge(input: {pullRequestId: $id, mergeMethod: SQUASH}) { pullRequest { number } } }`,
                       {id: pr.node_id},
                     );
                   }
-                  await reply(`\`/lgtm\` recorded by @${commenter}. GitHub Auto-merge will squash merge the PR after required CI passes.`);
+                  await reply(`\`/lgtm\` recorded by @${commenter}. GitHub Auto-merge will squash merge after mergeability refresh; CI results are informational.`);
                 }
                 return;
               }
