@@ -87,7 +87,65 @@ func (b *EndpointBuilder) BuildClusterLoadAssignment(endpointIndex *model.Endpoi
 	if err != nil {
 		log.Warnf("invalid %s value %q: %v", multicluster.EastWestGatewayEnvName, features.EastWestGatewayRegistry, err)
 	}
-	return b.BuildClusterLoadAssignmentWithGateways(endpointIndex, gateways)
+	assignment := b.BuildClusterLoadAssignmentWithGateways(endpointIndex, gateways)
+	return b.rewriteColdServiceToActivator(endpointIndex, gateways, assignment)
+}
+
+func (b *EndpointBuilder) rewriteColdServiceToActivator(
+	endpointIndex *model.EndpointIndex,
+	gateways map[cluster.ID]multicluster.EastWestGateway,
+	assignment *endpoint.ClusterLoadAssignment,
+) *endpoint.ClusterLoadAssignment {
+	if b == nil || b.proxy == nil || !b.proxy.IsProxylessGrpc() || b.proxy.IsRouter() ||
+		b.push == nil || b.service == nil || b.service.Attributes.Name == model.ActivationGatewayServiceName ||
+		!b.push.ServiceActivationEnabled(b.service.Attributes.Namespace, b.service.Attributes.Name) ||
+		hasLbEndpoints(assignment) {
+		return assignment
+	}
+
+	activator := b.push.ActivationGatewayService(b.service.Attributes.Namespace)
+	if activator == nil || len(activator.Ports) == 0 {
+		log.Warnf("activation policy targets %s/%s but Service %s is unavailable; keeping EDS empty",
+			b.service.Attributes.Namespace, b.service.Attributes.Name, model.ActivationGatewayServiceName)
+		return assignment
+	}
+	activatorPort := activator.Ports[0]
+	for _, port := range activator.Ports {
+		if port.Port == 80 {
+			activatorPort = port
+			break
+		}
+	}
+	activatorCluster := model.BuildSubsetKey(
+		model.TrafficDirectionOutbound,
+		"",
+		activator.Hostname,
+		activatorPort.Port,
+	)
+	activatorBuilder := NewEndpointBuilder(activatorCluster, b.proxy, b.push)
+	if activatorBuilder == nil {
+		return assignment
+	}
+	rewritten := activatorBuilder.BuildClusterLoadAssignmentWithGateways(endpointIndex, gateways)
+	if !hasLbEndpoints(rewritten) {
+		log.Warnf("activation policy targets %s/%s but Activator has no endpoints; keeping target EDS empty",
+			b.service.Attributes.Namespace, b.service.Attributes.Name)
+		return assignment
+	}
+	rewritten.ClusterName = b.clusterName
+	return rewritten
+}
+
+func hasLbEndpoints(assignment *endpoint.ClusterLoadAssignment) bool {
+	if assignment == nil {
+		return false
+	}
+	for _, locality := range assignment.Endpoints {
+		if len(locality.GetLbEndpoints()) > 0 {
+			return true
+		}
+	}
+	return false
 }
 
 func (b *EndpointBuilder) BuildClusterLoadAssignmentWithGateways(endpointIndex *model.EndpointIndex, gateways map[cluster.ID]multicluster.EastWestGateway) *endpoint.ClusterLoadAssignment {

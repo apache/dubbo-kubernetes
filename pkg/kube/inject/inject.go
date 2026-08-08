@@ -223,6 +223,13 @@ func getProxyImage(values map[string]any, defaultImage string) string {
 		if image, ok := global["proxyImage"].(string); ok && image != "" {
 			return image
 		}
+		if proxyless, ok := global["proxyless"].(map[string]any); ok {
+			if cni, ok := proxyless["cni"].(map[string]any); ok {
+				if image, ok := cni["image"].(string); ok && image != "" {
+					return image
+				}
+			}
+		}
 	}
 
 	return defaultImage

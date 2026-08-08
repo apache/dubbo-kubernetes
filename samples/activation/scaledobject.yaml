@@ -1,0 +1,55 @@
+# Licensed to the Apache Software Foundation (ASF) under one or more
+# contributor license agreements.  See the NOTICE file distributed with
+# this work for additional information regarding copyright ownership.
+# The ASF licenses this file to You under the Apache License, Version 2.0
+# (the "License"); you may not use this file except in compliance with
+# the License.  You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+# Stock KEDA. The mesh neither installs nor wraps it; the only mesh-specific
+# part is the external scaler address, which is dubbod serving KEDA's own
+# scaler contract over the demand gateways report.
+apiVersion: keda.sh/v1alpha1
+kind: ScaledObject
+metadata:
+  name: payment
+  namespace: activation
+spec:
+  scaleTargetRef:
+    name: payment
+  # Zero is only safe because the gateway holds the request that would
+  # otherwise arrive at nothing. Drop the ServiceActivationPolicy and this must
+  # go back to 1.
+  minReplicaCount: 0
+  maxReplicaCount: 10
+  # Idle long enough that a lull between requests does not scale the service
+  # into a cold start that the next request has to pay for.
+  cooldownPeriod: 300
+  # How often KEDA asks for pending counts. This is the floor on how long the
+  # first request waits, so it is much shorter than the queue-driven sample's.
+  pollingInterval: 1
+  advanced:
+    horizontalPodAutoscalerConfig:
+      behavior:
+        scaleDown:
+          stabilizationWindowSeconds: 300
+  triggers:
+    - type: external
+      metadata:
+        # Headless: one address per dubbod pod. The load-balanced Service would
+        # send every query to one replica, which may not be the replica the
+        # gateway reported to.
+        scalerAddress: dubbod-activation-replicas.dubbo-system.svc.cluster.local:26030
+        service: payment
+        namespace: activation
+        # Pending requests per replica before KEDA adds another. Activation from
+        # zero does not depend on this value — any pending request at all takes
+        # the service to one replica.
+        targetPendingRequests: "10"

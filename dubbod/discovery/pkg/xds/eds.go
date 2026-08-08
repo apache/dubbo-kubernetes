@@ -314,6 +314,14 @@ func edsUpdatedServicesForRequest(req *model.PushRequest) (sets.String, bool) {
 			return nil, false
 		}
 		services.Insert(cfg.Name)
+		if req.Push != nil {
+			activator := req.Push.ActivationGatewayService(cfg.Namespace)
+			if activator != nil && (cfg.Name == string(activator.Hostname) || cfg.Name == activator.Attributes.Name) {
+				for _, activated := range req.Push.ActivatedServices(cfg.Namespace) {
+					services.Insert(string(activated.Hostname))
+				}
+			}
+		}
 	}
 	return services, len(services) > 0
 }

@@ -23,6 +23,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"net"
 	"sort"
 	"strconv"
 	"strings"
@@ -427,6 +428,9 @@ func (d *DeploymentController) configureGateway(log *dubbolog.Logger, gw gateway
 		OtelTags:            observability.OtelTags,
 		AccessLog:           observability.AccessLog,
 		AccessLogFormat:     observability.AccessLogFormat,
+
+		ActivationControlPlane: d.activationControlPlane(),
+		ActivationHoldTimeout:  features.ActivationHoldTimeout,
 	}
 
 	log.Infof("desired dxgate deployment=%s/%s gatewayClass=%s serviceType=%s ports=%s image=%s",
@@ -486,6 +490,12 @@ type TemplateInput struct {
 	OtelTags            string
 	AccessLog           string
 	AccessLogFormat     string
+	// ActivationControlPlane is the address a gateway reports pending requests
+	// to so that scaled-to-zero targets get activated. Empty turns the feature
+	// off in the data plane; the gateway then fails such a request outright, as
+	// it did before activation existed.
+	ActivationControlPlane string
+	ActivationHoldTimeout  int
 }
 
 type gatewayObservabilityConfig struct {
@@ -638,6 +648,24 @@ type dxgateSecret struct {
 	Name                string `json:"name" yaml:"name"`
 	CertificateChainPEM string `json:"certificate_chain_pem" yaml:"certificate_chain_pem"`
 	PrivateKeyPEM       string `json:"private_key_pem" yaml:"private_key_pem"`
+}
+
+// activationControlPlane resolves the headless Service that fans out to every
+// dubbod replica.
+//
+// It must not be the load-balanced Service: KEDA polls whichever replica its
+// query lands on, so demand delivered to only one replica would leave the
+// request waiting on a scale-up the polled replica never hears about. Resolving
+// the headless name yields one address per pod, and the gateway reports to all
+// of them.
+func (d *DeploymentController) activationControlPlane() string {
+	if features.ActivationDemandPort == 0 {
+		return ""
+	}
+	return net.JoinHostPort(
+		fmt.Sprintf("dubbod-activation-replicas.%s.svc.%s", d.systemNamespace, d.domainSuffix()),
+		strconv.Itoa(features.ActivationDemandPort),
+	)
 }
 
 func (d *DeploymentController) domainSuffix() string {

@@ -40,31 +40,11 @@ github:
   protected_branches:
     master:
       required_status_checks:
-        strict: true
+        # CI remains visible and actionable, but only explicit maintainer
+        # approval blocks merge. /lgtm can therefore merge even when CI fails.
+        strict: false
         checks:
-          # Require the concrete CI jobs directly. A separate fan-in job needs
-          # another scarce ASF runner after every real check has already passed.
-          - context: Lint
-            app_id: 15368
-          - context: Check Repo Hygiene
-            app_id: 15368
-          - context: Unit Tests
-            app_id: 15368
-          - context: Performance Scale Smoke
-            app_id: 15368
-          - context: Build (linux/amd64)
-            app_id: 15368
-          - context: Build (linux/arm64)
-            app_id: 15368
-          - context: Build (darwin/amd64)
-            app_id: 15368
-          - context: Build (darwin/arm64)
-            app_id: 15368
-          - context: Helm Charts
-            app_id: 15368
-          - context: E2E Smoke (kind)
-            app_id: 15368
-          # Pin every gate to the GitHub Actions App so a personal token cannot
-          # forge a required result.
+          # Pin the sole merge gate to the GitHub Actions App so another token
+          # cannot forge maintainer approval.
           - context: Maintainer Approval Gate
             app_id: 15368

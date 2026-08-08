@@ -859,3 +859,80 @@ func TestResolveGatewayObservabilityTelemetryHierarchy(t *testing.T) {
 		t.Fatalf("otel endpoint = %q, want empty when workload disables reporting", cfg.OtelEndpoint)
 	}
 }
+
+func TestActivationControlPlaneResolvesHeadlessService(t *testing.T) {
+	controller := &DeploymentController{systemNamespace: "dubbo-system"}
+	got := controller.activationControlPlane()
+	// The headless name, not the load-balanced one: KEDA polls a single replica,
+	// so demand that reached only one replica would be invisible to it.
+	want := "dubbod-activation-replicas.dubbo-system.svc.cluster.local:26030"
+	if got != want {
+		t.Fatalf("activation control plane = %q, want %q", got, want)
+	}
+}
+
+func TestKubeGatewayTemplateRendersActivationEnv(t *testing.T) {
+	templatePath := filepath.Join("..", "..", "..", "..", "..", "..", "manifests", "charts", "dubbod", "files", "kube-gateway.yaml")
+	raw, err := os.ReadFile(templatePath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	templates, err := inject.ParseTemplates(inject.RawTemplates{"gateway": string(raw)})
+	if err != nil {
+		t.Fatal(err)
+	}
+	controller := &DeploymentController{
+		injectConfig: func() inject.Config {
+			return inject.Config{Templates: templates}
+		},
+	}
+	baseInput := func() TemplateInput {
+		return TemplateInput{
+			Gateway: &gatewayv1.Gateway{
+				ObjectMeta: metav1.ObjectMeta{Name: "public", Namespace: "app"},
+			},
+			DeploymentName:  "public-dubbo",
+			ServiceAccount:  "public-dubbo",
+			Ports:           []corev1.ServicePort{{Name: "http", Port: 80, TargetPort: intstr.FromInt(15080)}},
+			ServiceType:     corev1.ServiceTypeLoadBalancer,
+			Revision:        "default",
+			DxgateImage:     "kdubbo/dxgate:test",
+			SystemNamespace: "dubbo-system",
+			ClusterID:       "Kubernetes",
+			DomainSuffix:    "cluster.local",
+			AccessLog:       "true",
+			AccessLogFormat: "text",
+		}
+	}
+
+	input := baseInput()
+	input.ActivationControlPlane = "dubbod-activation-replicas.dubbo-system.svc.cluster.local:26030"
+	input.ActivationHoldTimeout = 30
+	rendered, err := controller.render("gateway", input)
+	if err != nil {
+		t.Fatal(err)
+	}
+	deployment := rendered[2]
+	if !strings.Contains(deployment, "DXGATE_ACTIVATION_CONTROL_PLANE") ||
+		!strings.Contains(deployment, "dubbod-activation-replicas.dubbo-system.svc.cluster.local:26030") {
+		t.Fatalf("deployment did not render the activation control plane:\n%s", deployment)
+	}
+	if !strings.Contains(deployment, `name: DXGATE_ACTIVATION_HOLD_TIMEOUT`) ||
+		!strings.Contains(deployment, `value: "30"`) {
+		t.Fatalf("deployment did not render the activation hold timeout:\n%s", deployment)
+	}
+	// POD_NAME is what tells one gateway replica's report from another's; without
+	// it every replica would overwrite the same entry in the control plane.
+	if !strings.Contains(deployment, "name: POD_NAME") {
+		t.Fatalf("deployment must inject POD_NAME for reports to be attributable:\n%s", deployment)
+	}
+
+	// Activation off must leave the gateway exactly as it was before.
+	off, err := controller.render("gateway", baseInput())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if strings.Contains(off[2], "DXGATE_ACTIVATION") {
+		t.Fatalf("activation env leaked into a gateway with activation disabled:\n%s", off[2])
+	}
+}

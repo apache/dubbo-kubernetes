@@ -27,8 +27,10 @@ import (
 	"github.com/apache/dubbo-kubernetes/pkg/config/mesh/meshwatcher"
 	"github.com/apache/dubbo-kubernetes/pkg/config/protocol"
 	"github.com/apache/dubbo-kubernetes/pkg/config/schema/collections"
+	"github.com/apache/dubbo-kubernetes/pkg/config/schema/gvk"
 	"github.com/apache/dubbo-kubernetes/pkg/kube/krt"
 	"github.com/apache/dubbo-kubernetes/pkg/kube/multicluster"
+	networking "github.com/kdubbo/api/networking/v1alpha3"
 	endpoint "github.com/kdubbo/xds-api/endpoint/v1"
 )
 
@@ -50,6 +52,123 @@ func TestBuildClusterLoadAssignmentKeepsAppPortWithoutDUBBOMutual(t *testing.T) 
 
 	if got := firstEndpointPort(t, cla); got != 80 {
 		t.Fatalf("endpoint port = %d, want app port 80", got)
+	}
+}
+
+func TestColdActivationRewritesProxylessEDSAndSwitchesBack(t *testing.T) {
+	targetHost := host.Name("payment.app.svc.cluster.local")
+	activatorHost := host.Name("dxgate-gateway.app.svc.cluster.local")
+	target := newEndpointTestService("payment", "app", string(targetHost), 8080)
+	activator := newEndpointTestService(model.ActivationGatewayServiceName, "app", string(activatorHost), 80)
+	push := newEndpointTestPushContext(t, []config.Config{{
+		Meta: config.Meta{
+			GroupVersionKind: gvk.ServiceActivationPolicy,
+			Name:             "payment",
+			Namespace:        "app",
+		},
+		Spec: &networking.ServiceActivationPolicy{
+			TargetRef:              &networking.PolicyTargetReference{Kind: "Service", Name: "payment"},
+			AutoscalerRef:          &networking.AutoscalerReference{Name: "payment"},
+			BackendServiceAccounts: []string{"payment"},
+		},
+	}}, []*model.Service{target, activator})
+
+	index := model.NewEndpointIndex(model.DisabledCache{})
+	index.UpdateServiceEndpoints(model.ShardKey{}, string(activatorHost), "app", []*model.DubboEndpoint{{
+		Addresses:       []string{"10.0.0.9"},
+		EndpointPort:    15080,
+		ServicePortName: "http",
+		HealthStatus:    model.Healthy,
+	}}, false)
+
+	clusterName := model.BuildSubsetKey(model.TrafficDirectionOutbound, "", targetHost, 8080)
+	builder := NewEndpointBuilder(clusterName, newEndpointTestProxy(), push)
+	cold := builder.BuildClusterLoadAssignment(index)
+	if got := firstEndpointAddress(t, cold); got != "10.0.0.9" {
+		t.Fatalf("cold endpoint address = %q, want Activator 10.0.0.9", got)
+	}
+	if got := firstEndpointPort(t, cold); got != 15080 {
+		t.Fatalf("cold endpoint port = %d, want Activator inbound 15080", got)
+	}
+	if cold.GetClusterName() != clusterName {
+		t.Fatalf("cold cluster name = %q, want original target %q", cold.GetClusterName(), clusterName)
+	}
+
+	index.UpdateServiceEndpoints(model.ShardKey{}, string(targetHost), "app", []*model.DubboEndpoint{{
+		Addresses:       []string{"10.0.0.5"},
+		EndpointPort:    8080,
+		ServicePortName: "http",
+		HealthStatus:    model.Healthy,
+	}}, false)
+	hot := builder.BuildClusterLoadAssignment(index)
+	if got := firstEndpointAddress(t, hot); got != "10.0.0.5" {
+		t.Fatalf("hot endpoint address = %q, want backend 10.0.0.5", got)
+	}
+}
+
+func TestColdActivationDoesNotRewriteRouterEDS(t *testing.T) {
+	targetHost := host.Name("payment.app.svc.cluster.local")
+	activatorHost := host.Name("dxgate-gateway.app.svc.cluster.local")
+	target := newEndpointTestService("payment", "app", string(targetHost), 8080)
+	activator := newEndpointTestService(model.ActivationGatewayServiceName, "app", string(activatorHost), 80)
+	push := newEndpointTestPushContext(t, []config.Config{{
+		Meta: config.Meta{
+			GroupVersionKind: gvk.ServiceActivationPolicy,
+			Name:             "payment",
+			Namespace:        "app",
+		},
+		Spec: &networking.ServiceActivationPolicy{
+			TargetRef:              &networking.PolicyTargetReference{Kind: "Service", Name: "payment"},
+			AutoscalerRef:          &networking.AutoscalerReference{Name: "payment"},
+			BackendServiceAccounts: []string{"payment"},
+		},
+	}}, []*model.Service{target, activator})
+	index := model.NewEndpointIndex(model.DisabledCache{})
+	index.UpdateServiceEndpoints(model.ShardKey{}, string(activatorHost), "app", []*model.DubboEndpoint{{
+		Addresses:       []string{"10.0.0.9"},
+		EndpointPort:    15080,
+		ServicePortName: "http",
+		HealthStatus:    model.Healthy,
+	}}, false)
+
+	proxy := newEndpointTestProxy()
+	proxy.Type = model.Router
+	clusterName := model.BuildSubsetKey(model.TrafficDirectionOutbound, "", targetHost, 8080)
+	cla := NewEndpointBuilder(clusterName, proxy, push).BuildClusterLoadAssignment(index)
+	if hasLbEndpoints(cla) {
+		t.Fatalf("router EDS contains Activator endpoints; this would create an activation self-loop")
+	}
+}
+
+func TestColdActivationRequiresDeclaredBackendIdentity(t *testing.T) {
+	targetHost := host.Name("payment.app.svc.cluster.local")
+	activatorHost := host.Name("dxgate-gateway.app.svc.cluster.local")
+	target := newEndpointTestService("payment", "app", string(targetHost), 8080)
+	activator := newEndpointTestService(model.ActivationGatewayServiceName, "app", string(activatorHost), 80)
+	push := newEndpointTestPushContext(t, []config.Config{{
+		Meta: config.Meta{
+			GroupVersionKind: gvk.ServiceActivationPolicy,
+			Name:             "payment",
+			Namespace:        "app",
+		},
+		Spec: &networking.ServiceActivationPolicy{
+			TargetRef:     &networking.PolicyTargetReference{Kind: "Service", Name: "payment"},
+			AutoscalerRef: &networking.AutoscalerReference{Name: "payment"},
+		},
+	}}, []*model.Service{target, activator})
+
+	index := model.NewEndpointIndex(model.DisabledCache{})
+	index.UpdateServiceEndpoints(model.ShardKey{}, string(activatorHost), "app", []*model.DubboEndpoint{{
+		Addresses:       []string{"10.0.0.9"},
+		EndpointPort:    15080,
+		ServicePortName: "http",
+		HealthStatus:    model.Healthy,
+	}}, false)
+
+	clusterName := model.BuildSubsetKey(model.TrafficDirectionOutbound, "", targetHost, 8080)
+	assignment := NewEndpointBuilder(clusterName, newEndpointTestProxy(), push).BuildClusterLoadAssignment(index)
+	if hasLbEndpoints(assignment) {
+		t.Fatal("activation rewrote EDS without backendServiceAccounts")
 	}
 }
 

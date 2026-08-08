@@ -297,6 +297,166 @@ metadata:
     dubbo: networking
     heritage: Tiller
     release: dubbo
+  name: serviceactivationpolicies.networking.dubbo.apache.org
+spec:
+  group: networking.dubbo.apache.org
+  names:
+    categories:
+    - dubbo
+    - networking
+    kind: ServiceActivationPolicy
+    listKind: ServiceActivationPolicyList
+    plural: serviceactivationpolicies
+    shortNames:
+    - sap
+    singular: serviceactivationpolicy
+  scope: Namespaced
+  versions:
+  - additionalPrinterColumns:
+    - description: Service activated by this policy.
+      jsonPath: .spec.targetRef.name
+      name: Target
+      type: string
+    - description: Autoscaler that owns the replica count.
+      jsonPath: .spec.autoscalerRef.name
+      name: Autoscaler
+      type: string
+    - description: CreationTimestamp is a timestamp representing the server time when
+        this object was created.
+      jsonPath: .metadata.creationTimestamp
+      name: Age
+      type: date
+    name: v1alpha3
+    schema:
+      openAPIV3Schema:
+        properties:
+          spec:
+            description: 'On-demand activation for a Service that is scaled to zero.
+              See more details at: '
+            properties:
+              autoscalerRef:
+                description: Autoscaler that owns the replica count for the target,
+                  and that activation demand is reported to.
+                properties:
+                  group:
+                    description: API group of the autoscaler.
+                    type: string
+                  kind:
+                    description: Kind of the autoscaler.
+                    type: string
+                  name:
+                    description: Name of the autoscaler object, in the same namespace
+                      as this policy.
+                    type: string
+                required:
+                - name
+                type: object
+              backendServiceAccounts:
+                description: ServiceAccounts that may serve the target while it is
+                  hot.
+                items:
+                  type: string
+                type: array
+              failurePolicy:
+                description: |-
+                  What to do when activation cannot proceed, for example because the autoscaler is unreachable.
+
+                  Valid Options: REJECT, KEEP_MIN_REPLICAS
+                enum:
+                - FAILURE_POLICY_UNSPECIFIED
+                - REJECT
+                - KEEP_MIN_REPLICAS
+                type: string
+              maxPendingBytes:
+                description: Maximum total body bytes buffered across all pending
+                  requests for this target.
+                format: int64
+                type: integer
+              maxPendingRequests:
+                description: Maximum requests held for this target at once.
+                format: int32
+                type: integer
+              protocols:
+                description: |-
+                  Protocols eligible for activation.
+
+                  Valid Options: HTTP, GRPC_UNARY, TRIPLE_UNARY
+                items:
+                  enum:
+                  - ACTIVATION_PROTOCOL_UNSPECIFIED
+                  - HTTP
+                  - GRPC_UNARY
+                  - TRIPLE_UNARY
+                  type: string
+                type: array
+              requestTimeout:
+                description: How long a request may wait for the target to become
+                  ready before it is failed.
+                type: string
+                x-kubernetes-validations:
+                - message: must be a valid duration greater than 1ms
+                  rule: duration(self) >= duration('1ms')
+              targetRef:
+                description: Service whose requests may be held during activation.
+                properties:
+                  group:
+                    description: API group of the target.
+                    type: string
+                  kind:
+                    description: Kind of the target.
+                    type: string
+                  name:
+                    description: Name of the target object.
+                    type: string
+                  sectionName:
+                    description: Optional section name for future per-port attachment.
+                    type: string
+                required:
+                - kind
+                - name
+                type: object
+            required:
+            - targetRef
+            - autoscalerRef
+            - backendServiceAccounts
+            type: object
+          status:
+            properties:
+              conditions:
+                items:
+                  properties:
+                    observedGeneration:
+                      anyOf:
+                      - type: integer
+                      - type: string
+                      x-kubernetes-int-or-string: true
+                    reason:
+                      type: string
+                    status:
+                      type: string
+                    type:
+                      type: string
+                  type: object
+                type: array
+            type: object
+            x-kubernetes-preserve-unknown-fields: true
+        type: object
+    served: true
+    storage: true
+    subresources:
+      status: {}
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    "helm.sh/resource-policy": keep
+  labels:
+    app: dubbo
+    chart: dubbo
+    dubbo: networking
+    heritage: Tiller
+    release: dubbo
   name: serviceentries.networking.dubbo.apache.org
 spec:
   group: networking.dubbo.apache.org
