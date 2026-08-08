@@ -230,12 +230,19 @@ jobs:
 
   activation-e2e:
     name: Activation E2E (KEDA)
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04-arm
     timeout-minutes: 45
     if: github.repository == 'apache/dubbo-kubernetes'
+    env:
+      DOCKER_DEFAULT_PLATFORM: linux/arm64
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+
+      - name: Verify native ARM64 runner
+        run: |
+          test "$(uname -m)" = "aarch64"
+          test "$(docker info --format '{{.Architecture}}')" = "aarch64"
 
       # Pin the data plane source that implements request holding and demand
       # reporting. A floating main branch could make a control-plane PR pass
