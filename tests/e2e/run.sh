@@ -65,6 +65,17 @@ fail() {
   "${KUBECTL[@]}" get pods -A -o wide >&2 || true
   echo "--- diagnostics: dubbod logs ---" >&2
   "${KUBECTL[@]}" -n "${SYSTEM_NS}" logs deploy/dubbod --tail=100 >&2 || true
+  echo "--- diagnostics: managed gateway logs ---" >&2
+  local pod
+  while read -r pod; do
+    [[ -n "${pod}" ]] || continue
+    echo "--- ${APP_NS}/${pod} current ---" >&2
+    "${KUBECTL[@]}" -n "${APP_NS}" logs "${pod}" --all-containers --tail=100 >&2 || true
+    echo "--- ${APP_NS}/${pod} previous ---" >&2
+    "${KUBECTL[@]}" -n "${APP_NS}" logs "${pod}" --all-containers --previous --tail=100 >&2 || true
+  done < <("${KUBECTL[@]}" -n "${APP_NS}" get pods \
+    -l gateway.networking.k8s.io/gateway-name \
+    -o jsonpath='{range .items[*]}{.metadata.name}{"\n"}{end}' 2>/dev/null || true)
   exit 1
 }
 
