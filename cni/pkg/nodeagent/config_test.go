@@ -30,12 +30,12 @@ func TestParseNetConfDefaults(t *testing.T) {
 	if conf.CNIVersion != "1.0.0" {
 		t.Fatalf("cniVersion = %q, want %q", conf.CNIVersion, "1.0.0")
 	}
-	if conf.ManagedLabel != inject.ProxylessManagedLabel || conf.ManagedLabelValue != inject.ProxylessManagedLabelValue {
+	if conf.ManagedLabel != inject.InherentManagedLabel || conf.ManagedLabelValue != inject.InherentManagedLabelValue {
 		t.Fatalf("managed label = %s/%s, want %s/%s", conf.ManagedLabel, conf.ManagedLabelValue,
-			inject.ProxylessManagedLabel, inject.ProxylessManagedLabelValue)
+			inject.InherentManagedLabel, inject.InherentManagedLabelValue)
 	}
-	if conf.GRPCInboundPort != inject.ProxylessGRPCInboundPort {
-		t.Fatalf("grpcInboundPort = %d, want %d", conf.GRPCInboundPort, inject.ProxylessGRPCInboundPort)
+	if conf.GRPCInboundPort != inject.InherentGRPCInboundPort {
+		t.Fatalf("grpcInboundPort = %d, want %d", conf.GRPCInboundPort, inject.InherentGRPCInboundPort)
 	}
 	if conf.IPTablesPath != defaultIPTablesPath || conf.IPSetPath != defaultIPSetPath {
 		t.Fatalf("iptables/ipset path = %s/%s, want %s/%s", conf.IPTablesPath, conf.IPSetPath, defaultIPTablesPath, defaultIPSetPath)

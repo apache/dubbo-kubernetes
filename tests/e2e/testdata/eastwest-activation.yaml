@@ -46,7 +46,7 @@ spec:
     metadata:
       labels:
         app: payment
-        proxyless.dubbo.apache.org/inject: "true"
+        inherent.dubbo.apache.org/inject: "true"
       annotations:
         inject.dubbo.apache.org/templates: grpc-engine
     spec:

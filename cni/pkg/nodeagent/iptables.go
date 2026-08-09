@@ -28,12 +28,12 @@ const (
 	meshPodIPSet     = "DUBBO-GRPC-INBOUND-PODS"
 	meshExcludeIPSet = "DUBBO-GRPC-INBOUND-EXCLUDE"
 	dxgateAdminPort  = 26021
-	// dxplaneAdminPort carries the inbound sidecar's health, readiness and
+	// dxproxyAdminPort carries the inbound sidecar's health, readiness and
 	// metrics endpoints. kubelet probes it from the host, so the fence has to
 	// exempt it or every injected pod fails its readiness probe. Workloads that
 	// move the admin listener elsewhere exempt it with the
-	// proxyless.dubbo.apache.org/excludeInboundPorts annotation instead.
-	dxplaneAdminPort = 15020
+	// inherent.dubbo.apache.org/excludeInboundPorts annotation instead.
+	dxproxyAdminPort = 15020
 )
 
 type CommandRunner interface {
@@ -169,12 +169,12 @@ func (m *IPTablesRuleManager) ensureBase(ctx context.Context) error {
 	allowExcluded := []string{"-m", "set", "--match-set", meshExcludeIPSet, "dst,dst", "-p", "tcp", "-j", "RETURN"}
 	allowGRPCInbound := []string{"-m", "set", "--match-set", meshPodIPSet, "dst", "-p", "tcp", "--dport", fmt.Sprint(m.grpcInboundPort), "-j", "RETURN"}
 	allowDxgateAdmin := []string{"-m", "set", "--match-set", meshPodIPSet, "dst", "-p", "tcp", "--dport", fmt.Sprint(dxgateAdminPort), "-j", "RETURN"}
-	allowDxplaneAdmin := []string{"-m", "set", "--match-set", meshPodIPSet, "dst", "-p", "tcp", "--dport", fmt.Sprint(dxplaneAdminPort), "-j", "RETURN"}
+	allowDxproxyAdmin := []string{"-m", "set", "--match-set", meshPodIPSet, "dst", "-p", "tcp", "--dport", fmt.Sprint(dxproxyAdminPort), "-j", "RETURN"}
 	rejectOtherTCP := []string{"-m", "set", "--match-set", meshPodIPSet, "dst", "-p", "tcp", "-j", "REJECT"}
 	m.deleteRepeated(ctx, allowExcluded...)
 	m.deleteRepeated(ctx, allowGRPCInbound...)
 	m.deleteRepeated(ctx, allowDxgateAdmin...)
-	m.deleteRepeated(ctx, allowDxplaneAdmin...)
+	m.deleteRepeated(ctx, allowDxproxyAdmin...)
 	m.deleteRepeated(ctx, rejectOtherTCP...)
 	if err := m.appendRule(ctx, allowExcluded...); err != nil {
 		return err
@@ -185,7 +185,7 @@ func (m *IPTablesRuleManager) ensureBase(ctx context.Context) error {
 	if err := m.appendRule(ctx, allowDxgateAdmin...); err != nil {
 		return err
 	}
-	if err := m.appendRule(ctx, allowDxplaneAdmin...); err != nil {
+	if err := m.appendRule(ctx, allowDxproxyAdmin...); err != nil {
 		return err
 	}
 	return m.appendRule(ctx, rejectOtherTCP...)

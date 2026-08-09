@@ -34,7 +34,7 @@ spec:
       labels:
         app: dubbo-cni
         dubbo.apache.org/rev: default
-        proxyless.dubbo.apache.org/inject: "false"
+        inherent.dubbo.apache.org/inject: "false"
     spec:
       serviceAccountName: dubbo-cni
       hostNetwork: true
@@ -57,7 +57,7 @@ spec:
             - --token-file=/var/run/dubbo-cni/token
             - --ca-file=/var/run/dubbo-cni/ca.crt
             - --grpc-inbound-port=15080
-            - --managed-label=proxyless.dubbo.apache.org/managed
+            - --managed-label=inherent.dubbo.apache.org/managed
             - --managed-label-value=true
             - --iptables-path=iptables
             - --ipset-path=ipset

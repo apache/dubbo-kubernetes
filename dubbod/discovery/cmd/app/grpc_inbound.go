@@ -72,10 +72,10 @@ const grpcInboundAcceptTimeout = 10 * time.Second
 
 func newGRPCInboundCommand() *cobra.Command {
 	opts := &grpcInboundOptions{
-		listen:            firstNonEmpty(os.Getenv("DUBBO_GRPC_INBOUND_LISTEN"), fmt.Sprintf(":%d", inject.ProxylessGRPCInboundPort)),
+		listen:            firstNonEmpty(os.Getenv("DUBBO_GRPC_INBOUND_LISTEN"), fmt.Sprintf(":%d", inject.InherentGRPCInboundPort)),
 		upstream:          firstNonEmpty(os.Getenv("DUBBO_GRPC_INBOUND_UPSTREAM"), "127.0.0.1:80"),
 		bootstrapPath:     os.Getenv("GRPC_XDS_BOOTSTRAP"),
-		runtimeConfig:     firstNonEmpty(os.Getenv(inject.ProxylessGRPCConfigEnvName), inject.ProxylessGRPCConfigPath),
+		runtimeConfig:     firstNonEmpty(os.Getenv(inject.InherentGRPCConfigEnvName), inject.InherentGRPCConfigPath),
 		mtlsMode:          os.Getenv("DUBBO_GRPC_INBOUND_MTLS_MODE"),
 		trustDomain:       firstNonEmpty(os.Getenv("DUBBO_GRPC_INBOUND_TRUST_DOMAIN"), os.Getenv("TRUST_DOMAIN")),
 		allowedPrincipals: os.Getenv("DUBBO_GRPC_INBOUND_ALLOWED_PRINCIPALS"),
@@ -85,7 +85,7 @@ func newGRPCInboundCommand() *cobra.Command {
 	}
 	c := &cobra.Command{
 		Use:   "grpc-inbound",
-		Short: "run an inbound mTLS data-plane proxy for proxyless workloads",
+		Short: "run an inbound mTLS data-plane proxy for Inherent workloads",
 		Args:  cobra.NoArgs,
 		PreRunE: func(cmd *cobra.Command, args []string) error {
 			log.SetDefaultScope(grpcInboundLogScope)
@@ -98,7 +98,7 @@ func newGRPCInboundCommand() *cobra.Command {
 	c.Flags().StringVar(&opts.listen, "listen", opts.listen, "mTLS listener address")
 	c.Flags().StringVar(&opts.upstream, "upstream", opts.upstream, "local plaintext upstream address")
 	c.Flags().StringVar(&opts.bootstrapPath, "bootstrap", opts.bootstrapPath, "gRPC xDS bootstrap file")
-	c.Flags().StringVar(&opts.runtimeConfig, "runtime-config", opts.runtimeConfig, "proxyless runtime config file")
+	c.Flags().StringVar(&opts.runtimeConfig, "runtime-config", opts.runtimeConfig, "Inherent runtime config file")
 	c.Flags().StringVar(&opts.mtlsMode, "mtls-mode", opts.mtlsMode, "override inbound mTLS mode: DISABLE, PERMISSIVE, or STRICT")
 	c.Flags().StringVar(&opts.trustDomain, "trust-domain", opts.trustDomain, "trust domain peers must belong to; defaults to the trust domain of the workload certificate")
 	c.Flags().StringVar(&opts.allowedPrincipals, "allowed-principals", opts.allowedPrincipals,

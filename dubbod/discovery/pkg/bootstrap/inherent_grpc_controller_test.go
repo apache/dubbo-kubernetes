@@ -45,7 +45,7 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 )
 
-func TestShouldManageProxylessGRPCPod(t *testing.T) {
+func TestShouldManageInherentGRPCPod(t *testing.T) {
 	tests := []struct {
 		name string
 		pod  *corev1.Pod
@@ -55,7 +55,7 @@ func TestShouldManageProxylessGRPCPod(t *testing.T) {
 			name: "explicit grpc-engine template",
 			pod: &corev1.Pod{ObjectMeta: metav1.ObjectMeta{
 				Annotations: map[string]string{
-					inject.ProxylessInjectTemplatesAnnoName: inject.ProxylessGRPCTemplateName,
+					inject.InherentInjectTemplatesAnnoName: inject.InherentGRPCTemplateName,
 				},
 			}},
 			want: true,
@@ -65,7 +65,7 @@ func TestShouldManageProxylessGRPCPod(t *testing.T) {
 			pod: &corev1.Pod{Spec: corev1.PodSpec{Containers: []corev1.Container{{
 				Env: []corev1.EnvVar{{
 					Name:  "GRPC_XDS_BOOTSTRAP",
-					Value: inject.ProxylessGRPCBootstrapPath,
+					Value: inject.InherentGRPCBootstrapPath,
 				}},
 			}}}},
 			want: true,
@@ -74,8 +74,8 @@ func TestShouldManageProxylessGRPCPod(t *testing.T) {
 			name: "default injected pod marked by runtime config env",
 			pod: &corev1.Pod{Spec: corev1.PodSpec{Containers: []corev1.Container{{
 				Env: []corev1.EnvVar{{
-					Name:  inject.ProxylessGRPCConfigEnvName,
-					Value: inject.ProxylessGRPCConfigPath,
+					Name:  inject.InherentGRPCConfigEnvName,
+					Value: inject.InherentGRPCConfigPath,
 				}},
 			}}}},
 			want: true,
@@ -83,7 +83,7 @@ func TestShouldManageProxylessGRPCPod(t *testing.T) {
 		{
 			name: "default injected pod marked by xds secret volume",
 			pod: &corev1.Pod{Spec: corev1.PodSpec{Volumes: []corev1.Volume{{
-				Name: inject.ProxylessXDSVolumeName,
+				Name: inject.InherentXDSVolumeName,
 				VolumeSource: corev1.VolumeSource{
 					Secret: &corev1.SecretVolumeSource{SecretName: "dubbo-xds-pod"},
 				},
@@ -91,7 +91,7 @@ func TestShouldManageProxylessGRPCPod(t *testing.T) {
 			want: true,
 		},
 		{
-			name: "not proxyless grpc",
+			name: "not Inherent gRPC",
 			pod:  &corev1.Pod{},
 			want: false,
 		},
@@ -104,28 +104,28 @@ func TestShouldManageProxylessGRPCPod(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := shouldManageProxylessGRPCPod(tt.pod); got != tt.want {
-				t.Fatalf("shouldManageProxylessGRPCPod() = %v, want %v", got, tt.want)
+			if got := shouldManageInherentGRPCPod(tt.pod); got != tt.want {
+				t.Fatalf("shouldManageInherentGRPCPod() = %v, want %v", got, tt.want)
 			}
 		})
 	}
 }
 
-func TestBuildProxylessGRPCSecretIncludesRuntimeConfig(t *testing.T) {
+func TestBuildInherentGRPCSecretIncludesRuntimeConfig(t *testing.T) {
 	pod := &corev1.Pod{ObjectMeta: metav1.ObjectMeta{
 		Name:      "nginx",
 		Namespace: "app",
 		UID:       "pod-uid",
 	}}
 
-	secret := buildProxylessGRPCSecret(pod, []byte("bootstrap"), []byte("runtime"), []byte("cert"), []byte("key"), []byte("root"))
-	if secret.Name != inject.ProxylessGRPCSecretNameForMeta(pod.ObjectMeta) {
-		t.Fatalf("secret name = %q, want proxyless secret name", secret.Name)
+	secret := buildInherentGRPCSecret(pod, []byte("bootstrap"), []byte("runtime"), []byte("cert"), []byte("key"), []byte("root"))
+	if secret.Name != inject.InherentGRPCSecretNameForMeta(pod.ObjectMeta) {
+		t.Fatalf("secret name = %q, want inherent secret name", secret.Name)
 	}
-	if got := string(secret.Data[inject.ProxylessGRPCBootstrapFileName]); got != "bootstrap" {
+	if got := string(secret.Data[inject.InherentGRPCBootstrapFileName]); got != "bootstrap" {
 		t.Fatalf("bootstrap data = %q, want bootstrap", got)
 	}
-	if got := string(secret.Data[inject.ProxylessGRPCConfigFileName]); got != "runtime" {
+	if got := string(secret.Data[inject.InherentGRPCConfigFileName]); got != "runtime" {
 		t.Fatalf("runtime config data = %q, want runtime", got)
 	}
 	if got := string(secret.Data[constants.CACertNamespaceConfigMapDataName]); got != "root" {
@@ -137,8 +137,8 @@ func TestBuildProxylessGRPCSecretIncludesRuntimeConfig(t *testing.T) {
 }
 
 func TestBuildRuntimeConfigJSON(t *testing.T) {
-	workload := &proxylessGRPCWorkloadContext{
-		nodeID:           "proxyless~10.0.0.1~nginx.app~app.svc.cluster.local",
+	workload := &inherentGRPCWorkloadContext{
+		nodeID:           "inherent~10.0.0.1~nginx.app~app.svc.cluster.local",
 		podName:          "nginx",
 		podNamespace:     "app",
 		podIP:            "10.0.0.1",
@@ -154,22 +154,22 @@ func TestBuildRuntimeConfigJSON(t *testing.T) {
 		t.Fatalf("buildRuntimeConfigJSON() failed: %v", err)
 	}
 
-	var got proxylessGRPCRuntimeConfig
+	var got inherentGRPCRuntimeConfig
 	if err := json.Unmarshal(data, &got); err != nil {
 		t.Fatalf("runtime config is not valid JSON: %v", err)
 	}
 
-	if got.Version != proxylessGRPCRuntimeConfigVersion {
-		t.Fatalf("version = %q, want %q", got.Version, proxylessGRPCRuntimeConfigVersion)
+	if got.Version != inherentGRPCRuntimeConfigVersion {
+		t.Fatalf("version = %q, want %q", got.Version, inherentGRPCRuntimeConfigVersion)
 	}
-	if got.Mode != "proxyless-grpc" {
-		t.Fatalf("mode = %q, want proxyless-grpc", got.Mode)
+	if got.Mode != "inherent-grpc" {
+		t.Fatalf("mode = %q, want inherent-grpc", got.Mode)
 	}
-	if got.Env["GRPC_XDS_BOOTSTRAP"] != inject.ProxylessGRPCBootstrapPath {
-		t.Fatalf("GRPC_XDS_BOOTSTRAP = %q, want %q", got.Env["GRPC_XDS_BOOTSTRAP"], inject.ProxylessGRPCBootstrapPath)
+	if got.Env["GRPC_XDS_BOOTSTRAP"] != inject.InherentGRPCBootstrapPath {
+		t.Fatalf("GRPC_XDS_BOOTSTRAP = %q, want %q", got.Env["GRPC_XDS_BOOTSTRAP"], inject.InherentGRPCBootstrapPath)
 	}
-	if got.Env[inject.ProxylessGRPCConfigEnvName] != inject.ProxylessGRPCConfigPath {
-		t.Fatalf("%s = %q, want %q", inject.ProxylessGRPCConfigEnvName, got.Env[inject.ProxylessGRPCConfigEnvName], inject.ProxylessGRPCConfigPath)
+	if got.Env[inject.InherentGRPCConfigEnvName] != inject.InherentGRPCConfigPath {
+		t.Fatalf("%s = %q, want %q", inject.InherentGRPCConfigEnvName, got.Env[inject.InherentGRPCConfigEnvName], inject.InherentGRPCConfigPath)
 	}
 	if got.Bootstrap.DiscoveryAddress != workload.discoveryAddress {
 		t.Fatalf("discoveryAddress = %q, want %q", got.Bootstrap.DiscoveryAddress, workload.discoveryAddress)
@@ -177,32 +177,32 @@ func TestBuildRuntimeConfigJSON(t *testing.T) {
 	if got.Env["DUBBO_META_CLUSTER_ID"] != workload.clusterID {
 		t.Fatalf("DUBBO_META_CLUSTER_ID = %q, want %q", got.Env["DUBBO_META_CLUSTER_ID"], workload.clusterID)
 	}
-	if got.Env[inject.ProxylessGRPCKeepaliveEnvName] != inject.ProxylessGRPCKeepaliveValue {
-		t.Fatalf("%s = %q, want %q", inject.ProxylessGRPCKeepaliveEnvName, got.Env[inject.ProxylessGRPCKeepaliveEnvName], inject.ProxylessGRPCKeepaliveValue)
+	if got.Env[inject.InherentGRPCKeepaliveEnvName] != inject.InherentGRPCKeepaliveValue {
+		t.Fatalf("%s = %q, want %q", inject.InherentGRPCKeepaliveEnvName, got.Env[inject.InherentGRPCKeepaliveEnvName], inject.InherentGRPCKeepaliveValue)
 	}
-	if got.Env[inject.ProxylessGRPCKeepaliveTimeEnv] != inject.ProxylessGRPCKeepaliveTime {
-		t.Fatalf("%s = %q, want %q", inject.ProxylessGRPCKeepaliveTimeEnv, got.Env[inject.ProxylessGRPCKeepaliveTimeEnv], inject.ProxylessGRPCKeepaliveTime)
+	if got.Env[inject.InherentGRPCKeepaliveTimeEnv] != inject.InherentGRPCKeepaliveTime {
+		t.Fatalf("%s = %q, want %q", inject.InherentGRPCKeepaliveTimeEnv, got.Env[inject.InherentGRPCKeepaliveTimeEnv], inject.InherentGRPCKeepaliveTime)
 	}
-	if got.Env[inject.ProxylessGRPCKeepaliveTimeoutEnv] != inject.ProxylessGRPCKeepaliveTimeout {
-		t.Fatalf("%s = %q, want %q", inject.ProxylessGRPCKeepaliveTimeoutEnv, got.Env[inject.ProxylessGRPCKeepaliveTimeoutEnv], inject.ProxylessGRPCKeepaliveTimeout)
+	if got.Env[inject.InherentGRPCKeepaliveTimeoutEnv] != inject.InherentGRPCKeepaliveTimeout {
+		t.Fatalf("%s = %q, want %q", inject.InherentGRPCKeepaliveTimeoutEnv, got.Env[inject.InherentGRPCKeepaliveTimeoutEnv], inject.InherentGRPCKeepaliveTimeout)
 	}
-	if got.Env[inject.ProxylessGRPCKeepalivePermitWithoutStreamEnv] != inject.ProxylessGRPCKeepaliveValue {
-		t.Fatalf("%s = %q, want %q", inject.ProxylessGRPCKeepalivePermitWithoutStreamEnv, got.Env[inject.ProxylessGRPCKeepalivePermitWithoutStreamEnv], inject.ProxylessGRPCKeepaliveValue)
+	if got.Env[inject.InherentGRPCKeepalivePermitWithoutStreamEnv] != inject.InherentGRPCKeepaliveValue {
+		t.Fatalf("%s = %q, want %q", inject.InherentGRPCKeepalivePermitWithoutStreamEnv, got.Env[inject.InherentGRPCKeepalivePermitWithoutStreamEnv], inject.InherentGRPCKeepaliveValue)
 	}
 	if !got.Keepalive.Enabled {
 		t.Fatalf("keepalive enabled = false, want true")
 	}
-	if got.Keepalive.Time != inject.ProxylessGRPCKeepaliveTime {
-		t.Fatalf("keepalive time = %q, want %q", got.Keepalive.Time, inject.ProxylessGRPCKeepaliveTime)
+	if got.Keepalive.Time != inject.InherentGRPCKeepaliveTime {
+		t.Fatalf("keepalive time = %q, want %q", got.Keepalive.Time, inject.InherentGRPCKeepaliveTime)
 	}
-	if got.Keepalive.Timeout != inject.ProxylessGRPCKeepaliveTimeout {
-		t.Fatalf("keepalive timeout = %q, want %q", got.Keepalive.Timeout, inject.ProxylessGRPCKeepaliveTimeout)
+	if got.Keepalive.Timeout != inject.InherentGRPCKeepaliveTimeout {
+		t.Fatalf("keepalive timeout = %q, want %q", got.Keepalive.Timeout, inject.InherentGRPCKeepaliveTimeout)
 	}
 	if !got.Keepalive.PermitWithoutStream {
 		t.Fatalf("keepalive permitWithoutStream = false, want true")
 	}
-	if got.Env[inject.ProxylessXDSAddressEnvName] != workload.discoveryAddress {
-		t.Fatalf("%s = %q, want %q", inject.ProxylessXDSAddressEnvName, got.Env[inject.ProxylessXDSAddressEnvName], workload.discoveryAddress)
+	if got.Env[inject.InherentXDSAddressEnvName] != workload.discoveryAddress {
+		t.Fatalf("%s = %q, want %q", inject.InherentXDSAddressEnvName, got.Env[inject.InherentXDSAddressEnvName], workload.discoveryAddress)
 	}
 	if got.Env["CA_ADDRESS"] != workload.caAddress {
 		t.Fatalf("CA_ADDRESS = %q, want %q", got.Env["CA_ADDRESS"], workload.caAddress)
@@ -210,7 +210,7 @@ func TestBuildRuntimeConfigJSON(t *testing.T) {
 	if got.Certificates.Provider != grpcxds.FileWatcherCertProviderName {
 		t.Fatalf("cert provider = %q, want %q", got.Certificates.Provider, grpcxds.FileWatcherCertProviderName)
 	}
-	if got.Certificates.CertChain != inject.ProxylessXDSMountPath+"/"+constants.CertChainFilename {
+	if got.Certificates.CertChain != inject.InherentXDSMountPath+"/"+constants.CertChainFilename {
 		t.Fatalf("certChain = %q, want mounted cert-chain path", got.Certificates.CertChain)
 	}
 	if got.Workload.NodeID != workload.nodeID {
@@ -225,7 +225,7 @@ func TestBuildRuntimeConfigJSON(t *testing.T) {
 }
 
 func TestBuildWorkloadContextUsesInjectedRemoteValues(t *testing.T) {
-	controller := &proxylessGRPCWorkloadController{
+	controller := &inherentGRPCWorkloadController{
 		server: &Server{
 			environment: &discoverymodel.Environment{
 				DomainSuffix: constants.DefaultClusterLocalDomain,
@@ -243,7 +243,7 @@ func TestBuildWorkloadContextUsesInjectedRemoteValues(t *testing.T) {
 				Name: "app",
 				Env: []corev1.EnvVar{
 					{Name: "DUBBO_META_CLUSTER_ID", Value: "remote"},
-					{Name: inject.ProxylessXDSAddressEnvName, Value: "192.168.15.164:32049"},
+					{Name: inject.InherentXDSAddressEnvName, Value: "192.168.15.164:32049"},
 					{Name: "CA_ADDRESS", Value: "192.168.15.164:32049"},
 				},
 			}},
@@ -268,11 +268,11 @@ func TestBuildWorkloadContextUsesInjectedRemoteValues(t *testing.T) {
 	}
 }
 
-func TestBuildRuntimeTrafficConfigCapturesProxylessSecurity(t *testing.T) {
+func TestBuildRuntimeTrafficConfigCapturesInherentSecurity(t *testing.T) {
 	hostname := host.Name("provider.grpc-app.svc.cluster.local")
-	svc := newProxylessRuntimeTestService("provider", "grpc-app", string(hostname), 17070)
-	push := newProxylessRuntimeTestPushContext(t, []config.Config{
-		newProxylessStrictPeerAuthenticationConfig("grpc-app-strict-mtls", "grpc-app"),
+	svc := newInherentRuntimeTestService("provider", "grpc-app", string(hostname), 17070)
+	push := newInherentRuntimeTestPushContext(t, []config.Config{
+		newInherentStrictPeerAuthenticationConfig("grpc-app-strict-mtls", "grpc-app"),
 	}, []*discoverymodel.Service{svc})
 
 	serviceConfig := buildRuntimeServiceConfig(push, nil, svc)
@@ -295,9 +295,9 @@ func TestBuildRuntimeTrafficConfigCapturesProxylessSecurity(t *testing.T) {
 
 func TestBuildRuntimeTrafficConfigCapturesPermissivePeerAuthentication(t *testing.T) {
 	hostname := host.Name("provider.grpc-app.svc.cluster.local")
-	svc := newProxylessRuntimeTestService("provider", "grpc-app", string(hostname), 17070)
-	push := newProxylessRuntimeTestPushContext(t, []config.Config{
-		newProxylessPeerAuthenticationConfig("grpc-app-permissive-mtls", "grpc-app", security.PeerAuthentication_MutualTLS_PERMISSIVE),
+	svc := newInherentRuntimeTestService("provider", "grpc-app", string(hostname), 17070)
+	push := newInherentRuntimeTestPushContext(t, []config.Config{
+		newInherentPeerAuthenticationConfig("grpc-app-permissive-mtls", "grpc-app", security.PeerAuthentication_MutualTLS_PERMISSIVE),
 	}, []*discoverymodel.Service{svc})
 
 	serviceConfig := buildRuntimeServiceConfig(push, nil, svc)
@@ -311,8 +311,8 @@ func TestBuildRuntimeTrafficConfigCapturesPermissivePeerAuthentication(t *testin
 
 func TestBuildRuntimeTrafficConfigCapturesFaultInjection(t *testing.T) {
 	hostname := host.Name("provider.grpc-app.svc.cluster.local")
-	svc := newProxylessRuntimeTestService("provider", "grpc-app", string(hostname), 17070)
-	push := newProxylessRuntimeTestPushContext(t, []config.Config{{
+	svc := newInherentRuntimeTestService("provider", "grpc-app", string(hostname), 17070)
+	push := newInherentRuntimeTestPushContext(t, []config.Config{{
 		Meta: config.Meta{
 			GroupVersionKind: gvk.FaultInjectionPolicy,
 			Name:             "provider-fault",
@@ -348,7 +348,7 @@ func TestBuildRuntimeTrafficConfigCapturesFaultInjection(t *testing.T) {
 	}
 }
 
-func TestProxylessGRPCRuntimeConfigNeedsUpdate(t *testing.T) {
+func TestInherentGRPCRuntimeConfigNeedsUpdate(t *testing.T) {
 	tests := []struct {
 		name string
 		req  *discoverymodel.PushRequest
@@ -405,8 +405,8 @@ func TestProxylessGRPCRuntimeConfigNeedsUpdate(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := proxylessGRPCRuntimeConfigNeedsUpdate(tt.req); got != tt.want {
-				t.Fatalf("proxylessGRPCRuntimeConfigNeedsUpdate() = %v, want %v", got, tt.want)
+			if got := inherentGRPCRuntimeConfigNeedsUpdate(tt.req); got != tt.want {
+				t.Fatalf("inherentGRPCRuntimeConfigNeedsUpdate() = %v, want %v", got, tt.want)
 			}
 		})
 	}
@@ -418,14 +418,14 @@ func TestHandleRuntimeConfigUpdateEnqueuesManagedPods(t *testing.T) {
 			Name:      name,
 			Namespace: namespace,
 			Annotations: map[string]string{
-				inject.ProxylessInjectTemplatesAnnoName: inject.ProxylessGRPCTemplateName,
+				inject.InherentInjectTemplatesAnnoName: inject.InherentGRPCTemplateName,
 			},
 		}}
 	}
 
 	reconciled := make(chan types.NamespacedName, 3)
-	controller := &proxylessGRPCWorkloadController{
-		managedPods: staticProxylessPodIndexer{items: []any{
+	controller := &inherentGRPCWorkloadController{
+		managedPods: staticInherentPodIndexer{items: []any{
 			managed("zeta", "team-b"),
 			"not-a-pod",
 			nil,
@@ -433,7 +433,7 @@ func TestHandleRuntimeConfigUpdateEnqueuesManagedPods(t *testing.T) {
 			managed("alpha", "team-a"),
 		}},
 	}
-	controller.queue = controllers.NewQueue("proxyless runtime config test",
+	controller.queue = controllers.NewQueue("Inherent runtime config test",
 		controllers.WithReconciler(func(key types.NamespacedName) error {
 			reconciled <- key
 			return nil
@@ -500,12 +500,12 @@ func TestNextRotationTime(t *testing.T) {
 	}
 }
 
-func newProxylessRuntimeTestPushContext(t *testing.T, configs []config.Config, services []*discoverymodel.Service) *discoverymodel.PushContext {
-	_, push := newProxylessRuntimeTestEnvironment(t, configs, services)
+func newInherentRuntimeTestPushContext(t *testing.T, configs []config.Config, services []*discoverymodel.Service) *discoverymodel.PushContext {
+	_, push := newInherentRuntimeTestEnvironment(t, configs, services)
 	return push
 }
 
-func newProxylessRuntimeTestEnvironment(t *testing.T, configs []config.Config, services []*discoverymodel.Service) (*discoverymodel.Environment, *discoverymodel.PushContext) {
+func newInherentRuntimeTestEnvironment(t *testing.T, configs []config.Config, services []*discoverymodel.Service) (*discoverymodel.Environment, *discoverymodel.PushContext) {
 	t.Helper()
 
 	store := memory.Make(collections.DubboGatewayAPI())
@@ -517,7 +517,7 @@ func newProxylessRuntimeTestEnvironment(t *testing.T, configs []config.Config, s
 
 	env := discoverymodel.NewEnvironment()
 	env.ConfigStore = store
-	env.ServiceDiscovery = proxylessRuntimeStaticServiceDiscovery{services: services}
+	env.ServiceDiscovery = inherentRuntimeStaticServiceDiscovery{services: services}
 	env.Watcher = meshwatcher.ConfigAdapter(krt.NewStatic(&meshwatcher.MeshConfigResource{
 		MeshConfig: mesh.DefaultMeshConfig(),
 	}, true))
@@ -529,7 +529,7 @@ func newProxylessRuntimeTestEnvironment(t *testing.T, configs []config.Config, s
 	return env, push
 }
 
-func newProxylessRuntimeTestService(name, namespace, hostname string, port int) *discoverymodel.Service {
+func newInherentRuntimeTestService(name, namespace, hostname string, port int) *discoverymodel.Service {
 	return &discoverymodel.Service{
 		Hostname: host.Name(hostname),
 		Ports: discoverymodel.PortList{
@@ -546,11 +546,11 @@ func newProxylessRuntimeTestService(name, namespace, hostname string, port int) 
 	}
 }
 
-func newProxylessStrictPeerAuthenticationConfig(name, namespace string) config.Config {
-	return newProxylessPeerAuthenticationConfig(name, namespace, security.PeerAuthentication_MutualTLS_STRICT)
+func newInherentStrictPeerAuthenticationConfig(name, namespace string) config.Config {
+	return newInherentPeerAuthenticationConfig(name, namespace, security.PeerAuthentication_MutualTLS_STRICT)
 }
 
-func newProxylessPeerAuthenticationConfig(name, namespace string, mode security.PeerAuthentication_MutualTLS_Mode) config.Config {
+func newInherentPeerAuthenticationConfig(name, namespace string, mode security.PeerAuthentication_MutualTLS_Mode) config.Config {
 	return config.Config{
 		Meta: config.Meta{
 			GroupVersionKind: gvk.PeerAuthentication,
@@ -566,26 +566,26 @@ func newProxylessPeerAuthenticationConfig(name, namespace string, mode security.
 	}
 }
 
-type proxylessRuntimeStaticServiceDiscovery struct {
+type inherentRuntimeStaticServiceDiscovery struct {
 	services []*discoverymodel.Service
 }
 
-type staticProxylessPodIndexer struct {
+type staticInherentPodIndexer struct {
 	items []any
 }
 
-func (s staticProxylessPodIndexer) Lookup(key string) []any {
-	if key != proxylessGRPCManagedPodIndexKey {
+func (s staticInherentPodIndexer) Lookup(key string) []any {
+	if key != inherentGRPCManagedPodIndexKey {
 		return nil
 	}
 	return s.items
 }
 
-func (s proxylessRuntimeStaticServiceDiscovery) Services() []*discoverymodel.Service {
+func (s inherentRuntimeStaticServiceDiscovery) Services() []*discoverymodel.Service {
 	return s.services
 }
 
-func (s proxylessRuntimeStaticServiceDiscovery) GetService(hostname host.Name) *discoverymodel.Service {
+func (s inherentRuntimeStaticServiceDiscovery) GetService(hostname host.Name) *discoverymodel.Service {
 	for _, svc := range s.services {
 		if svc.Hostname == hostname {
 			return svc
@@ -594,13 +594,13 @@ func (s proxylessRuntimeStaticServiceDiscovery) GetService(hostname host.Name) *
 	return nil
 }
 
-func (s proxylessRuntimeStaticServiceDiscovery) GetProxyServiceTargets(*discoverymodel.Proxy) []discoverymodel.ServiceTarget {
+func (s inherentRuntimeStaticServiceDiscovery) GetProxyServiceTargets(*discoverymodel.Proxy) []discoverymodel.ServiceTarget {
 	return nil
 }
 
 func TestScheduleRotationTracksEarliestTimer(t *testing.T) {
 	now := time.Now()
-	controller := &proxylessGRPCWorkloadController{
+	controller := &inherentGRPCWorkloadController{
 		rotations: make(map[types.NamespacedName]time.Time),
 	}
 	defer controller.stopAllTimers()

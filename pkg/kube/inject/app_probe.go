@@ -49,7 +49,7 @@ func FindContainerFromPod(name string, pod *corev1.Pod) *corev1.Container {
 // forwards to are touched; nothing forwards the other ports, so rewriting them
 // would point the kubelet at an endpoint that does not exist.
 func RewriteAppProbes(pod *corev1.Pod) {
-	inbound := FindContainerFromPod(ProxylessGRPCInboundContainerName, pod)
+	inbound := FindContainerFromPod(InherentGRPCInboundContainerName, pod)
 	if inbound == nil {
 		return
 	}
@@ -60,7 +60,7 @@ func RewriteAppProbes(pod *corev1.Pod) {
 	listenPort := inboundListenPort(inbound)
 	for i := range pod.Spec.Containers {
 		container := &pod.Spec.Containers[i]
-		if container.Name == ProxylessGRPCInboundContainerName {
+		if container.Name == InherentGRPCInboundContainerName {
 			continue
 		}
 		for _, probe := range []*corev1.Probe{container.ReadinessProbe, container.LivenessProbe, container.StartupProbe} {
@@ -116,7 +116,7 @@ func inboundListenPort(container *corev1.Container) int32 {
 			}
 		}
 	}
-	return ProxylessGRPCInboundPort
+	return InherentGRPCInboundPort
 }
 
 // argValue supports both `--flag value` and `--flag=value`.

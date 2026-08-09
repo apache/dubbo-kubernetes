@@ -28,7 +28,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/intstr"
 )
 
-func TestRewriteProxylessServiceTargetPortsRoutesTCPServiceToGRPCInbound(t *testing.T) {
+func TestRewriteInherentServiceTargetPortsRoutesTCPServiceToGRPCInbound(t *testing.T) {
 	svc := &corev1.Service{
 		ObjectMeta: metav1.ObjectMeta{Name: "nginx", Namespace: "app"},
 		Spec: corev1.ServiceSpec{
@@ -40,17 +40,17 @@ func TestRewriteProxylessServiceTargetPortsRoutesTCPServiceToGRPCInbound(t *test
 		},
 	}
 
-	if !rewriteProxylessServiceTargetPorts(svc) {
-		t.Fatalf("rewriteProxylessServiceTargetPorts() = false, want true")
+	if !rewriteInherentServiceTargetPorts(svc) {
+		t.Fatalf("rewriteInherentServiceTargetPorts() = false, want true")
 	}
 	for _, port := range svc.Spec.Ports {
-		if got := port.TargetPort.IntVal; got != ProxylessGRPCInboundPort {
-			t.Fatalf("port %s targetPort = %d, want %d", port.Name, got, ProxylessGRPCInboundPort)
+		if got := port.TargetPort.IntVal; got != InherentGRPCInboundPort {
+			t.Fatalf("port %s targetPort = %d, want %d", port.Name, got, InherentGRPCInboundPort)
 		}
 	}
 }
 
-func TestRewriteProxylessServiceTargetPortsSkipsUnsafeServices(t *testing.T) {
+func TestRewriteInherentServiceTargetPortsSkipsUnsafeServices(t *testing.T) {
 	cases := []struct {
 		name string
 		svc  corev1.Service
@@ -81,8 +81,8 @@ func TestRewriteProxylessServiceTargetPortsSkipsUnsafeServices(t *testing.T) {
 	for _, tt := range cases {
 		t.Run(tt.name, func(t *testing.T) {
 			svc := tt.svc
-			if rewriteProxylessServiceTargetPorts(&svc) {
-				t.Fatalf("rewriteProxylessServiceTargetPorts() = true, want false")
+			if rewriteInherentServiceTargetPorts(&svc) {
+				t.Fatalf("rewriteInherentServiceTargetPorts() = true, want false")
 			}
 			if got := svc.Spec.Ports[0].TargetPort.IntVal; got != 80 {
 				t.Fatalf("targetPort = %d, want 80", got)
@@ -91,7 +91,7 @@ func TestRewriteProxylessServiceTargetPortsSkipsUnsafeServices(t *testing.T) {
 	}
 }
 
-func TestRewriteProxylessServiceTargetPortsSkipsNonTCPPorts(t *testing.T) {
+func TestRewriteInherentServiceTargetPortsSkipsNonTCPPorts(t *testing.T) {
 	svc := &corev1.Service{
 		ObjectMeta: metav1.ObjectMeta{Name: "dns", Namespace: "app"},
 		Spec: corev1.ServiceSpec{
@@ -102,8 +102,8 @@ func TestRewriteProxylessServiceTargetPortsSkipsNonTCPPorts(t *testing.T) {
 		},
 	}
 
-	if rewriteProxylessServiceTargetPorts(svc) {
-		t.Fatalf("rewriteProxylessServiceTargetPorts() = true, want false")
+	if rewriteInherentServiceTargetPorts(svc) {
+		t.Fatalf("rewriteInherentServiceTargetPorts() = true, want false")
 	}
 	if got := svc.Spec.Ports[0].TargetPort.IntVal; got != 53 {
 		t.Fatalf("targetPort = %d, want 53", got)
@@ -147,13 +147,13 @@ func TestInjectServiceCreatesGRPCInboundTargetPortPatch(t *testing.T) {
 	}
 }
 
-func TestInjectServiceSkipsProxylessOptOutService(t *testing.T) {
+func TestInjectServiceSkipsInherentOptOutService(t *testing.T) {
 	svc := corev1.Service{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "dxgate-gateway",
 			Namespace: "app",
 			Labels: map[string]string{
-				"proxyless.dubbo.apache.org/inject": "false",
+				"inherent.dubbo.apache.org/inject": "false",
 			},
 		},
 		Spec: corev1.ServiceSpec{

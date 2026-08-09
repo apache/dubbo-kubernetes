@@ -33,8 +33,8 @@ import (
 )
 
 const (
-	webhookName                  = "proxyless-injector.dubbo.apache.org"
-	defaultInjectorConfigMapName = "dubbo-proxyless-injector"
+	webhookName                  = "inherent-injector.dubbo.apache.org"
+	defaultInjectorConfigMapName = "dubbo-inherent-injector"
 )
 
 var injectionEnabled = env.Register("INJECT_ENABLED", true, "Enable mutating webhook handler.")
@@ -60,18 +60,18 @@ func (s *Server) initInjector(args *DubboArgs) (*inject.Webhook, error) {
 		cms := s.kubeClient.Kube().CoreV1().ConfigMaps(args.Namespace)
 		if _, err := cms.Get(context.TODO(), configMapName, metav1.GetOptions{}); err != nil {
 			if errors.IsNotFound(err) {
-				log.Infof("Skipping proxyless injector, template not found")
+				log.Infof("Skipping Inherent injector, template not found")
 				return nil, nil
 			}
 			return nil, err
 		}
 		watcher = inject.NewConfigMapWatcher(s.kubeClient, args.Namespace, configMapName, "config", "values")
 	} else {
-		log.Infof("Skipping proxyless injector, template not found")
+		log.Infof("Skipping Inherent injector, template not found")
 		return nil, nil
 	}
 
-	log.Info("initializing proxyless injector")
+	log.Info("initializing Inherent injector")
 
 	parameters := inject.WebhookParameters{
 		Watcher:      watcher,

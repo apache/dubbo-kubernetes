@@ -37,7 +37,7 @@ func TestIsInjectedPod(t *testing.T) {
 			pod: corev1.Pod{
 				ObjectMeta: metav1.ObjectMeta{
 					Annotations: map[string]string{
-						annotation.OrgApacheDubboInjectTemplates.Name: inject.ProxylessGRPCTemplateName,
+						annotation.OrgApacheDubboInjectTemplates.Name: inject.InherentGRPCTemplateName,
 					},
 				},
 			},
@@ -47,18 +47,18 @@ func TestIsInjectedPod(t *testing.T) {
 			name: "grpc-inbound container",
 			pod: corev1.Pod{
 				Spec: corev1.PodSpec{
-					Containers: []corev1.Container{{Name: inject.ProxylessGRPCInboundContainerName}},
+					Containers: []corev1.Container{{Name: inject.InherentGRPCInboundContainerName}},
 				},
 			},
 			want: true,
 		},
 		{
-			name: "proxyless env",
+			name: "inherent env",
 			pod: corev1.Pod{
 				Spec: corev1.PodSpec{
 					Containers: []corev1.Container{{
 						Name: "app",
-						Env:  []corev1.EnvVar{{Name: "GRPC_XDS_BOOTSTRAP", Value: inject.ProxylessGRPCBootstrapPath}},
+						Env:  []corev1.EnvVar{{Name: "GRPC_XDS_BOOTSTRAP", Value: inject.InherentGRPCBootstrapPath}},
 					}},
 				},
 			},
@@ -90,19 +90,19 @@ func TestPrintInjectedPods(t *testing.T) {
 			Namespace:         "app",
 			CreationTimestamp: metav1.NewTime(time.Unix(100, 0)),
 			Annotations: map[string]string{
-				annotation.OrgApacheDubboInjectTemplates.Name: inject.ProxylessGRPCTemplateName,
+				annotation.OrgApacheDubboInjectTemplates.Name: inject.InherentGRPCTemplateName,
 			},
 		},
 		Spec: corev1.PodSpec{
 			NodeName:   "node-a",
-			Containers: []corev1.Container{{Name: "app"}, {Name: inject.ProxylessGRPCInboundContainerName}},
+			Containers: []corev1.Container{{Name: "app"}, {Name: inject.InherentGRPCInboundContainerName}},
 		},
 		Status: corev1.PodStatus{
 			Phase: corev1.PodRunning,
 			PodIP: "10.0.0.7",
 			ContainerStatuses: []corev1.ContainerStatus{
 				{Name: "app", Ready: true, RestartCount: 1},
-				{Name: inject.ProxylessGRPCInboundContainerName, Ready: true},
+				{Name: inject.InherentGRPCInboundContainerName, Ready: true},
 			},
 		},
 	}
@@ -112,7 +112,7 @@ func TestPrintInjectedPods(t *testing.T) {
 		t.Fatalf("printInjectedPods() returned error: %v", err)
 	}
 	got := out.String()
-	for _, want := range []string{"NAMESPACE", "app-1", "2/2", "Running", "10.0.0.7", inject.ProxylessGRPCTemplateName} {
+	for _, want := range []string{"NAMESPACE", "app-1", "2/2", "Running", "10.0.0.7", inject.InherentGRPCTemplateName} {
 		if !strings.Contains(got, want) {
 			t.Fatalf("output %q missing %q", got, want)
 		}

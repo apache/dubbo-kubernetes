@@ -118,11 +118,11 @@ func NewWebhook(p WebhookParameters) (*Webhook, error) {
 		revision:   p.Revision,
 	}
 
-	proxylessConfig, valuesConfig, err := p.Watcher.Get()
+	inherentConfig, valuesConfig, err := p.Watcher.Get()
 	if err != nil {
 		return nil, fmt.Errorf("failed to get initial configuration: %v", err)
 	}
-	if err := wh.updateConfig(proxylessConfig, valuesConfig); err != nil {
+	if err := wh.updateConfig(inherentConfig, valuesConfig); err != nil {
 		return nil, fmt.Errorf("failed to process webhook config: %v", err)
 	}
 
@@ -263,7 +263,7 @@ func (wh *Webhook) injectPod(ar *kube.AdmissionReview, path string) *kube.Admiss
 	}
 
 	log = log.WithLabels("pod", pod.Namespace+"/"+podName)
-	log.Infof("Process proxyless injection request")
+	log.Infof("Process inherent injection request")
 
 	wh.mu.RLock()
 	if !injectRequired(IgnoredNamespaces.UnsortedList(), wh.Config, &pod.Spec, pod.ObjectMeta) {
@@ -335,7 +335,7 @@ func (wh *Webhook) injectService(ar *kube.AdmissionReview, path string) *kube.Ad
 	}
 
 	log = log.WithLabels("service", svc.Namespace+"/"+svc.Name)
-	log.Infof("Process proxyless service request")
+	log.Infof("Process inherent service request")
 
 	wh.mu.RLock()
 	required := injectRequired(IgnoredNamespaces.UnsortedList(), wh.Config, &corev1.PodSpec{}, svc.ObjectMeta)
@@ -349,7 +349,7 @@ func (wh *Webhook) injectService(ar *kube.AdmissionReview, path string) *kube.Ad
 	if err != nil {
 		return toAdmissionResponse(err)
 	}
-	if !rewriteProxylessServiceTargetPorts(&svc) {
+	if !rewriteInherentServiceTargetPorts(&svc) {
 		return &kube.AdmissionResponse{Allowed: true}
 	}
 
@@ -451,10 +451,10 @@ func postProcessPod(pod *corev1.Pod, injectedPod corev1.Pod, req InjectionParame
 	removeTemplateOnlyContainers(pod, injectedPod, req.pod)
 	overwriteClusterInfo(pod, req)
 
-	if shouldInjectProxylessGRPC(req) {
-		// Add proxyless gRPC env and shared bootstrap/cert volume to application containers.
-		ensureProxylessGRPCTemplateAnnotation(pod)
-		ensureProxylessManagedLabel(pod)
+	if shouldInjectInherentGRPC(req) {
+		// Add Inherent gRPC env and shared bootstrap/cert volume to application containers.
+		ensureInherentGRPCTemplateAnnotation(pod)
+		ensureInherentManagedLabel(pod)
 		if err := addApplicationContainerConfig(pod, req); err != nil {
 			return err
 		}
@@ -521,9 +521,9 @@ func addApplicationContainerConfig(pod *corev1.Pod, req InjectionParameters) err
 	if req.pod != nil {
 		meta = req.pod.ObjectMeta
 	}
-	secretName := ProxylessGRPCSecretNameForMeta(meta)
+	secretName := InherentGRPCSecretNameForMeta(meta)
 	desiredVolume := corev1.Volume{
-		Name: ProxylessXDSVolumeName,
+		Name: InherentXDSVolumeName,
 		VolumeSource: corev1.VolumeSource{
 			Secret: &corev1.SecretVolumeSource{
 				SecretName:  secretName,
@@ -533,7 +533,7 @@ func addApplicationContainerConfig(pod *corev1.Pod, req InjectionParameters) err
 	}
 	updated := false
 	for i := range pod.Spec.Volumes {
-		if pod.Spec.Volumes[i].Name == ProxylessXDSVolumeName {
+		if pod.Spec.Volumes[i].Name == InherentXDSVolumeName {
 			pod.Spec.Volumes[i] = desiredVolume
 			updated = true
 			break
@@ -551,14 +551,14 @@ func addApplicationContainerConfig(pod *corev1.Pod, req InjectionParameters) err
 
 		container.Env = ensureEnvVar(container.Env, corev1.EnvVar{
 			Name:  "GRPC_XDS_BOOTSTRAP",
-			Value: ProxylessGRPCBootstrapPath,
+			Value: InherentGRPCBootstrapPath,
 		})
 		container.Env = ensureEnvVar(container.Env, corev1.EnvVar{
-			Name:  ProxylessGRPCConfigEnvName,
-			Value: ProxylessGRPCConfigPath,
+			Name:  InherentGRPCConfigEnvName,
+			Value: InherentGRPCConfigPath,
 		})
 		container.Env = ensureEnvVar(container.Env, corev1.EnvVar{
-			Name:  ProxylessXDSAddressEnvName,
+			Name:  InherentXDSAddressEnvName,
 			Value: discoveryAddress,
 		})
 		container.Env = ensureEnvVar(container.Env, corev1.EnvVar{
@@ -574,20 +574,20 @@ func addApplicationContainerConfig(pod *corev1.Pod, req InjectionParameters) err
 			Value: "xds:///",
 		})
 		container.Env = ensureEnvVar(container.Env, corev1.EnvVar{
-			Name:  ProxylessGRPCKeepaliveEnvName,
-			Value: ProxylessGRPCKeepaliveValue,
+			Name:  InherentGRPCKeepaliveEnvName,
+			Value: InherentGRPCKeepaliveValue,
 		})
 		container.Env = ensureEnvVar(container.Env, corev1.EnvVar{
-			Name:  ProxylessGRPCKeepaliveTimeEnv,
-			Value: ProxylessGRPCKeepaliveTime,
+			Name:  InherentGRPCKeepaliveTimeEnv,
+			Value: InherentGRPCKeepaliveTime,
 		})
 		container.Env = ensureEnvVar(container.Env, corev1.EnvVar{
-			Name:  ProxylessGRPCKeepaliveTimeoutEnv,
-			Value: ProxylessGRPCKeepaliveTimeout,
+			Name:  InherentGRPCKeepaliveTimeoutEnv,
+			Value: InherentGRPCKeepaliveTimeout,
 		})
 		container.Env = ensureEnvVar(container.Env, corev1.EnvVar{
-			Name:  ProxylessGRPCKeepalivePermitWithoutStreamEnv,
-			Value: ProxylessGRPCKeepaliveValue,
+			Name:  InherentGRPCKeepalivePermitWithoutStreamEnv,
+			Value: InherentGRPCKeepaliveValue,
 		})
 		container.Env = ensureEnvVar(container.Env, corev1.EnvVar{
 			Name:  "DUBBO_META_GENERATOR",
@@ -651,45 +651,45 @@ func addApplicationContainerConfig(pod *corev1.Pod, req InjectionParameters) err
 
 		hasProxyVolumeMount := false
 		for _, vm := range container.VolumeMounts {
-			if vm.Name == ProxylessXDSVolumeName {
+			if vm.Name == InherentXDSVolumeName {
 				hasProxyVolumeMount = true
 				break
 			}
 		}
 		if !hasProxyVolumeMount {
 			container.VolumeMounts = append(container.VolumeMounts, corev1.VolumeMount{
-				Name:      ProxylessXDSVolumeName,
-				MountPath: ProxylessXDSMountPath,
+				Name:      InherentXDSVolumeName,
+				MountPath: InherentXDSMountPath,
 				ReadOnly:  true,
 			})
-			webhookLog.Infof("Injection: Added %s volume mount to application container %s", ProxylessXDSMountPath, container.Name)
+			webhookLog.Infof("Injection: Added %s volume mount to application container %s", InherentXDSMountPath, container.Name)
 		}
 	}
 	return nil
 }
 
-func ensureProxylessGRPCTemplateAnnotation(pod *corev1.Pod) {
+func ensureInherentGRPCTemplateAnnotation(pod *corev1.Pod) {
 	if pod.Annotations == nil {
 		pod.Annotations = map[string]string{}
 	}
-	templates := pod.Annotations[ProxylessInjectTemplatesAnnoName]
+	templates := pod.Annotations[InherentInjectTemplatesAnnoName]
 	for _, templateName := range strings.Split(templates, ",") {
-		if strings.TrimSpace(templateName) == ProxylessGRPCTemplateName {
+		if strings.TrimSpace(templateName) == InherentGRPCTemplateName {
 			return
 		}
 	}
 	if strings.TrimSpace(templates) == "" {
-		pod.Annotations[ProxylessInjectTemplatesAnnoName] = ProxylessGRPCTemplateName
+		pod.Annotations[InherentInjectTemplatesAnnoName] = InherentGRPCTemplateName
 		return
 	}
-	pod.Annotations[ProxylessInjectTemplatesAnnoName] = templates + "," + ProxylessGRPCTemplateName
+	pod.Annotations[InherentInjectTemplatesAnnoName] = templates + "," + InherentGRPCTemplateName
 }
 
-func ensureProxylessManagedLabel(pod *corev1.Pod) {
+func ensureInherentManagedLabel(pod *corev1.Pod) {
 	if pod.Labels == nil {
 		pod.Labels = map[string]string{}
 	}
-	pod.Labels[ProxylessManagedLabel] = ProxylessManagedLabelValue
+	pod.Labels[InherentManagedLabel] = InherentManagedLabelValue
 }
 
 func ensureEnvVar(envs []corev1.EnvVar, desired corev1.EnvVar) []corev1.EnvVar {
@@ -701,9 +701,9 @@ func ensureEnvVar(envs []corev1.EnvVar, desired corev1.EnvVar) []corev1.EnvVar {
 	return append(envs, desired)
 }
 
-func shouldInjectProxylessGRPC(req InjectionParameters) bool {
+func shouldInjectInherentGRPC(req InjectionParameters) bool {
 	for _, templateName := range selectTemplates(req) {
-		if templateName == ProxylessGRPCTemplateName {
+		if templateName == InherentGRPCTemplateName {
 			return true
 		}
 	}
@@ -714,7 +714,7 @@ func reorderPod(pod *corev1.Pod, req InjectionParameters) error {
 	// Proxy container should be last to ensure `kubectl exec` and similar commands
 	// continue to default to the user's container
 	pod.Spec.Containers = modifyContainers(pod.Spec.Containers, ProxyContainerName, MoveLast)
-	pod.Spec.Containers = modifyContainers(pod.Spec.Containers, ProxylessGRPCInboundContainerName, MoveLast)
+	pod.Spec.Containers = modifyContainers(pod.Spec.Containers, InherentGRPCInboundContainerName, MoveLast)
 	return nil
 }
 
@@ -742,7 +742,7 @@ func createServicePatch(svc *corev1.Service, original []byte) ([]byte, error) {
 	return json.Marshal(p)
 }
 
-func rewriteProxylessServiceTargetPorts(svc *corev1.Service) bool {
+func rewriteInherentServiceTargetPorts(svc *corev1.Service) bool {
 	if svc.Spec.Type == corev1.ServiceTypeExternalName || len(svc.Spec.Selector) == 0 {
 		return false
 	}
@@ -753,10 +753,10 @@ func rewriteProxylessServiceTargetPorts(svc *corev1.Service) bool {
 		if port.Protocol != "" && port.Protocol != corev1.ProtocolTCP {
 			continue
 		}
-		if port.TargetPort.Type == intstr.Int && port.TargetPort.IntVal == ProxylessGRPCInboundPort {
+		if port.TargetPort.Type == intstr.Int && port.TargetPort.IntVal == InherentGRPCInboundPort {
 			continue
 		}
-		port.TargetPort = intstr.FromInt(ProxylessGRPCInboundPort)
+		port.TargetPort = intstr.FromInt(InherentGRPCInboundPort)
 		changed = true
 	}
 	return changed

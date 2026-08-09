@@ -19,7 +19,7 @@
        EDS 下发新端点 -> dxgate 放行被扣住的请求
 ```
 
-南北向请求直接经过 dxgate。东西向请求原本由 proxyless 调用方直接读 EDS；冷服务的 EDS 现在会临时改写为专用 Activator `dxgate-gateway`，所以同一个扣流和上报机制也能接住服务间调用。后端就绪后，EDS 恢复真实端点，新请求直接访问后端。
+南北向请求直接经过 dxgate。东西向请求原本由 inherent 调用方直接读 EDS；冷服务的 EDS 现在会临时改写为专用 Activator `dxgate-gateway`，所以同一个扣流和上报机制也能接住服务间调用。后端就绪后，EDS 恢复真实端点，新请求直接访问后端。
 
 网关只负责等和上报，副本数始终由 KEDA 写。这条边界是有意的：网关重启不会把某个工作负载留在没人要求过的副本数上。
 
@@ -98,9 +98,9 @@ kubectl -n activation get serviceactivationpolicy payment -o jsonpath='{.status.
 1. KEDA 轮询间隔——样例里 `pollingInterval: 1`，最多 1s
 2. HPA 把副本从 0 改到 1
 3. Pod 调度 + 拉镜像 + 进程启动
-4. proxyless 冷启动：取证书、建 xDS 连接、等首次 CDS/EDS 收敛
+4. inherent 冷启动：取证书、建 xDS 连接、等首次 CDS/EDS 收敛
 
-第 4 段是 sidecar 方案里由常驻 sidecar 摊销掉、而 proxyless 下每个副本都要重付的部分。上生产前量一下从 Pod Running 到能收发流量的时间，再定 `requestTimeout`——它必须大于这个总和，否则请求总在服务刚要就绪时被判超时。
+第 4 段是 sidecar 方案里由常驻 sidecar 摊销掉、而 inherent 下每个副本都要重付的部分。上生产前量一下从 Pod Running 到能收发流量的时间，再定 `requestTimeout`——它必须大于这个总和，否则请求总在服务刚要就绪时被判超时。
 
 `requestTimeout` 同时要小于调用方自己的超时。调用方已经放弃的请求，在网关这边多扣一会儿没有任何意义。
 
@@ -115,9 +115,9 @@ kubectl -n activation get serviceactivationpolicy payment -o jsonpath='{.status.
 
 ### 缩容时的排空
 
-和 `samples/autoscaling` 一样，被缩掉的 pod 走 dxplane 的两阶段排空：先 5s 只失败 readiness 让 EndpointSlice 摘掉，再关监听等在途连接最多 25s。`terminationGracePeriodSeconds` 必须大于两者之和，`payment.yaml` 里是 40s。
+和 `samples/autoscaling` 一样，被缩掉的 pod 走 dxproxy 的两阶段排空：先 5s 只失败 readiness 让 EndpointSlice 摘掉，再关监听等在途连接最多 25s。`terminationGracePeriodSeconds` 必须大于两者之和，`payment.yaml` 里是 40s。
 
-`dxplane_connections_force_closed_total` 非零说明 25s 不够，调 `DUBBO_GRPC_INBOUND_TERMINATION_DRAIN_DURATION`。
+`dxproxy_connections_force_closed_total` 非零说明 25s 不够，调 `DUBBO_GRPC_INBOUND_TERMINATION_DRAIN_DURATION`。
 
 ### 为什么网关上报和 KEDA 查询使用不同地址
 

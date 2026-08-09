@@ -98,7 +98,7 @@ func newDeltaXDSTestServer(generator model.XdsResourceGenerator) (*DiscoveryServ
 	con.s = server
 	con.proxy = &model.Proxy{
 		ID:               "pod-1",
-		Type:             model.Proxyless,
+		Type:             model.Inherent,
 		Metadata:         &model.NodeMetadata{Generator: "grpc", Namespace: "app"},
 		WatchedResources: map[string]*model.WatchedResource{},
 		LastPushContext:  push,

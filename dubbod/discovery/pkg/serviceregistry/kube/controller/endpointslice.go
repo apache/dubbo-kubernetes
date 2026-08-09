@@ -502,7 +502,7 @@ func getServiceNamespacedName(slice *v1.EndpointSlice) types.NamespacedName {
 }
 
 func serviceNeedsPush(svc *corev1.Service) bool {
-	// In proxyless mesh, all services need to be pushed
+	// In Inherent mesh, all services need to be pushed
 	return true
 }
 

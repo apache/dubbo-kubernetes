@@ -108,9 +108,9 @@ func connectionWatchesAnyService(con *Connection, services sets.String) bool {
 	}
 
 	con.proxy.RLock()
-	isProxylessGRPC := con.proxy.Metadata != nil && con.proxy.Metadata.Generator == "grpc"
+	isInherentGRPC := con.proxy.Metadata != nil && con.proxy.Metadata.Generator == "grpc"
 	watched := con.proxy.WatchedResources[v1.EndpointType]
-	if !isProxylessGRPC {
+	if !isInherentGRPC {
 		con.proxy.RUnlock()
 		return true
 	}
@@ -391,15 +391,15 @@ func (s *DiscoveryServer) processRequest(req *discovery.DiscoveryRequest, con *C
 		return nil
 	}
 
-	// For proxyless gRPC, if client sends wildcard (empty ResourceNames) after receiving specific resources,
+	// For Inherent gRPC, if client sends wildcard (empty ResourceNames) after receiving specific resources,
 	// this is likely an ACK and we should NOT push all resources again
 	// Check if this is a wildcard request after specific resources were sent
 	watchedResource := con.proxy.GetWatchedResource(req.TypeUrl)
-	if con.proxy.IsProxylessGrpc() && len(req.ResourceNames) == 0 && watchedResource != nil && len(watchedResource.ResourceNames) > 0 && watchedResource.NonceSent != "" {
+	if con.proxy.IsInherentGrpc() && len(req.ResourceNames) == 0 && watchedResource != nil && len(watchedResource.ResourceNames) > 0 && watchedResource.NonceSent != "" {
 		// This is a wildcard ACK after specific resources were sent
 		// ShouldRespond should have returned false, but we check here as safety net
 		// Update the WatchedResource to reflect the ACK, but don't push
-		log.Debugf("%s: proxyless gRPC wildcard ACK after specific resources (prev: %d resources, nonce: %s), skipping push",
+		log.Debugf("%s: Inherent gRPC wildcard ACK after specific resources (prev: %d resources, nonce: %s), skipping push",
 			stype, len(watchedResource.ResourceNames), watchedResource.NonceSent)
 		// ShouldRespond should have already handled this, but we ensure no push happens
 		return nil

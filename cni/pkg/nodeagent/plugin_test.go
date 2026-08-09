@@ -30,7 +30,7 @@ func TestPluginAddInstallsRulesForManagedPod(t *testing.T) {
 	rules := &fakeRuleManager{}
 	plugin := Plugin{
 		PodInfoProvider: fakePodInfoProvider{pod: PodInfo{Labels: map[string]string{
-			inject.ProxylessManagedLabel: inject.ProxylessManagedLabelValue,
+			inject.InherentManagedLabel: inject.InherentManagedLabelValue,
 		}}},
 		RuleManager: rules,
 		StateStore:  NewFileStateStore(conf.StateDirectory()),
@@ -122,7 +122,7 @@ func TestPluginAddRetriesTransientPodInfoFailure(t *testing.T) {
 		failures: 2,
 		err:      errors.New("etcdserver: request timed out"),
 		pod: PodInfo{Labels: map[string]string{
-			inject.ProxylessManagedLabel: inject.ProxylessManagedLabelValue,
+			inject.InherentManagedLabel: inject.InherentManagedLabelValue,
 		}},
 	}
 	plugin := Plugin{
@@ -199,7 +199,7 @@ func TestPluginAddPassesExcludedPortsThrough(t *testing.T) {
 	plugin := Plugin{
 		PodInfoProvider: fakePodInfoProvider{pod: PodInfo{
 			Labels: map[string]string{
-				inject.ProxylessManagedLabel: inject.ProxylessManagedLabelValue,
+				inject.InherentManagedLabel: inject.InherentManagedLabelValue,
 			},
 			ExcludedPorts: []int{9090, 15020},
 		}},

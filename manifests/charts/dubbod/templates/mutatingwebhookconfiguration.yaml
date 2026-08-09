@@ -16,7 +16,7 @@
 apiVersion: admissionregistration.k8s.io/v1
 kind: MutatingWebhookConfiguration
 metadata:
-  name: dubbo-proxyless-injector
+  name: dubbo-inherent-injector
   labels:
     app: dubbod
     dubbo.apache.org/rev: default
@@ -30,7 +30,7 @@ webhooks:
         path: /inject
         port: 443
     failurePolicy: Fail
-    name: rev.namespace.proxyless-injector.dubbo.apache.org
+    name: rev.namespace.inherent-injector.dubbo.apache.org
     namespaceSelector:
       matchExpressions:
         - key: dubbo.apache.org/rev
@@ -41,7 +41,7 @@ webhooks:
           operator: DoesNotExist
     objectSelector:
       matchExpressions:
-        - key: proxyless.dubbo.apache.org/inject
+        - key: inherent.dubbo.apache.org/inject
           operator: NotIn
           values:
             - "false"
@@ -74,7 +74,7 @@ webhooks:
         path: /inject
         port: 443
     failurePolicy: Fail
-    name: rev.object.proxyless-injector.dubbo.apache.org
+    name: rev.object.inherent-injector.dubbo.apache.org
     namespaceSelector:
       matchExpressions:
         - key: dubbo.apache.org/rev
@@ -83,7 +83,7 @@ webhooks:
           operator: DoesNotExist
     objectSelector:
       matchExpressions:
-        - key: proxyless.dubbo.apache.org/inject
+        - key: inherent.dubbo.apache.org/inject
           operator: NotIn
           values:
             - "false"
@@ -119,7 +119,7 @@ webhooks:
         namespace: dubbo-system
         path: /inject
         port: 443
-    name: namespace.proxyless-injector.dubbo.apache.org
+    name: namespace.inherent-injector.dubbo.apache.org
     namespaceSelector:
       matchExpressions:
         - key: dubbo-injection
@@ -128,7 +128,7 @@ webhooks:
             - enabled
     objectSelector:
       matchExpressions:
-        - key: proxyless.dubbo.apache.org/inject
+        - key: inherent.dubbo.apache.org/inject
           operator: NotIn
           values:
             - "false"
@@ -160,14 +160,14 @@ webhooks:
         namespace: dubbo-system
         path: /inject
         port: 443
-    name: object.proxyless-injector.dubbo.apache.org
+    name: object.inherent-injector.dubbo.apache.org
     namespaceSelector:
       matchExpressions:
         - key: dubbo-injection
           operator: DoesNotExist
     objectSelector:
       matchExpressions:
-        - key: proxyless.dubbo.apache.org/inject
+        - key: inherent.dubbo.apache.org/inject
           operator: In
           values:
             - "true"

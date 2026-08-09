@@ -44,11 +44,11 @@ import (
 const (
 	testListenerName = "nginx.app.svc.cluster.local:8080"
 	testClusterName  = "outbound|8080||nginx.app.svc.cluster.local"
-	testNodeID       = "proxyless~10.0.0.1~pod-1~app.svc.cluster.local"
+	testNodeID       = "inherent~10.0.0.1~pod-1~app.svc.cluster.local"
 )
 
-func TestPushXdsProxylessLDSCreatesDependentWatches(t *testing.T) {
-	server, con, stream := newProxylessXDSTestServer(t)
+func TestPushXdsInherentLDSCreatesDependentWatches(t *testing.T) {
+	server, con, stream := newInherentXDSTestServer(t)
 
 	req := &model.PushRequest{
 		Full:   true,
@@ -69,8 +69,8 @@ func TestPushXdsProxylessLDSCreatesDependentWatches(t *testing.T) {
 	stream.assertNoResponse(t)
 }
 
-func TestStreamProxylessWildcardAckDoesNotRepushOrPrematurelySendEDS(t *testing.T) {
-	server, _, stream := newProxylessXDSTestServer(t)
+func TestStreamInherentWildcardAckDoesNotRepushOrPrematurelySendEDS(t *testing.T) {
+	server, _, stream := newInherentXDSTestServer(t)
 	server.serverReady.Store(true)
 
 	errCh := make(chan error, 1)
@@ -81,7 +81,7 @@ func TestStreamProxylessWildcardAckDoesNotRepushOrPrematurelySendEDS(t *testing.
 	stream.recvCh <- &discovery.DiscoveryRequest{
 		TypeUrl:       v1.ListenerType,
 		ResourceNames: []string{testListenerName},
-		Node:          testProxylessNode(t),
+		Node:          testInherentNode(t),
 	}
 
 	responses := stream.takeAllResponses(t, 3)
@@ -111,7 +111,7 @@ func TestStreamProxylessWildcardAckDoesNotRepushOrPrematurelySendEDS(t *testing.
 	}
 }
 
-func newProxylessXDSTestServer(t *testing.T) (*DiscoveryServer, *Connection, *fakeADSStream) {
+func newInherentXDSTestServer(t *testing.T) (*DiscoveryServer, *Connection, *fakeADSStream) {
 	t.Helper()
 
 	env := model.NewEnvironment()
@@ -134,9 +134,9 @@ func newProxylessXDSTestServer(t *testing.T) (*DiscoveryServer, *Connection, *fa
 
 	server := NewDiscoveryServer(env, nil, nil)
 	server.Generators = map[string]model.XdsResourceGenerator{
-		v1.ListenerType: staticResourceGenerator{resources: proxylessListenerResources()},
-		v1.ClusterType:  staticResourceGenerator{resources: proxylessClusterResources()},
-		v1.RouteType:    staticResourceGenerator{resources: proxylessRouteResources()},
+		v1.ListenerType: staticResourceGenerator{resources: inherentListenerResources()},
+		v1.ClusterType:  staticResourceGenerator{resources: inherentClusterResources()},
+		v1.RouteType:    staticResourceGenerator{resources: inherentRouteResources()},
 	}
 
 	stream := newFakeADSStream()
@@ -144,7 +144,7 @@ func newProxylessXDSTestServer(t *testing.T) (*DiscoveryServer, *Connection, *fa
 	con.s = server
 	con.proxy = &model.Proxy{
 		ID:        "pod-1",
-		Type:      model.Proxyless,
+		Type:      model.Inherent,
 		DNSDomain: "app.svc.cluster.local",
 		Metadata:  &model.NodeMetadata{Generator: "grpc", Namespace: "app"},
 		WatchedResources: map[string]*model.WatchedResource{
@@ -291,7 +291,7 @@ func (testConfigStore) Delete(config.GroupVersionKind, string, string, *string) 
 	return nil
 }
 
-func testProxylessNode(t *testing.T) *core.Node {
+func testInherentNode(t *testing.T) *core.Node {
 	t.Helper()
 	meta, err := structpb.NewStruct(map[string]any{
 		"GENERATOR": "grpc",
@@ -306,7 +306,7 @@ func testProxylessNode(t *testing.T) *core.Node {
 	}
 }
 
-func proxylessListenerResources() model.Resources {
+func inherentListenerResources() model.Resources {
 	hcm := &hcmv1.HttpConnectionManager{
 		RouteSpecifier: &hcmv1.HttpConnectionManager_Rds{
 			Rds: &hcmv1.Rds{
@@ -327,7 +327,7 @@ func proxylessListenerResources() model.Resources {
 	}
 }
 
-func proxylessClusterResources() model.Resources {
+func inherentClusterResources() model.Resources {
 	return model.Resources{
 		{
 			Name: testClusterName,
@@ -344,7 +344,7 @@ func proxylessClusterResources() model.Resources {
 	}
 }
 
-func proxylessRouteResources() model.Resources {
+func inherentRouteResources() model.Resources {
 	return model.Resources{
 		{
 			Name:     testClusterName,

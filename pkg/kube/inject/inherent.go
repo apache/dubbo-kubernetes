@@ -29,39 +29,39 @@ import (
 )
 
 const (
-	ProxylessGRPCTemplateName                    = "grpc-engine"
-	ProxylessXDSVolumeName                       = "dubbo-xds"
-	ProxylessXDSMountPath                        = "/etc/dubbo/proxy"
-	ProxylessGRPCBootstrapFileName               = "grpc-bootstrap.json"
-	ProxylessGRPCBootstrapPath                   = ProxylessXDSMountPath + "/" + ProxylessGRPCBootstrapFileName
-	ProxylessXDSAddressEnvName                   = "XDS_ADDRESS"
-	ProxylessGRPCConfigEnvName                   = "DUBBO_GRPC_XDS_CONFIG"
-	ProxylessGRPCKeepaliveEnvName                = "DUBBO_GRPC_KEEPALIVE"
-	ProxylessGRPCKeepaliveTimeEnv                = "GRPC_KEEPALIVE_INTERVAL"
-	ProxylessGRPCKeepaliveTimeoutEnv             = "GRPC_KEEPALIVE_TIMEOUT"
-	ProxylessGRPCKeepalivePermitWithoutStreamEnv = "GRPC_KEEPALIVE_PERMIT_WITHOUT_STREAM"
-	ProxylessGRPCKeepaliveValue                  = "true"
-	ProxylessGRPCKeepaliveTime                   = "30s"
-	ProxylessGRPCKeepaliveTimeout                = "10s"
-	ProxylessGRPCConfigFileName                  = "dubbo-grpc-xds.json"
-	ProxylessGRPCConfigPath                      = ProxylessXDSMountPath + "/" + ProxylessGRPCConfigFileName
-	ProxylessGRPCInboundContainerName            = "dubbo-grpc-inbound"
-	ProxylessGRPCInboundPort                     = 15080
-	// ProxylessGRPCInboundAdminPort serves the inbound sidecar's health,
+	InherentGRPCTemplateName                    = "grpc-engine"
+	InherentXDSVolumeName                       = "dubbo-xds"
+	InherentXDSMountPath                        = "/etc/dubbo/proxy"
+	InherentGRPCBootstrapFileName               = "grpc-bootstrap.json"
+	InherentGRPCBootstrapPath                   = InherentXDSMountPath + "/" + InherentGRPCBootstrapFileName
+	InherentXDSAddressEnvName                   = "XDS_ADDRESS"
+	InherentGRPCConfigEnvName                   = "DUBBO_GRPC_XDS_CONFIG"
+	InherentGRPCKeepaliveEnvName                = "DUBBO_GRPC_KEEPALIVE"
+	InherentGRPCKeepaliveTimeEnv                = "GRPC_KEEPALIVE_INTERVAL"
+	InherentGRPCKeepaliveTimeoutEnv             = "GRPC_KEEPALIVE_TIMEOUT"
+	InherentGRPCKeepalivePermitWithoutStreamEnv = "GRPC_KEEPALIVE_PERMIT_WITHOUT_STREAM"
+	InherentGRPCKeepaliveValue                  = "true"
+	InherentGRPCKeepaliveTime                   = "30s"
+	InherentGRPCKeepaliveTimeout                = "10s"
+	InherentGRPCConfigFileName                  = "dubbo-grpc-xds.json"
+	InherentGRPCConfigPath                      = InherentXDSMountPath + "/" + InherentGRPCConfigFileName
+	InherentGRPCInboundContainerName            = "dubbo-grpc-inbound"
+	InherentGRPCInboundPort                     = 15080
+	// InherentGRPCInboundAdminPort serves the inbound sidecar's health,
 	// readiness and metrics endpoints. It carries no mesh traffic, so the node
 	// fence exempts it and kubelet can probe it directly.
-	ProxylessGRPCInboundAdminPort = 15020
-	ProxylessManagedLabel         = "proxyless.dubbo.apache.org/managed"
-	ProxylessManagedLabelValue    = "true"
+	InherentGRPCInboundAdminPort = 15020
+	InherentManagedLabel         = "inherent.dubbo.apache.org/managed"
+	InherentManagedLabelValue    = "true"
 )
 
-// ProxylessExcludeInboundPortsAnnotation lists inbound ports that stay
+// InherentExcludeInboundPortsAnnotation lists inbound ports that stay
 // reachable without passing through the mTLS listener, as a comma-separated
 // list of port numbers. Setting it replaces the default, which is every
 // declared container port that the inbound listener does not forward to.
-const ProxylessExcludeInboundPortsAnnotation = "proxyless.dubbo.apache.org/excludeInboundPorts"
+const InherentExcludeInboundPortsAnnotation = "inherent.dubbo.apache.org/excludeInboundPorts"
 
-// ProxylessExcludedInboundPorts reports the ports that must be exempted from
+// InherentExcludedInboundPorts reports the ports that must be exempted from
 // the inbound fence for a pod.
 //
 // The inbound listener forwards a single upstream port, but a workload
@@ -69,11 +69,11 @@ const ProxylessExcludeInboundPortsAnnotation = "proxyless.dubbo.apache.org/exclu
 // part of the mesh, and without an exemption the node fence rejects them,
 // which strands them with no diagnosable symptom. Excluded ports carry plain
 // traffic and are not covered by mTLS.
-func ProxylessExcludedInboundPorts(pod *corev1.Pod) ([]int, error) {
+func InherentExcludedInboundPorts(pod *corev1.Pod) ([]int, error) {
 	if pod == nil {
 		return nil, nil
 	}
-	if raw, ok := pod.Annotations[ProxylessExcludeInboundPortsAnnotation]; ok {
+	if raw, ok := pod.Annotations[InherentExcludeInboundPortsAnnotation]; ok {
 		return parseExcludedInboundPorts(raw)
 	}
 	return defaultExcludedInboundPorts(pod), nil
@@ -89,10 +89,10 @@ func parseExcludedInboundPorts(raw string) ([]int, error) {
 		}
 		port, err := strconv.Atoi(field)
 		if err != nil {
-			return nil, fmt.Errorf("annotation %s: %q is not a port number", ProxylessExcludeInboundPortsAnnotation, field)
+			return nil, fmt.Errorf("annotation %s: %q is not a port number", InherentExcludeInboundPortsAnnotation, field)
 		}
 		if port < 1 || port > 65535 {
-			return nil, fmt.Errorf("annotation %s: port %d is out of range", ProxylessExcludeInboundPortsAnnotation, port)
+			return nil, fmt.Errorf("annotation %s: port %d is out of range", InherentExcludeInboundPortsAnnotation, port)
 		}
 		if _, ok := seen[port]; ok {
 			continue
@@ -108,20 +108,20 @@ func parseExcludedInboundPorts(raw string) ([]int, error) {
 // inbound listener neither listens on nor forwards to.
 func defaultExcludedInboundPorts(pod *corev1.Pod) []int {
 	meshed := map[int32]struct{}{}
-	if proxy := FindContainerFromPod(ProxylessGRPCInboundContainerName, pod); proxy != nil {
+	if proxy := FindContainerFromPod(InherentGRPCInboundContainerName, pod); proxy != nil {
 		meshed[inboundListenPort(proxy)] = struct{}{}
 		if upstream, ok := inboundUpstreamPort(proxy); ok {
 			meshed[upstream] = struct{}{}
 		}
 	} else {
-		meshed[ProxylessGRPCInboundPort] = struct{}{}
+		meshed[InherentGRPCInboundPort] = struct{}{}
 	}
 
 	seen := map[int]struct{}{}
 	ports := []int{}
 	for i := range pod.Spec.Containers {
 		container := &pod.Spec.Containers[i]
-		if container.Name == ProxylessGRPCInboundContainerName {
+		if container.Name == InherentGRPCInboundContainerName {
 			continue
 		}
 		for _, port := range container.Ports {
@@ -143,9 +143,9 @@ func defaultExcludedInboundPorts(pod *corev1.Pod) []int {
 	return ports
 }
 
-var ProxylessInjectTemplatesAnnoName = annotation.OrgApacheDubboInjectTemplates.Name
+var InherentInjectTemplatesAnnoName = annotation.OrgApacheDubboInjectTemplates.Name
 
-func ProxylessGRPCSecretName(podName string) string {
+func InherentGRPCSecretName(podName string) string {
 	const (
 		prefix      = "dubbo-xds-"
 		maxNameLen  = 63
@@ -167,10 +167,10 @@ func ProxylessGRPCSecretName(podName string) string {
 	return fmt.Sprintf("%s%s-%s", prefix, base, suffix)
 }
 
-func ProxylessGRPCSecretNameForMeta(meta metav1.ObjectMeta) string {
+func InherentGRPCSecretNameForMeta(meta metav1.ObjectMeta) string {
 	name := meta.Name
 	if meta.GenerateName != "" {
 		name = meta.GenerateName
 	}
-	return ProxylessGRPCSecretName(name)
+	return InherentGRPCSecretName(name)
 }

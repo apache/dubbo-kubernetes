@@ -78,7 +78,7 @@ func TestShouldRespondPreservesNonceAckWithoutResourceNames(t *testing.T) {
 	watcher := newTestWatcher()
 	routeName := "outbound|80||nginx.app.svc.cluster.local"
 
-	shouldRespond, _ := ShouldRespond(watcher, "proxyless", &discovery.DiscoveryRequest{
+	shouldRespond, _ := ShouldRespond(watcher, "inherent", &discovery.DiscoveryRequest{
 		TypeUrl:       model.RouteType,
 		ResourceNames: []string{routeName},
 	})
@@ -91,7 +91,7 @@ func TestShouldRespondPreservesNonceAckWithoutResourceNames(t *testing.T) {
 		return wr
 	})
 
-	shouldRespond, _ = ShouldRespond(watcher, "proxyless", &discovery.DiscoveryRequest{
+	shouldRespond, _ = ShouldRespond(watcher, "inherent", &discovery.DiscoveryRequest{
 		TypeUrl:       model.RouteType,
 		VersionInfo:   "version-1",
 		ResponseNonce: "nonce-1",
@@ -116,7 +116,7 @@ func TestShouldRespondStillDeletesExplicitUnsubscribe(t *testing.T) {
 	watcher := newTestWatcher()
 	watcher.NewWatchedResource(model.RouteType, []string{"outbound|80||nginx.app.svc.cluster.local"})
 
-	shouldRespond, _ := ShouldRespond(watcher, "proxyless", &discovery.DiscoveryRequest{
+	shouldRespond, _ := ShouldRespond(watcher, "inherent", &discovery.DiscoveryRequest{
 		TypeUrl: model.RouteType,
 	})
 	if shouldRespond {

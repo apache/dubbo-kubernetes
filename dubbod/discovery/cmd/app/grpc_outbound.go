@@ -329,7 +329,7 @@ func buildADSNode(opts *grpcOutboundOptions) (*corev1.Node, error) {
 	proxyConfig := meshconfig.DefaultProxyConfig()
 	proxyConfig.DiscoveryAddress = opts.xdsAddress
 	nodeID := strings.Join([]string{
-		string(v1.Proxyless),
+		string(v1.Inherent),
 		opts.podIP,
 		opts.podName + "." + opts.namespace,
 		fmt.Sprintf("%s.svc.%s", opts.namespace, opts.domainSuffix),

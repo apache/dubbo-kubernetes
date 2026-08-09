@@ -20,7 +20,7 @@
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: dubbo-proxyless-injector
+  name: dubbo-inherent-injector
   namespace: dubbo-system
   labels:
     app: dubbod

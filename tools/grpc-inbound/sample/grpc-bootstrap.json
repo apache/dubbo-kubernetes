@@ -13,7 +13,7 @@
     }
   ],
   "node": {
-    "id": "proxyless~10.244.5.2~app-2.default~default.svc.cluster.local"
+    "id": "inherent~10.244.5.2~app-2.default~default.svc.cluster.local"
   },
   "certificate_providers": {
     "default": {

@@ -32,10 +32,10 @@ func httpProbe(port intstr.IntOrString) *corev1.Probe {
 
 func inboundContainer(listen, upstream string) corev1.Container {
 	return corev1.Container{
-		Name:  ProxylessGRPCInboundContainerName,
+		Name:  InherentGRPCInboundContainerName,
 		Image: "kdubbo/dubbod:latest",
 		Args:  []string{"grpc-inbound", "--listen", listen, "--upstream", upstream},
-		Ports: []corev1.ContainerPort{{Name: "grpc-inbound", ContainerPort: ProxylessGRPCInboundPort}},
+		Ports: []corev1.ContainerPort{{Name: "grpc-inbound", ContainerPort: InherentGRPCInboundPort}},
 	}
 }
 
@@ -75,8 +75,8 @@ func TestRewriteAppProbesMovesApplicationPortToSidecar(t *testing.T) {
 		"liveness":  app.LivenessProbe,
 		"startup":   app.StartupProbe,
 	} {
-		if got := probe.HTTPGet.Port.IntValue(); got != ProxylessGRPCInboundPort {
-			t.Fatalf("%s probe port = %d, want %d", name, got, ProxylessGRPCInboundPort)
+		if got := probe.HTTPGet.Port.IntValue(); got != InherentGRPCInboundPort {
+			t.Fatalf("%s probe port = %d, want %d", name, got, InherentGRPCInboundPort)
 		}
 		if probe.HTTPGet.Path != "/healthz" {
 			t.Fatalf("%s probe path changed to %q", name, probe.HTTPGet.Path)
@@ -90,8 +90,8 @@ func TestRewriteAppProbesResolvesNamedPort(t *testing.T) {
 		inboundContainer(":15080", "127.0.0.1:9080"),
 	)
 	RewriteAppProbes(pod)
-	if got := pod.Spec.Containers[0].ReadinessProbe.HTTPGet.Port.IntValue(); got != ProxylessGRPCInboundPort {
-		t.Fatalf("port = %d, want %d", got, ProxylessGRPCInboundPort)
+	if got := pod.Spec.Containers[0].ReadinessProbe.HTTPGet.Port.IntValue(); got != InherentGRPCInboundPort {
+		t.Fatalf("port = %d, want %d", got, InherentGRPCInboundPort)
 	}
 }
 
@@ -162,8 +162,8 @@ func TestRewriteAppProbesAcceptsEqualsSyntax(t *testing.T) {
 	inbound.Args = []string{"grpc-inbound", "--listen=:15080", "--upstream=127.0.0.1:9080"}
 	pod := podWith(appContainer(httpProbe(intstr.FromInt32(9080))), inbound)
 	RewriteAppProbes(pod)
-	if got := pod.Spec.Containers[0].ReadinessProbe.HTTPGet.Port.IntValue(); got != ProxylessGRPCInboundPort {
-		t.Fatalf("port = %d, want %d", got, ProxylessGRPCInboundPort)
+	if got := pod.Spec.Containers[0].ReadinessProbe.HTTPGet.Port.IntValue(); got != InherentGRPCInboundPort {
+		t.Fatalf("port = %d, want %d", got, InherentGRPCInboundPort)
 	}
 }
 
@@ -175,8 +175,8 @@ func TestRewriteAppProbesIsIdempotent(t *testing.T) {
 	)
 	RewriteAppProbes(pod)
 	RewriteAppProbes(pod)
-	if got := pod.Spec.Containers[0].ReadinessProbe.HTTPGet.Port.IntValue(); got != ProxylessGRPCInboundPort {
-		t.Fatalf("port = %d, want %d", got, ProxylessGRPCInboundPort)
+	if got := pod.Spec.Containers[0].ReadinessProbe.HTTPGet.Port.IntValue(); got != InherentGRPCInboundPort {
+		t.Fatalf("port = %d, want %d", got, InherentGRPCInboundPort)
 	}
 }
 

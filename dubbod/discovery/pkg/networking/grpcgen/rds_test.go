@@ -58,7 +58,7 @@ func TestBuildRouteMatchesPreservesHTTPRouteORSemantics(t *testing.T) {
 	}
 }
 
-func TestBuildHTTPRouteProxylessOutboundIgnoresGatewayAttachedHTTPRoute(t *testing.T) {
+func TestBuildHTTPRouteInherentOutboundIgnoresGatewayAttachedHTTPRoute(t *testing.T) {
 	push := newRDSTestPushContext(t, []config.Config{
 		newWildcardHTTPRouteConfig("httpbin", "default", 8000),
 	}, []*model.Service{
@@ -67,7 +67,7 @@ func TestBuildHTTPRouteProxylessOutboundIgnoresGatewayAttachedHTTPRoute(t *testi
 	})
 
 	rc := buildHTTPRoute(
-		&model.Proxy{ID: "nginx-consumer.app", Type: model.Proxyless},
+		&model.Proxy{ID: "nginx-consumer.app", Type: model.Inherent},
 		push,
 		"outbound|80||nginx.app.svc.cluster.local",
 	)
@@ -89,7 +89,7 @@ func TestBuildHTTPRouteProxylessOutboundIgnoresGatewayAttachedHTTPRoute(t *testi
 	}
 }
 
-func TestBuildHTTPRouteProxylessOutboundUsesServiceAttachedHTTPRoute(t *testing.T) {
+func TestBuildHTTPRouteInherentOutboundUsesServiceAttachedHTTPRoute(t *testing.T) {
 	push := newRDSTestPushContext(t, []config.Config{
 		newServiceAttachedHTTPRouteConfig("reviews-routing", "moviereview", "reviews", 9080),
 	}, []*model.Service{
@@ -99,7 +99,7 @@ func TestBuildHTTPRouteProxylessOutboundUsesServiceAttachedHTTPRoute(t *testing.
 	})
 
 	rc := buildHTTPRoute(
-		&model.Proxy{ID: "moviepage.moviereview", Type: model.Proxyless},
+		&model.Proxy{ID: "moviepage.moviereview", Type: model.Inherent},
 		push,
 		"outbound|9080||reviews.moviereview.svc.cluster.local",
 	)
@@ -146,7 +146,7 @@ func TestBuildHTTPRouteSetsGatewayAPIRequestTimeout(t *testing.T) {
 	})
 
 	rc := buildHTTPRoute(
-		&model.Proxy{ID: "moviepage.moviereview", Type: model.Proxyless},
+		&model.Proxy{ID: "moviepage.moviereview", Type: model.Inherent},
 		push,
 		"outbound|9080||reviews.moviereview.svc.cluster.local",
 	)
@@ -178,7 +178,7 @@ func TestBuildHTTPRouteSetsGatewayAPIRetryPolicy(t *testing.T) {
 	})
 
 	rc := buildHTTPRoute(
-		&model.Proxy{ID: "moviepage.moviereview", Type: model.Proxyless},
+		&model.Proxy{ID: "moviepage.moviereview", Type: model.Inherent},
 		push,
 		"outbound|9080||reviews.moviereview.svc.cluster.local",
 	)
@@ -240,7 +240,7 @@ func TestBuildHTTPRouteSetsServiceFaultInjectionPolicy(t *testing.T) {
 	})
 
 	rc := buildHTTPRoute(
-		&model.Proxy{ID: "moviepage.moviereview", Type: model.Proxyless},
+		&model.Proxy{ID: "moviepage.moviereview", Type: model.Inherent},
 		push,
 		"outbound|9080||reviews.moviereview.svc.cluster.local",
 	)

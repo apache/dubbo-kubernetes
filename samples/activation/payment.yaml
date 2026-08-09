@@ -46,7 +46,7 @@ spec:
       labels:
         app: payment
     spec:
-      # Long enough for dxplane's two-phase drain: 5s failing readiness so the
+      # Long enough for dxproxy's two-phase drain: 5s failing readiness so the
       # EndpointSlice drops this pod, then up to 25s draining connections.
       terminationGracePeriodSeconds: 40
       containers:

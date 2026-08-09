@@ -151,7 +151,7 @@ func generateEastWestGatewayCmd() *cobra.Command {
 		namespace:   "dubbo-system",
 		serviceType: "LoadBalancer",
 		port:        15443,
-		targetPort:  inject.ProxylessGRPCInboundPort,
+		targetPort:  inject.InherentGRPCInboundPort,
 	}
 	command := &cobra.Command{
 		Use:   "generate-eastwest-gateway",
@@ -326,46 +326,46 @@ func buildRemoteWebhookManifest(args remoteManifestArgs, caBundle []byte) (*admi
 			Kind:       "MutatingWebhookConfiguration",
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Name: "dubbo-remote-proxyless-injector-" + args.clusterName,
+			Name: "dubbo-remote-inherent-injector-" + args.clusterName,
 			Labels: map[string]string{
 				"app":                  "dubbod",
 				"dubbo.apache.org/rev": args.revision,
 			},
 		},
 		Webhooks: []admissionregistrationv1.MutatingWebhook{
-			remoteWebhook("rev.namespace.remote.proxyless-injector.dubbo.apache.org", clientConfig, &failurePolicy, &sideEffects, &reinvocationPolicy, &scope,
+			remoteWebhook("rev.namespace.remote.inherent-injector.dubbo.apache.org", clientConfig, &failurePolicy, &sideEffects, &reinvocationPolicy, &scope,
 				&metav1.LabelSelector{MatchExpressions: []metav1.LabelSelectorRequirement{
 					{Key: "dubbo.apache.org/rev", Operator: metav1.LabelSelectorOpIn, Values: []string{args.revision}},
 					{Key: "dubbo-injection", Operator: metav1.LabelSelectorOpDoesNotExist},
 				}},
 				&metav1.LabelSelector{MatchExpressions: []metav1.LabelSelectorRequirement{
-					{Key: "proxyless.dubbo.apache.org/inject", Operator: metav1.LabelSelectorOpNotIn, Values: []string{"false"}},
+					{Key: "inherent.dubbo.apache.org/inject", Operator: metav1.LabelSelectorOpNotIn, Values: []string{"false"}},
 				}},
 			),
-			remoteWebhook("rev.object.remote.proxyless-injector.dubbo.apache.org", clientConfig, &failurePolicy, &sideEffects, &reinvocationPolicy, &scope,
+			remoteWebhook("rev.object.remote.inherent-injector.dubbo.apache.org", clientConfig, &failurePolicy, &sideEffects, &reinvocationPolicy, &scope,
 				&metav1.LabelSelector{MatchExpressions: []metav1.LabelSelectorRequirement{
 					{Key: "dubbo.apache.org/rev", Operator: metav1.LabelSelectorOpDoesNotExist},
 					{Key: "dubbo-injection", Operator: metav1.LabelSelectorOpDoesNotExist},
 				}},
 				&metav1.LabelSelector{MatchExpressions: []metav1.LabelSelectorRequirement{
-					{Key: "proxyless.dubbo.apache.org/inject", Operator: metav1.LabelSelectorOpNotIn, Values: []string{"false"}},
+					{Key: "inherent.dubbo.apache.org/inject", Operator: metav1.LabelSelectorOpNotIn, Values: []string{"false"}},
 					{Key: "dubbo.apache.org/rev", Operator: metav1.LabelSelectorOpIn, Values: []string{args.revision}},
 				}},
 			),
-			remoteWebhook("namespace.remote.proxyless-injector.dubbo.apache.org", clientConfig, nil, &sideEffects, &reinvocationPolicy, &scope,
+			remoteWebhook("namespace.remote.inherent-injector.dubbo.apache.org", clientConfig, nil, &sideEffects, &reinvocationPolicy, &scope,
 				&metav1.LabelSelector{MatchExpressions: []metav1.LabelSelectorRequirement{
 					{Key: "dubbo-injection", Operator: metav1.LabelSelectorOpIn, Values: []string{"enabled"}},
 				}},
 				&metav1.LabelSelector{MatchExpressions: []metav1.LabelSelectorRequirement{
-					{Key: "proxyless.dubbo.apache.org/inject", Operator: metav1.LabelSelectorOpNotIn, Values: []string{"false"}},
+					{Key: "inherent.dubbo.apache.org/inject", Operator: metav1.LabelSelectorOpNotIn, Values: []string{"false"}},
 				}},
 			),
-			remoteWebhook("object.remote.proxyless-injector.dubbo.apache.org", clientConfig, nil, &sideEffects, &reinvocationPolicy, &scope,
+			remoteWebhook("object.remote.inherent-injector.dubbo.apache.org", clientConfig, nil, &sideEffects, &reinvocationPolicy, &scope,
 				&metav1.LabelSelector{MatchExpressions: []metav1.LabelSelectorRequirement{
 					{Key: "dubbo-injection", Operator: metav1.LabelSelectorOpDoesNotExist},
 				}},
 				&metav1.LabelSelector{MatchExpressions: []metav1.LabelSelectorRequirement{
-					{Key: "proxyless.dubbo.apache.org/inject", Operator: metav1.LabelSelectorOpIn, Values: []string{"true"}},
+					{Key: "inherent.dubbo.apache.org/inject", Operator: metav1.LabelSelectorOpIn, Values: []string{"true"}},
 				}},
 			),
 		},

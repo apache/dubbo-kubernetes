@@ -28,7 +28,6 @@ import (
 	"github.com/apache/dubbo-kubernetes/dubbod/discovery/pkg/networking/util"
 	"github.com/apache/dubbo-kubernetes/pkg/config/host"
 	"github.com/apache/dubbo-kubernetes/pkg/util/sets"
-	networking "github.com/kdubbo/api/networking/v1alpha3"
 	cluster "github.com/kdubbo/xds-api/cluster/v1"
 	core "github.com/kdubbo/xds-api/core/v1"
 	tlsv1 "github.com/kdubbo/xds-api/extensions/transport_sockets/tls/v1"
@@ -42,9 +41,7 @@ type clusterBuilder struct {
 	hostname           host.Name
 	portNum            int
 
-	// may not be set
 	svc    *model.Service
-	port   *model.Port
 	filter sets.String
 }
 
@@ -90,13 +87,12 @@ func newClusterBuilder(node *model.Proxy, push *model.PushContext, defaultCluste
 	}
 
 	// try to resolve the service and port
-	var port *model.Port
 	svc := push.ServiceForHostname(node, hostname)
 	if svc == nil {
 		return nil, fmt.Errorf("cds gen for %s: did not find service for cluster %s", node.ID, defaultClusterName)
 	}
 
-	port, ok := svc.Ports.GetByPort(portNum)
+	_, ok := svc.Ports.GetByPort(portNum)
 	if !ok {
 		return nil, fmt.Errorf("cds gen for %s: did not find port %d in service for cluster %s", node.ID, portNum, defaultClusterName)
 	}
@@ -110,42 +106,19 @@ func newClusterBuilder(node *model.Proxy, push *model.PushContext, defaultCluste
 		portNum:            portNum,
 		filter:             filter,
 
-		svc:  svc,
-		port: port,
+		svc: svc,
 	}, nil
 }
 
 func (b *clusterBuilder) build() []*cluster.Cluster {
-	var defaultCluster *cluster.Cluster
 	defaultRequested := b.filter == nil || b.filter.Contains(b.defaultClusterName)
-
-	var dr *networking.DestinationRule
-	if b.svc != nil {
-		dr = b.push.DestinationRuleForService(b.svc.Attributes.Namespace, b.hostname)
-		if dr == nil && b.svc.Hostname != b.hostname {
-			dr = b.push.DestinationRuleForService(b.svc.Attributes.Namespace, b.svc.Hostname)
-		}
-	}
-	hasTLSInDR := dr != nil && dr.TrafficPolicy != nil && dr.TrafficPolicy.Tls != nil
-	if hasTLSInDR {
-		tlsMode := dr.TrafficPolicy.Tls.Mode
-		tlsModeStr := dr.TrafficPolicy.Tls.Mode.String()
-		hasTLSInDR = (tlsMode == networking.ClientTLSSettings_DUBBO_MUTUAL || tlsModeStr == "DUBBO_MUTUAL")
+	if !defaultRequested {
+		return nil
 	}
 
-	// Generate default cluster if requested OR if DestinationRule has DUBBO_MUTUAL TLS
-	if defaultRequested || hasTLSInDR {
-		defaultCluster = b.edsCluster(b.defaultClusterName)
-		// For gRPC proxyless, we need to set CommonLbConfig to handle endpoint health status
-		// in OverrideHostStatus so that clients can use them when healthy endpoints are not available.
-		// The client will prioritize HEALTHY endpoints but can fall back to UNHEALTHY/DRAINING if needed.
-		if defaultCluster.CommonLbConfig == nil {
-			defaultCluster.CommonLbConfig = &cluster.Cluster_CommonLbConfig{}
-		}
-		// in OverrideHostStatus. This allows clients to use unhealthy endpoints when healthy ones
-		// are not available, preventing "weighted-target: no targets to pick from" errors.
-		// The client will still prioritize HEALTHY endpoints, but can fall back to others.
-		defaultCluster.CommonLbConfig.OverrideHostStatus = &core.HealthStatusSet{
+	defaultCluster := b.edsCluster(b.defaultClusterName)
+	defaultCluster.CommonLbConfig = &cluster.Cluster_CommonLbConfig{
+		OverrideHostStatus: &core.HealthStatusSet{
 			Statuses: []core.HealthStatus{
 				core.HealthStatus_HEALTHY,
 				core.HealthStatus_UNHEALTHY,
@@ -153,41 +126,16 @@ func (b *clusterBuilder) build() []*cluster.Cluster {
 				core.HealthStatus_UNKNOWN,
 				core.HealthStatus_DEGRADED,
 			},
-		}
-		// TLS will be applied in applyDestinationRule after DestinationRule is found
-		if hasTLSInDR {
-			log.Debugf("generated default cluster %s (required for DUBBO_MUTUAL TLS)", b.defaultClusterName)
-		} else {
-			log.Debugf("generated default cluster %s", b.defaultClusterName)
-		}
-	}
-
-	subsetClusters, newDefaultCluster := b.applyDestinationRule(defaultCluster)
-	// If applyDestinationRule generated a new default cluster (because TLS was found but cluster wasn't generated in build()),
-	// use it instead of the original defaultCluster
-	if newDefaultCluster != nil {
-		defaultCluster = newDefaultCluster
+		},
 	}
 	if b.requiresPeerAuthenticationMTLS() {
 		b.applyPeerAuthenticationMTLS(defaultCluster)
-		for _, subsetCluster := range subsetClusters {
-			b.applyPeerAuthenticationMTLS(subsetCluster)
-		}
 	}
 	if b.node != nil && b.node.IsRouter() {
 		b.applyBackendTLSPolicy(defaultCluster)
-		for _, subsetCluster := range subsetClusters {
-			b.applyBackendTLSPolicy(subsetCluster)
-		}
 	}
-	out := make([]*cluster.Cluster, 0, 1+len(subsetClusters))
-	if defaultCluster != nil {
-		out = append(out, defaultCluster)
-	}
-	result := append(out, subsetClusters...)
-	log.Debugf("generated %d clusters total (1 default + %d subsets) for %s",
-		len(result), len(subsetClusters), b.defaultClusterName)
-	return result
+	log.Debugf("generated cluster %s", b.defaultClusterName)
+	return []*cluster.Cluster{defaultCluster}
 }
 
 func (b *clusterBuilder) requiresPeerAuthenticationMTLS() bool {
@@ -203,7 +151,7 @@ func (b *clusterBuilder) applyPeerAuthenticationMTLS(c *cluster.Cluster) {
 	if c == nil || c.TransportSocket != nil {
 		return
 	}
-	tlsContext := b.buildUpstreamTLSContext(c, nil)
+	tlsContext := b.buildUpstreamTLSContext(c)
 	if tlsContext == nil {
 		log.Warnf("failed to build automatic mTLS context for STRICT PeerAuthentication on cluster %s", c.Name)
 		return
@@ -251,201 +199,6 @@ func defaultLbPolicy() cluster.Cluster_LbPolicy {
 	}
 }
 
-func (b *clusterBuilder) applyDestinationRule(defaultCluster *cluster.Cluster) (subsetClusters []*cluster.Cluster, newDefaultCluster *cluster.Cluster) {
-	if b.svc == nil || b.port == nil {
-		log.Warnf("service or port is nil for %s", b.defaultClusterName)
-		return nil, nil
-	}
-	log.Debugf("looking for DestinationRule for service %s/%s (hostname=%s, port=%d)",
-		b.svc.Attributes.Namespace, b.svc.Attributes.Name, b.hostname, b.portNum)
-	dr := b.push.DestinationRuleForService(b.svc.Attributes.Namespace, b.hostname)
-	if dr == nil {
-		// If not found with b.hostname, try with the service's FQDN hostname
-		if b.svc.Hostname != b.hostname {
-			dr = b.push.DestinationRuleForService(b.svc.Attributes.Namespace, b.svc.Hostname)
-		}
-		if dr == nil {
-			log.Debugf("no DestinationRule found for %s/%s or %s", b.svc.Attributes.Namespace, b.hostname, b.svc.Hostname)
-			return nil, nil
-		}
-	}
-
-	// Check if DestinationRule has TLS configuration
-	hasTLS := dr.TrafficPolicy != nil && dr.TrafficPolicy.Tls != nil
-	if hasTLS {
-		tlsMode := dr.TrafficPolicy.Tls.Mode
-		tlsModeStr := dr.TrafficPolicy.Tls.Mode.String()
-		hasTLS = (tlsMode == networking.ClientTLSSettings_DUBBO_MUTUAL || tlsModeStr == "DUBBO_MUTUAL")
-	}
-
-	// If no subsets and no TLS, there's nothing to do
-	if len(dr.Subsets) == 0 && !hasTLS {
-		log.Debugf("DestinationRule found for %s/%s but has no subsets and no TLS policy", b.svc.Attributes.Namespace, b.hostname)
-		return nil, nil
-	}
-
-	log.Debugf("found DestinationRule for %s/%s with %d subsets, defaultCluster requested=%v, hasTLS=%v",
-		b.svc.Attributes.Namespace, b.hostname, len(dr.Subsets), defaultCluster != nil, hasTLS)
-
-	// Apply TLS to default cluster if it exists and doesn't have TransportSocket yet
-	// This ensures that default cluster gets TLS from the top-level TrafficPolicy in DestinationRule
-	// When DestinationRule sets DUBBO_MUTUAL, inbound listener enforces STRICT mTLS, so outbound must also use TLS
-	// NOTE: We re-check hasTLS here because firstDestinationRule might have returned a different rule
-	// than the one checked in build(), especially when multiple DestinationRules exist and merge failed
-	if defaultCluster != nil && defaultCluster.TransportSocket == nil {
-		// Re-check TLS in case DestinationRule was found here but not in build()
-		recheckTLS := dr != nil && dr.TrafficPolicy != nil && dr.TrafficPolicy.Tls != nil
-		if recheckTLS {
-			tlsMode := dr.TrafficPolicy.Tls.Mode
-			tlsModeStr := dr.TrafficPolicy.Tls.Mode.String()
-			recheckTLS = (tlsMode == networking.ClientTLSSettings_DUBBO_MUTUAL || tlsModeStr == "DUBBO_MUTUAL")
-		}
-		if hasTLS || recheckTLS {
-			log.Debugf("applying TLS to default cluster %s (DestinationRule has DUBBO_MUTUAL)", b.defaultClusterName)
-			b.applyTLSForCluster(defaultCluster, nil)
-		} else {
-			log.Debugf("skipping TLS for default cluster %s (DestinationRule has no TrafficPolicy or TLS)", b.defaultClusterName)
-		}
-	} else if defaultCluster == nil && hasTLS {
-		// If default cluster was not generated in build() but DestinationRule has TLS,
-		// we need to generate it here to ensure TLS is applied
-		// This can happen if build() checked the first rule (without TLS) but applyDestinationRule
-		// found a different rule (with TLS) via firstDestinationRule's improved logic
-		log.Debugf("default cluster was not generated in build() but DestinationRule has TLS, generating it now")
-		defaultCluster = b.edsCluster(b.defaultClusterName)
-		if defaultCluster.CommonLbConfig == nil {
-			defaultCluster.CommonLbConfig = &cluster.Cluster_CommonLbConfig{}
-		}
-		defaultCluster.CommonLbConfig.OverrideHostStatus = &core.HealthStatusSet{
-			Statuses: []core.HealthStatus{
-				core.HealthStatus_HEALTHY,
-				core.HealthStatus_UNHEALTHY,
-				core.HealthStatus_DRAINING,
-				core.HealthStatus_UNKNOWN,
-				core.HealthStatus_DEGRADED,
-			},
-		}
-		log.Debugf("applying TLS to newly generated default cluster %s (DestinationRule has DUBBO_MUTUAL)", b.defaultClusterName)
-		b.applyTLSForCluster(defaultCluster, nil)
-		return nil, defaultCluster // Return the newly generated default cluster
-	}
-
-	var commonLbConfig *cluster.Cluster_CommonLbConfig
-	if defaultCluster != nil {
-		commonLbConfig = defaultCluster.CommonLbConfig
-	} else {
-		commonLbConfig = &cluster.Cluster_CommonLbConfig{
-			OverrideHostStatus: &core.HealthStatusSet{
-				Statuses: []core.HealthStatus{
-					core.HealthStatus_HEALTHY,
-					core.HealthStatus_UNHEALTHY,
-					core.HealthStatus_DRAINING,
-					core.HealthStatus_UNKNOWN,
-					core.HealthStatus_DEGRADED,
-				},
-			},
-		}
-	}
-
-	defaultClusterRequested := defaultCluster != nil
-	if b.filter != nil {
-		defaultClusterRequested = b.filter.Contains(b.defaultClusterName)
-	}
-
-	for _, subset := range dr.Subsets {
-		if subset == nil || subset.Name == "" {
-			continue
-		}
-		clusterName := model.BuildSubsetKey(model.TrafficDirectionOutbound, subset.Name, b.hostname, b.portNum)
-
-		// Always generate subset clusters if default cluster is requested
-		shouldGenerate := true
-		if b.filter != nil && !b.filter.Contains(clusterName) {
-			// Subset cluster not explicitly requested, but generate it if default cluster was requested
-			shouldGenerate = defaultClusterRequested
-		}
-
-		if !shouldGenerate {
-			log.Debugf("skipping subset cluster %s (not requested and default not requested)", clusterName)
-			continue
-		}
-
-		log.Debugf("generating subset cluster %s for subset %s", clusterName, subset.Name)
-		subsetCluster := b.edsCluster(clusterName)
-		subsetCluster.CommonLbConfig = commonLbConfig
-		b.applyTLSForCluster(subsetCluster, subset)
-		subsetClusters = append(subsetClusters, subsetCluster)
-	}
-
-	log.Debugf("generated %d subset clusters for %s/%s", len(subsetClusters), b.svc.Attributes.Namespace, b.hostname)
-	return subsetClusters, nil
-}
-
-// applyTLSForCluster attaches a gRPC-compatible TLS transport socket whenever the
-// DestinationRule (or subset override) specifies DUBBO_MUTUAL/DUBBO_MUTUAL mode.
-func (b *clusterBuilder) applyTLSForCluster(c *cluster.Cluster, subset *networking.Subset) {
-	if c == nil || b.svc == nil {
-		return
-	}
-
-	dr := b.push.DestinationRuleForService(b.svc.Attributes.Namespace, b.hostname)
-	if dr == nil && b.svc.Hostname != b.hostname {
-		// If not found with b.hostname, try with the service's FQDN hostname
-		dr = b.push.DestinationRuleForService(b.svc.Attributes.Namespace, b.svc.Hostname)
-	}
-	if dr == nil {
-		log.Debugf("no DestinationRule found for cluster %s (namespace=%s, hostname=%s, service hostname=%s)",
-			c.Name, b.svc.Attributes.Namespace, b.hostname, b.svc.Hostname)
-		return
-	}
-
-	var policy *networking.TrafficPolicy
-	if subset != nil && subset.TrafficPolicy != nil {
-		policy = subset.TrafficPolicy
-		log.Debugf("using TrafficPolicy from subset %s for cluster %s", subset.Name, c.Name)
-	} else {
-		policy = dr.TrafficPolicy
-		if policy != nil {
-			log.Debugf("using top-level TrafficPolicy for cluster %s", c.Name)
-		}
-	}
-
-	if policy == nil || policy.Tls == nil {
-		if policy == nil {
-			log.Debugf("no TrafficPolicy found in DestinationRule for cluster %s", c.Name)
-		} else {
-			log.Debugf("no TLS settings in TrafficPolicy for cluster %s", c.Name)
-		}
-		return
-	}
-
-	mode := policy.Tls.Mode
-	modeStr := policy.Tls.Mode.String()
-	if mode != networking.ClientTLSSettings_DUBBO_MUTUAL && modeStr != "DUBBO_MUTUAL" {
-		log.Debugf("TLS mode %v (%s) not supported for gRPC proxyless, skipping", mode, modeStr)
-		return
-	}
-
-	tlsContext := b.buildUpstreamTLSContext(c, policy.Tls)
-	if tlsContext == nil {
-		log.Warnf("failed to build TLS context for cluster %s", c.Name)
-		return
-	}
-
-	sni := tlsContext.Sni
-	if sni == "" {
-		log.Warnf("SNI is empty for cluster %s, this may cause TLS handshake failures", c.Name)
-	} else {
-		log.Debugf("using SNI=%s for cluster %s", sni, c.Name)
-	}
-
-	c.TransportSocket = &core.TransportSocket{
-		Name:       "transport_sockets.tls",
-		ConfigType: &core.TransportSocket_TypedConfig{TypedConfig: protoconv.MessageToAny(tlsContext)},
-	}
-	log.Debugf("applied %v TLS transport socket to cluster %s (SNI=%s)", mode, c.Name, sni)
-}
-
 func (b *clusterBuilder) applyBackendTLSPolicy(c *cluster.Cluster) {
 	if c == nil || c.TransportSocket != nil || b.svc == nil || b.push == nil {
 		return
@@ -470,7 +223,7 @@ func (b *clusterBuilder) applyBackendTLSPolicy(c *cluster.Cluster) {
 
 // buildUpstreamTLSContext builds an UpstreamTlsContext that conforms to gRPC xDS expectations,
 // reusing the common certificate-provider setup from buildCommonTLSContext.
-func (b *clusterBuilder) buildUpstreamTLSContext(c *cluster.Cluster, tlsSettings *networking.ClientTLSSettings) *tlsv1.UpstreamTlsContext {
+func (b *clusterBuilder) buildUpstreamTLSContext(c *cluster.Cluster) *tlsv1.UpstreamTlsContext {
 	// Pin the upstream identity: only certificates whose SAN matches one of the
 	// target service's SPIFFE identities are accepted.
 	var sans []string
@@ -519,7 +272,7 @@ func (b *clusterBuilder) buildUpstreamTLSContext(c *cluster.Cluster, tlsSettings
 			}
 		}
 	}
-	// Proxyless gRPC always speaks HTTP/2, advertise h2 via ALPN.
+	// Inherent gRPC always speaks HTTP/2, advertise h2 via ALPN.
 	tlsContext.CommonTlsContext.AlpnProtocols = []string{"h2"}
 	return tlsContext
 }

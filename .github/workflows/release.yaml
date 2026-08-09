@@ -286,7 +286,7 @@ jobs:
             --app-version "${TAG}" \
             --destination release-charts
           helm template dubbod "release-charts/dubbod-${TAG}.tgz" \
-            --set global.proxyless.cni.enabled=false \
+            --set global.inherent.cni.enabled=false \
             | grep -F "image: \"ghcr.io/apache/dubbo-kubernetes/dubbod:${TAG}\""
           (
             cd release-charts

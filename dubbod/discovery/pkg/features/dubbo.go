@@ -55,7 +55,7 @@ var (
 	EastWestGatewayRegistry = env.Register("DUBBO_EASTWEST_GATEWAYS", "",
 		"Comma-separated east-west gateway endpoints in cluster=host:port format. "+
 			"When set, endpoints from another cluster are advertised through that cluster's gateway instead of its pod IPs.").Get()
-	InjectionWebhookConfigName = env.Register("INJECTION_WEBHOOK_CONFIG_NAME", "dubbo-proxyless-injector",
+	InjectionWebhookConfigName = env.Register("INJECTION_WEBHOOK_CONFIG_NAME", "dubbo-inherent-injector",
 		"Name of the mutatingwebhookconfiguration to patch, if dubboctl is not used.").Get()
 	ManagedGatewayController = env.Register("DUBBO_GATEWAY_API_CONTROLLER_NAME", "dubbo.apache.org/gateway-controller",
 		"Gateway API controller name. dubbod will only reconcile Gateway API resources referencing a GatewayClass with this controller name").Get()

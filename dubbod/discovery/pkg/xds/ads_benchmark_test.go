@@ -35,13 +35,13 @@ import (
 	discovery "github.com/kdubbo/xds-api/service/discovery/v1"
 )
 
-type proxylessPushScale struct {
+type inherentPushScale struct {
 	services            int
 	endpointsPerService int
 	connections         int
 }
 
-func (s proxylessPushScale) name() string {
+func (s inherentPushScale) name() string {
 	return fmt.Sprintf(
 		"services=%d/endpoints_per_service=%d/connections=%d",
 		s.services,
@@ -50,7 +50,7 @@ func (s proxylessPushScale) name() string {
 	)
 }
 
-var proxylessPushScaleMatrix = []proxylessPushScale{
+var inherentPushScaleMatrix = []inherentPushScale{
 	{services: 10, endpointsPerService: 10, connections: 100},
 	{services: 100, endpointsPerService: 10, connections: 100},
 	{services: 1000, endpointsPerService: 10, connections: 100},
@@ -60,7 +60,7 @@ var proxylessPushScaleMatrix = []proxylessPushScale{
 	{services: 100, endpointsPerService: 10, connections: 1000},
 }
 
-var proxylessFullPushScaleMatrix = []proxylessPushScale{
+var inherentFullPushScaleMatrix = []inherentPushScale{
 	{services: 10, endpointsPerService: 10, connections: 10},
 	{services: 100, endpointsPerService: 10, connections: 10},
 	{services: 1000, endpointsPerService: 10, connections: 10},
@@ -72,10 +72,10 @@ var proxylessFullPushScaleMatrix = []proxylessPushScale{
 
 var benchmarkPushResponse *discovery.DiscoveryResponse
 
-func BenchmarkProxylessPushScale(b *testing.B) {
-	for _, scale := range proxylessPushScaleMatrix {
+func BenchmarkInherentPushScale(b *testing.B) {
+	for _, scale := range inherentPushScaleMatrix {
 		b.Run(scale.name(), func(b *testing.B) {
-			fixture := newProxylessPushBenchmarkFixture(b, scale)
+			fixture := newInherentPushBenchmarkFixture(b, scale)
 			b.ReportAllocs()
 			b.ResetTimer()
 
@@ -101,10 +101,10 @@ func BenchmarkProxylessPushScale(b *testing.B) {
 	}
 }
 
-func BenchmarkProxylessFullPushScale(b *testing.B) {
-	for _, scale := range proxylessFullPushScaleMatrix {
+func BenchmarkInherentFullPushScale(b *testing.B) {
+	for _, scale := range inherentFullPushScaleMatrix {
 		b.Run(scale.name(), func(b *testing.B) {
-			fixture := newProxylessPushBenchmarkFixture(b, scale)
+			fixture := newInherentPushBenchmarkFixture(b, scale)
 			fixture.request.Full = true
 			fixture.request.Forced = true
 			fixture.request.ConfigsUpdated = nil
@@ -134,9 +134,9 @@ func BenchmarkProxylessFullPushScale(b *testing.B) {
 	}
 }
 
-func TestProxylessPushBenchmarkFixture(t *testing.T) {
-	scale := proxylessPushScale{services: 3, endpointsPerService: 2, connections: 4}
-	fixture := newProxylessPushBenchmarkFixture(t, scale)
+func TestInherentPushBenchmarkFixture(t *testing.T) {
+	scale := inherentPushScale{services: 3, endpointsPerService: 2, connections: 4}
+	fixture := newInherentPushBenchmarkFixture(t, scale)
 
 	responses, resources, lastResponse := fixture.pushOnce(t)
 	if responses != scale.connections || resources != scale.connections {
@@ -164,19 +164,19 @@ func TestProxylessPushBenchmarkFixture(t *testing.T) {
 	}
 }
 
-type proxylessPushBenchmarkFixture struct {
+type inherentPushBenchmarkFixture struct {
 	server      *DiscoveryServer
 	request     *model.PushRequest
 	stream      *fakeADSStream
 	connections int
 }
 
-func newProxylessPushBenchmarkFixture(tb testing.TB, scale proxylessPushScale) *proxylessPushBenchmarkFixture {
+func newInherentPushBenchmarkFixture(tb testing.TB, scale inherentPushScale) *inherentPushBenchmarkFixture {
 	tb.Helper()
 	if scale.services <= 0 || scale.endpointsPerService <= 0 || scale.connections <= 0 {
 		tb.Fatalf("benchmark scale values must all be positive: %+v", scale)
 	}
-	silenceProxylessPushBenchmarkLogs(tb)
+	silenceInherentPushBenchmarkLogs(tb)
 
 	services := make([]*model.Service, 0, scale.services)
 	serviceByHostname := make(map[host.Name]*model.Service, scale.services)
@@ -236,13 +236,13 @@ func newProxylessPushBenchmarkFixture(tb testing.TB, scale proxylessPushScale) *
 	}
 	stream := newFakeADSStream()
 	for connectionIndex := 0; connectionIndex < scale.connections; connectionIndex++ {
-		connectionID := fmt.Sprintf("proxyless-%d", connectionIndex)
+		connectionID := fmt.Sprintf("inherent-%d", connectionIndex)
 		connection := newConnection("127.0.0.1:26010", stream)
 		connection.SetID(connectionID)
 		connection.s = server
 		connection.proxy = &model.Proxy{
 			ID:              connectionID,
-			Type:            model.Proxyless,
+			Type:            model.Inherent,
 			ConfigNamespace: "app",
 			Metadata: &model.NodeMetadata{
 				Generator: "grpc",
@@ -261,7 +261,7 @@ func newProxylessPushBenchmarkFixture(tb testing.TB, scale proxylessPushScale) *
 	}
 
 	targetService := services[0]
-	return &proxylessPushBenchmarkFixture{
+	return &inherentPushBenchmarkFixture{
 		server: server,
 		request: &model.PushRequest{
 			Push:   push,
@@ -278,7 +278,7 @@ func newProxylessPushBenchmarkFixture(tb testing.TB, scale proxylessPushScale) *
 	}
 }
 
-func silenceProxylessPushBenchmarkLogs(tb testing.TB) {
+func silenceInherentPushBenchmarkLogs(tb testing.TB) {
 	tb.Helper()
 	for _, scopeName := range []string{"ads", "model"} {
 		scope := dubbolog.FindScope(scopeName)
@@ -293,7 +293,7 @@ func silenceProxylessPushBenchmarkLogs(tb testing.TB) {
 	}
 }
 
-func (f *proxylessPushBenchmarkFixture) pushOnce(tb testing.TB) (int, int, *discovery.DiscoveryResponse) {
+func (f *inherentPushBenchmarkFixture) pushOnce(tb testing.TB) (int, int, *discovery.DiscoveryResponse) {
 	tb.Helper()
 	clients := f.server.clientsForPush(f.request)
 	if len(clients) != f.connections {

@@ -462,7 +462,7 @@ func TestGenerateManifestCNIUsesFixedConfiguration(t *testing.T) {
 
 	valuesConfigMap := findManifest(t, manifests, "ConfigMap", "values")
 	mergedValues, _, _ := unstructured.NestedString(valuesConfigMap.Object, "data", "merged-values")
-	for _, removed := range []string{"global:", "proxyless:"} {
+	for _, removed := range []string{"global:", "inherent:"} {
 		if strings.Contains(mergedValues, removed) {
 			t.Fatalf("merged values retained removed key %q:\n%s", removed, mergedValues)
 		}
@@ -471,9 +471,9 @@ func TestGenerateManifestCNIUsesFixedConfiguration(t *testing.T) {
 		t.Fatalf("merged values missing top-level image:\n%s", mergedValues)
 	}
 
-	injectorConfigMap := findManifest(t, manifests, "ConfigMap", "dubbo-proxyless-injector")
+	injectorConfigMap := findManifest(t, manifests, "ConfigMap", "dubbo-inherent-injector")
 	injectorValues, _, _ := unstructured.NestedString(injectorConfigMap.Object, "data", "values")
-	if strings.Contains(injectorValues, "global:") || strings.Contains(injectorValues, "proxyless:") {
+	if strings.Contains(injectorValues, "global:") || strings.Contains(injectorValues, "inherent:") {
 		t.Fatalf("injector values retained removed nesting:\n%s", injectorValues)
 	}
 }
@@ -565,8 +565,8 @@ func TestGenerateManifestRejectsRemovedInstallSurface(t *testing.T) {
 			set:  "values.global.proxy.image=kdubbo/dubbod:test",
 		},
 		{
-			name: "removed proxyless value",
-			set:  "values.global.proxyless.cni.enabled=false",
+			name: "removed inherent value",
+			set:  "values.global.inherent.cni.enabled=false",
 		},
 		{
 			name: "removed prometheus component",

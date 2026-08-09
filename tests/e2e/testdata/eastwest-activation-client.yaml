@@ -20,7 +20,7 @@ metadata:
   namespace: e2e
   labels:
     app: payment-client
-    proxyless.dubbo.apache.org/inject: "true"
+    inherent.dubbo.apache.org/inject: "true"
   annotations:
     inject.dubbo.apache.org/templates: grpc-engine
 spec:

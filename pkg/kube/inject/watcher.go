@@ -81,13 +81,13 @@ func NewConfigMapWatcher(client kube.Client, namespace, name, configKey, valuesK
 		valuesKey: valuesKey,
 	}
 	w.c = configmapwatcher.NewController(client, namespace, name, func(cm *v1.ConfigMap) {
-		proxylessConfig, valuesConfig, err := readConfigMap(cm, configKey, valuesKey)
+		inherentConfig, valuesConfig, err := readConfigMap(cm, configKey, valuesKey)
 		if err != nil {
 			log.Warnf("failed to read injection config from ConfigMap: %v", err)
 			return
 		}
 		if w.handler != nil {
-			if err := w.handler(proxylessConfig, valuesConfig); err != nil {
+			if err := w.handler(inherentConfig, valuesConfig); err != nil {
 				log.Errorf("update error: %v", err)
 			}
 		}
@@ -102,13 +102,13 @@ func (w *fileWatcher) Run(stop <-chan struct{}) {
 		select {
 		case <-timerC:
 			timerC = nil
-			proxylessconfig, valuesConfig, err := w.Get()
+			inherentconfig, valuesConfig, err := w.Get()
 			if err != nil {
 				log.Errorf("update error: %v", err)
 				break
 			}
 			if w.handler != nil {
-				if err := w.handler(proxylessconfig, valuesConfig); err != nil {
+				if err := w.handler(inherentconfig, valuesConfig); err != nil {
 					log.Errorf("update error: %v", err)
 				}
 			}

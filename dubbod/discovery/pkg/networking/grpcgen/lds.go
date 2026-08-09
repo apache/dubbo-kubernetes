@@ -204,14 +204,12 @@ func buildInboundListeners(node *model.Proxy, push *model.PushContext, names []s
 		log.Debugf(" listener %s, service=%s, isGatewayPod=%v, node.Type=%v, node.IsRouter()=%v",
 			name, si.Service.Attributes.Name, isGatewayPod, node.Type, node.IsRouter())
 
-		// - DestinationRule with DUBBO_MUTUAL only configures CLIENT-SIDE (outbound) mTLS
-		// - PeerAuthentication with STRICT configures SERVER-SIDE (inbound) mTLS
-		// Both are REQUIRED for mTLS to work. Server-side mTLS should ONLY be controlled by PeerAuthentication.
+		// PeerAuthentication is the single source of truth for inbound mTLS.
 		mode := push.InboundMTLSModeForProxy(node, uint32(listenPort))
 
-		// For proxyless gRPC inbound listeners, we need a FilterChain with HttpConnectionManager filter
+		// For Inherent gRPC inbound listeners, we need a FilterChain with HttpConnectionManager filter
 		// to satisfy gRPC client requirements. According to grpc-go issue #7691 and the error
-		// "missing HttpConnectionManager filter", gRPC proxyless clients require HttpConnectionManager
+		// "missing HttpConnectionManager filter", gRPC Inherent clients require HttpConnectionManager
 		// in the FilterChain for inbound listeners.
 		routeName := fmt.Sprintf("%d", listenPort)
 		var hcm *hcmv1.HttpConnectionManager
@@ -243,7 +241,7 @@ func buildInboundListeners(node *model.Proxy, push *model.PushContext, names []s
 		} else {
 			// For regular service Pods, use inline RouteConfig with NonForwardingAction
 			// Use inline RouteConfig instead of RDS to avoid triggering additional RDS requests that cause push loops
-			// For proxyless gRPC, inline configuration is preferred to minimize round-trips
+			// For Inherent gRPC, inline configuration is preferred to minimize round-trips
 			hcm = &hcmv1.HttpConnectionManager{
 				CodecType:  hcmv1.HttpConnectionManager_AUTO,
 				StatPrefix: fmt.Sprintf("inbound_%d", listenPort),
@@ -301,7 +299,7 @@ func buildInboundListeners(node *model.Proxy, push *model.PushContext, names []s
 					},
 				},
 			}},
-			// Create FilterChain with HttpConnectionManager filter for proxyless gRPC
+			// Create FilterChain with HttpConnectionManager filter for Inherent gRPC
 			FilterChains: filterChains,
 			// the following must not be set or the client will NACK
 			ListenerFilters: nil,
@@ -339,7 +337,7 @@ func buildDownstreamTransportSocket(mode model.MutualTLSMode) *core.TransportSoc
 	tlsContext := &tlsv1.DownstreamTlsContext{
 		CommonTlsContext:         common,
 		RequireClientCertificate: wrapperspb.Bool(true),
-		// Note: gRPC proxyless uses certificate provider for validation
+		// Note: gRPC inherent uses certificate provider for validation
 		// The ValidationContextType in CommonTlsContext handles client cert validation
 	}
 	return &core.TransportSocket{
@@ -530,7 +528,7 @@ func buildOutboundListeners(node *model.Proxy, push *model.PushContext, filter l
 			// Build route name (same format as cluster name) for RDS
 			routeName := clusterName
 
-			// For gRPC proxyless, outbound listeners MUST use ApiListener with RDS
+			// For gRPC inherent, outbound listeners MUST use ApiListener with RDS
 			// This is the correct pattern used by Dubbo for gRPC xDS clients
 			// Using FilterChain with inline RouteConfig causes the gRPC client to remain in IDLE state
 			hcm := &hcmv1.HttpConnectionManager{

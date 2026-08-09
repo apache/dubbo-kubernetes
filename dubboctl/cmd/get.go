@@ -97,22 +97,22 @@ func listInjectedPods(ctx context.Context, client kubernetes.Interface, namespac
 }
 
 func isInjectedPod(pod corev1.Pod) bool {
-	if pod.Annotations[annotation.OrgApacheDubboProxylessStatus.Name] != "" {
+	if pod.Annotations[annotation.OrgApacheDubboInherentStatus.Name] != "" {
 		return true
 	}
-	if containsCSV(pod.Annotations[annotation.OrgApacheDubboInjectTemplates.Name], inject.ProxylessGRPCTemplateName) {
+	if containsCSV(pod.Annotations[annotation.OrgApacheDubboInjectTemplates.Name], inject.InherentGRPCTemplateName) {
 		return true
 	}
-	if hasVolume(pod, inject.ProxylessXDSVolumeName) {
+	if hasVolume(pod, inject.InherentXDSVolumeName) {
 		return true
 	}
 	for _, container := range allContainers(pod) {
-		if container.Name == inject.ProxylessGRPCInboundContainerName {
+		if container.Name == inject.InherentGRPCInboundContainerName {
 			return true
 		}
 		for _, env := range container.Env {
 			switch env.Name {
-			case "GRPC_XDS_BOOTSTRAP", inject.ProxylessGRPCConfigEnvName, inject.ProxylessXDSAddressEnvName:
+			case "GRPC_XDS_BOOTSTRAP", inject.InherentGRPCConfigEnvName, inject.InherentXDSAddressEnvName:
 				return true
 			}
 		}
@@ -212,7 +212,7 @@ func podTemplates(pod corev1.Pod) string {
 		return templates
 	}
 	if isInjectedPod(pod) {
-		return inject.ProxylessGRPCTemplateName
+		return inject.InherentGRPCTemplateName
 	}
 	return ""
 }

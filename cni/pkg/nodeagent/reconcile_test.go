@@ -128,7 +128,7 @@ func TestReconcileOnceAddsPodsMissingFromLocalState(t *testing.T) {
 			{IP: "10.244.0.99"},
 		}},
 		NodeName:   "master",
-		Label:      "proxyless.dubbo.apache.org/managed",
+		Label:      "inherent.dubbo.apache.org/managed",
 		LabelValue: "true",
 	}
 	reconciler := &recordingReconciler{}

@@ -76,13 +76,13 @@ func (s *DiscoveryServer) pushXds(con *Connection, w *model.WatchedResource, req
 		return nil
 	}
 
-	// For proxyless gRPC, handle wildcard (empty ResourceNames) requests correctly
+	// For Inherent gRPC, handle wildcard (empty ResourceNames) requests correctly
 	// When client sends empty ResourceNames after receiving specific resources, it's likely an ACK
 	// We should NOT generate all resources, but instead return the last sent resources
 	// However, for initial wildcard requests, we need to extract resource names from parent resources
 	var requestedResourceNames sets.String
 	var useLastSentResources bool
-	if con.proxy.IsProxylessGrpc() {
+	if con.proxy.IsInherentGrpc() {
 		// Check if this is a wildcard request (empty ResourceNames) but we have previously sent resources
 		if len(w.ResourceNames) == 0 && w.NonceSent != "" {
 			// This is likely an ACK after receiving specific resources
@@ -90,7 +90,7 @@ func (s *DiscoveryServer) pushXds(con *Connection, w *model.WatchedResource, req
 			useLastSentResources = true
 			// Get the last sent resource names from WatchedResource
 			// We'll populate this from the last sent resources after generation
-			log.Debugf("proxyless gRPC wildcard request with NonceSent=%s, will use last sent resources", w.NonceSent)
+			log.Debugf("Inherent gRPC wildcard request with NonceSent=%s, will use last sent resources", w.NonceSent)
 		} else if len(w.ResourceNames) == 0 && w.NonceSent == "" {
 			// Initial wildcard request - need to extract resource names from parent resources
 			// For CDS: extract cluster names from LDS
@@ -193,7 +193,7 @@ func (s *DiscoveryServer) pushXds(con *Connection, w *model.WatchedResource, req
 	}
 
 	var logFiltered string
-	if !req.Delta.IsEmpty() && !con.proxy.IsProxylessGrpc() {
+	if !req.Delta.IsEmpty() && !con.proxy.IsInherentGrpc() {
 		logFiltered = " filtered:" + strconv.Itoa(len(w.ResourceNames)-len(req.Delta.Subscribed))
 		w = &model.WatchedResource{
 			TypeUrl:       w.TypeUrl,
@@ -201,7 +201,7 @@ func (s *DiscoveryServer) pushXds(con *Connection, w *model.WatchedResource, req
 		}
 	}
 
-	// For proxyless gRPC wildcard requests with previous NonceSent, use last sent resources
+	// For Inherent gRPC wildcard requests with previous NonceSent, use last sent resources
 	var res model.Resources
 	var logdata model.XdsLogDetails
 	var err error
@@ -225,12 +225,12 @@ func (s *DiscoveryServer) pushXds(con *Connection, w *model.WatchedResource, req
 		return err
 	}
 
-	// For proxyless gRPC wildcard requests with previous NonceSent, return last sent resources
+	// For Inherent gRPC wildcard requests with previous NonceSent, return last sent resources
 	if useLastSentResources && res == nil {
 		// This is a wildcard ACK - client is acknowledging previous push
 		// We should NOT push again, as the client already has the resources
 		// The ShouldRespond logic should have prevented this, but we handle it here as safety
-		log.Debugf("proxyless gRPC wildcard ACK with NonceSent=%s, skipping push (client already has resources from previous push)", w.NonceSent)
+		log.Debugf("Inherent gRPC wildcard ACK with NonceSent=%s, skipping push (client already has resources from previous push)", w.NonceSent)
 		return nil
 	}
 
@@ -238,10 +238,10 @@ func (s *DiscoveryServer) pushXds(con *Connection, w *model.WatchedResource, req
 		return nil
 	}
 
-	// For proxyless gRPC, filter resources to only include requested ones
+	// For Inherent gRPC, filter resources to only include requested ones
 	// This prevents the push loop where client requests 1 resource but receives 13/14
 	var filteredRes model.Resources
-	if con.proxy.IsProxylessGrpc() {
+	if con.proxy.IsInherentGrpc() {
 		if len(requestedResourceNames) > 0 {
 			// Filter to only requested resources
 			filteredRes = make(model.Resources, 0, len(res))
@@ -249,7 +249,7 @@ func (s *DiscoveryServer) pushXds(con *Connection, w *model.WatchedResource, req
 				if requestedResourceNames.Contains(r.Name) {
 					filteredRes = append(filteredRes, r)
 				} else {
-					log.Debugf("filtering out unrequested resource %s for proxyless gRPC (requested: %v)", r.Name, requestedResourceNames.UnsortedList())
+					log.Debugf("filtering out unrequested resource %s for Inherent gRPC (requested: %v)", r.Name, requestedResourceNames.UnsortedList())
 				}
 			}
 			if len(filteredRes) != len(res) {
@@ -260,18 +260,18 @@ func (s *DiscoveryServer) pushXds(con *Connection, w *model.WatchedResource, req
 			// this means the requested resources don't exist. Don't send empty response to avoid loop.
 			// Instead, log and return nil to prevent push.
 			if len(res) == 0 && len(requestedResourceNames) > 0 {
-				log.Warnf("proxyless gRPC requested %d resources but none matched after filtering (requested: %v, generated before filter: %d). Skipping push to avoid loop.",
+				log.Warnf("Inherent gRPC requested %d resources but none matched after filtering (requested: %v, generated before filter: %d). Skipping push to avoid loop.",
 					len(requestedResourceNames), requestedResourceNames.UnsortedList(), len(filteredRes)+len(res))
 				return nil
 			}
 		} else if len(w.ResourceNames) == 0 {
 			// Wildcard request without previous NonceSent - this is initial request
 			// Allow generating all resources for initial connection
-			log.Debugf("proxyless gRPC initial wildcard request, generating all resources")
+			log.Debugf("Inherent gRPC initial wildcard request, generating all resources")
 		}
 	}
 
-	// Never send empty response for proxyless gRPC - this causes push loops
+	// Never send empty response for Inherent gRPC - this causes push loops
 	// If we have no resources to send, return nil instead of sending empty response
 	if len(res) == 0 {
 		log.Debugf("no resources to send for %s (proxy: %s), skipping push", w.TypeUrl, con.proxy.ID)
@@ -302,8 +302,8 @@ func (s *DiscoveryServer) pushXds(con *Connection, w *model.WatchedResource, req
 			return nil
 		}
 		wr.NonceSent = nonceValue
-		// Also update ResourceNames to match what we actually sent (for proxyless gRPC)
-		if con.proxy.IsProxylessGrpc() && res != nil {
+		// Also update ResourceNames to match what we actually sent (for Inherent gRPC)
+		if con.proxy.IsInherentGrpc() && res != nil {
 			sentNames := sets.New[string]()
 			for _, r := range res {
 				sentNames.Insert(r.Name)
@@ -358,11 +358,11 @@ func (s *DiscoveryServer) pushXds(con *Connection, w *model.WatchedResource, req
 			util.ByteCount(ResourceSize(res)), info, resourceNamesStr)
 	}
 
-	// For proxyless gRPC, after pushing LDS with outbound listeners,
+	// For Inherent gRPC, after pushing LDS with outbound listeners,
 	// automatically trigger CDS and RDS push for the referenced clusters and routes
 	// ONLY if this is a direct request push (not a push from pushConnection which would cause loops)
 	// Only auto-push if CDS/RDS is not already being watched by the client (client will request it naturally)
-	if w.TypeUrl == v1.ListenerType && con.proxy.IsProxylessGrpc() && len(res) > 0 {
+	if w.TypeUrl == v1.ListenerType && con.proxy.IsInherentGrpc() && len(res) > 0 {
 		// Only auto-push CDS/RDS if this is a direct request (not a full push from pushConnection)
 		// Check if this push was triggered by a direct client request using IsRequest()
 		isDirectRequest := req.IsRequest()
@@ -465,7 +465,7 @@ func (s *DiscoveryServer) pushXds(con *Connection, w *model.WatchedResource, req
 		}
 	}
 
-	// For proxyless gRPC, after pushing CDS with EDS clusters,
+	// For Inherent gRPC, after pushing CDS with EDS clusters,
 	// we should NOT automatically push EDS before the client requests it.
 	// The gRPC xDS client will automatically request EDS after receiving CDS with EDS clusters.
 	// If we push EDS before the client requests it, the client will receive the response
@@ -474,7 +474,7 @@ func (s *DiscoveryServer) pushXds(con *Connection, w *model.WatchedResource, req
 	// 1. Update the watched resource to include the EDS cluster names (so when client requests EDS, we know what to send)
 	// 2. Wait for the client to request EDS naturally
 	// 3. When the client requests EDS, we will push it with the correct state
-	if w.TypeUrl == v1.ClusterType && con.proxy.IsProxylessGrpc() && len(res) > 0 {
+	if w.TypeUrl == v1.ClusterType && con.proxy.IsInherentGrpc() && len(res) > 0 {
 		// Extract EDS cluster names from CDS resources
 		edsClusterNames := extractEDSClusterNamesFromCDS(res)
 		if len(edsClusterNames) > 0 {
@@ -699,7 +699,7 @@ func extractRouteNamesFromLDS(listeners model.Resources) []string {
 			}
 		}
 
-		// Check if this listener has ApiListener (used by gRPC proxyless for outbound)
+		// Check if this listener has ApiListener (used by gRPC inherent for outbound)
 		if ll.ApiListener != nil && ll.ApiListener.ApiListener != nil {
 			// Unmarshal ApiListener to get HttpConnectionManager
 			hcm := &hcmv1.HttpConnectionManager{}

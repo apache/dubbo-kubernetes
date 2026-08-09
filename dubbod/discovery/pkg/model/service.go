@@ -406,7 +406,7 @@ func (s *Service) SupportsDrainingEndpoints() bool {
 }
 
 // GetAddressForProxy returns the primary address for a service from the proxy's perspective.
-// This is used for outbound listener addresses in gRPC proxyless mode.
+// This is used for outbound listener addresses in gRPC Inherent mode.
 func (s *Service) GetAddressForProxy(node *Proxy) string {
 	addresses := s.getAllAddressesForProxy(node)
 	if len(addresses) > 0 {
