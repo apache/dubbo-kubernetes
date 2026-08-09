@@ -382,6 +382,112 @@ func TestValidateFaultInjectionPolicy(t *testing.T) {
 	}
 }
 
+func TestValidateDxgateService(t *testing.T) {
+	openAI := func() *networking.DxgateService {
+		return &networking.DxgateService{
+			Service: &networking.DxgateService_Ai{Ai: &networking.AIService{
+				Provider: &networking.AIProvider{
+					Provider: &networking.AIProvider_Openai{Openai: &networking.OpenAIProvider{}},
+				},
+				Models:   []string{"gpt-test"},
+				Endpoint: "http://llm.default.svc:8080/v1",
+			}},
+		}
+	}
+	mcp := func() *networking.DxgateService {
+		return &networking.DxgateService{
+			Service: &networking.DxgateService_Mcp{Mcp: &networking.MCPService{
+				Targets: []*networking.MCPTarget{{
+					Name: "tools",
+					Static: &networking.StaticBackend{
+						BackendRef: &networking.BackendReference{Name: "tools"},
+						Port:       8080,
+					},
+				}},
+			}},
+		}
+	}
+	a2a := func() *networking.DxgateService {
+		return &networking.DxgateService{
+			Service: &networking.DxgateService_A2A{A2A: &networking.A2AService{
+				BackendRef: &networking.BackendReference{Name: "review-agent"},
+				Port:       9090,
+			}},
+		}
+	}
+	cases := []struct {
+		name    string
+		spec    *networking.DxgateService
+		wantErr bool
+	}{
+		{name: "openai", spec: openAI()},
+		{name: "mcp", spec: mcp()},
+		{name: "a2a", spec: a2a()},
+		{name: "missing service", spec: &networking.DxgateService{}, wantErr: true},
+		{
+			name: "ai provider missing",
+			spec: &networking.DxgateService{
+				Service: &networking.DxgateService_Ai{Ai: &networking.AIService{}},
+			},
+			wantErr: true,
+		},
+		{
+			name: "bad ai endpoint",
+			spec: func() *networking.DxgateService {
+				s := openAI()
+				s.GetAi().Endpoint = "llm:8080"
+				return s
+			}(),
+			wantErr: true,
+		},
+		{
+			name: "empty mcp targets",
+			spec: &networking.DxgateService{
+				Service: &networking.DxgateService_Mcp{Mcp: &networking.MCPService{}},
+			},
+			wantErr: true,
+		},
+		{
+			name: "duplicate mcp target",
+			spec: func() *networking.DxgateService {
+				s := mcp()
+				s.GetMcp().Targets = append(s.GetMcp().Targets, s.GetMcp().Targets[0])
+				return s
+			}(),
+			wantErr: true,
+		},
+		{
+			name: "a2a ambiguous target",
+			spec: func() *networking.DxgateService {
+				s := a2a()
+				s.GetA2A().Host = "agent.example.com"
+				return s
+			}(),
+			wantErr: true,
+		},
+		{
+			name: "bad policy",
+			spec: func() *networking.DxgateService {
+				s := openAI()
+				s.Policies = &networking.DxgateServicePolicies{
+					Retry:   &networking.RetryPolicy{Attempts: 0, StatusCodes: []uint32{200}},
+					Timeout: durationpb.New(-time.Second),
+				}
+				return s
+			}(),
+			wantErr: true,
+		},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			_, err := ValidateDxgateService(makeConfig(tc.spec))
+			if (err != nil) != tc.wantErr {
+				t.Fatalf("got err=%v, wantErr=%v", err, tc.wantErr)
+			}
+		})
+	}
+}
+
 func TestValidateServiceEntry(t *testing.T) {
 	valid := func() *networking.ServiceEntry {
 		return &networking.ServiceEntry{

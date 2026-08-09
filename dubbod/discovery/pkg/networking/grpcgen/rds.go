@@ -241,6 +241,7 @@ func buildHTTPRoute(node *model.Proxy, push *model.PushContext, routeName string
 
 		// Filter HTTPRoutes by parentRef to match this Gateway
 		httpRoutes := filterHTTPRoutesByGateway(allHTTPRoutes, gatewayName, gatewayNamespace, gatewayListenerPort)
+		agentConfig := buildAgentConfig(push, httpRoutes)
 		log.Debugf("Gateway Pod inbound listener, filtered to %d HTTPRoute(s) matching gateway %s/%s listener port %d", len(httpRoutes), gatewayNamespace, gatewayName, gatewayListenerPort)
 
 		// For Gateway Pod, we also need to collect HTTPRoutes with specific hostnames
@@ -313,6 +314,7 @@ func buildHTTPRoute(node *model.Proxy, push *model.PushContext, routeName string
 		return &route.RouteConfiguration{
 			Name:         routeName,
 			VirtualHosts: virtualHosts,
+			AgentConfig:  agentConfig,
 		}
 	}
 
@@ -429,6 +431,13 @@ func buildRoutesFromGatewayHTTPRoute(httpRoutes []config.Config, hostName host.N
 				log.Debugf("HTTPRoute %s/%s rule[%d] has no backendRefs, skipping", hrConfig.Namespace, hrConfig.Name, ruleIdx)
 				continue
 			}
+			if ruleUsesDxgateService(rule) {
+				// Mesh-native LLM/MCP/A2A backends are carried in AgentConfig.
+				// Emitting them as ordinary clusters would fabricate a
+				// Kubernetes Service with the same name and bypass protocol
+				// translation.
+				continue
+			}
 
 			// Build weighted clusters from backendRefs
 			weights := make([]*route.WeightedCluster_ClusterWeight, 0, len(rule.BackendRefs))
@@ -483,9 +492,6 @@ func buildRoutesFromGatewayHTTPRoute(httpRoutes []config.Config, hostName host.N
 				weightedClusters.TotalWeight = wrapperspb.UInt32(totalWeight)
 			}
 
-			// Build route match from HTTPRoute matches
-			routeMatch := buildRouteMatchFromHTTPRouteMatches(rule.Matches)
-
 			routeAction := &route.RouteAction{
 				ClusterSpecifier: &route.RouteAction_WeightedClusters{
 					WeightedClusters: weightedClusters,
@@ -499,16 +505,18 @@ func buildRoutesFromGatewayHTTPRoute(httpRoutes []config.Config, hostName host.N
 			routeAction.RetryPolicy = gatewayAPIRetryPolicy(rule.Retry, rule.Timeouts)
 			routeAction.FaultPolicy = faultPolicy
 
-			builtRoute := &route.Route{
-				Match: routeMatch,
-				Action: &route.Route_Route{
-					Route: routeAction,
-				},
+			routeMatches := buildRouteMatchesFromHTTPRouteMatches(rule.Matches)
+			for _, routeMatch := range routeMatches {
+				allRoutes = append(allRoutes, &route.Route{
+					Match: routeMatch,
+					Action: &route.Route_Route{
+						Route: routeAction,
+					},
+				})
 			}
 
-			log.Infof("HTTPRoute %s/%s rule[%d] -> built route with %d clusters, totalWeight=%d",
-				hrConfig.Namespace, hrConfig.Name, ruleIdx, len(weights), totalWeight)
-			allRoutes = append(allRoutes, builtRoute)
+			log.Infof("HTTPRoute %s/%s rule[%d] -> built %d routes with %d clusters, totalWeight=%d",
+				hrConfig.Namespace, hrConfig.Name, ruleIdx, len(routeMatches), len(weights), totalWeight)
 		}
 	}
 
@@ -701,19 +709,21 @@ func isServiceParentRef(parentRef sigsk8siogatewayapiapisv1.ParentReference) boo
 	return parentRef.Group == nil || string(*parentRef.Group) == ""
 }
 
-// buildRouteMatchFromHTTPRouteMatches converts Gateway API HTTPRouteMatch to XDS RouteMatch
-func buildRouteMatchFromHTTPRouteMatches(matches []sigsk8siogatewayapiapisv1.HTTPRouteMatch) *route.RouteMatch {
+// buildRouteMatchesFromHTTPRouteMatches preserves Gateway API OR semantics:
+// every HTTPRouteMatch in a rule becomes an independent xDS route.
+func buildRouteMatchesFromHTTPRouteMatches(matches []sigsk8siogatewayapiapisv1.HTTPRouteMatch) []*route.RouteMatch {
 	if len(matches) == 0 {
-		// No matches means match all
-		return &route.RouteMatch{
-			PathSpecifier: &route.RouteMatch_Prefix{
-				Prefix: "/",
-			},
-		}
+		matches = []sigsk8siogatewayapiapisv1.HTTPRouteMatch{{}}
 	}
 
-	// For now, we'll use the first match. In a full implementation, we might need to merge multiple matches.
-	match := matches[0]
+	out := make([]*route.RouteMatch, 0, len(matches))
+	for _, match := range matches {
+		out = append(out, buildRouteMatchFromHTTPRouteMatch(match))
+	}
+	return out
+}
+
+func buildRouteMatchFromHTTPRouteMatch(match sigsk8siogatewayapiapisv1.HTTPRouteMatch) *route.RouteMatch {
 	routeMatch := &route.RouteMatch{}
 
 	// Handle path match

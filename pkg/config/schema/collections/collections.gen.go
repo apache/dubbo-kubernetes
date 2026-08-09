@@ -137,6 +137,21 @@ var (
 		ValidateProto: validation.EmptyValidate,
 	}.MustBuild()
 
+	DxgateService = resource.Builder{
+		Identifier: "DxgateService",
+		Group:      "networking.dubbo.apache.org",
+		Kind:       "DxgateService",
+		Plural:     "dxgateservices",
+		Version:    "v1alpha3",
+		Proto:      "dubbo.networking.v1alpha3.DxgateService", StatusProto: "dubbo.meta.v1alpha1.DubboStatus",
+		ReflectType: reflect.TypeOf(&githubcomkdubboapinetworkingv1alpha3.DxgateService{}).Elem(), StatusType: reflect.TypeOf(&githubcomkdubboapimetav1alpha1.DubboStatus{}).Elem(),
+		ProtoPackage: "github.com/kdubbo/api/networking/v1alpha3", StatusPackage: "github.com/kdubbo/api/meta/v1alpha1",
+		ClusterScoped: false,
+		Synthetic:     false,
+		Builtin:       false,
+		ValidateProto: validation.ValidateDxgateService,
+	}.MustBuild()
+
 	EndpointSlice = resource.Builder{
 		Identifier:    "EndpointSlice",
 		Group:         "discovery.k8s.io",
@@ -548,6 +563,7 @@ var (
 		MustAdd(CustomResourceDefinition).
 		MustAdd(DaemonSet).
 		MustAdd(Deployment).
+		MustAdd(DxgateService).
 		MustAdd(EndpointSlice).
 		MustAdd(Endpoints).
 		MustAdd(FaultInjectionPolicy).
@@ -607,6 +623,7 @@ var (
 	Dubbo = collection.NewSchemasBuilder().
 		MustAdd(AuthorizationPolicy).
 		MustAdd(CircuitBreakerPolicy).
+		MustAdd(DxgateService).
 		MustAdd(FaultInjectionPolicy).
 		MustAdd(PeerAuthentication).
 		MustAdd(RequestAuthentication).
@@ -621,6 +638,7 @@ var (
 			MustAdd(AuthorizationPolicy).
 			MustAdd(BackendTLSPolicy).
 			MustAdd(CircuitBreakerPolicy).
+			MustAdd(DxgateService).
 			MustAdd(FaultInjectionPolicy).
 			MustAdd(GatewayClass).
 			MustAdd(HTTPRoute).
@@ -639,6 +657,7 @@ var (
 				MustAdd(AuthorizationPolicy).
 				MustAdd(BackendTLSPolicy).
 				MustAdd(CircuitBreakerPolicy).
+				MustAdd(DxgateService).
 				MustAdd(FaultInjectionPolicy).
 				MustAdd(GatewayClass).
 				MustAdd(HTTPRoute).

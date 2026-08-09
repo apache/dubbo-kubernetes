@@ -37,7 +37,41 @@ metadata:
     app.kubernetes.io/instance: {{ .DeploymentName }}
     app.kubernetes.io/managed-by: dubbod
     gateway.networking.k8s.io/gateway-name: {{ .Gateway.Name }}
-automountServiceAccountToken: false
+automountServiceAccountToken: true
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: {{ .ServiceAccount }}-credentials
+  namespace: {{ .Gateway.Namespace }}
+  labels:
+    app.kubernetes.io/name: dxgate
+    app.kubernetes.io/instance: {{ .DeploymentName }}
+    app.kubernetes.io/managed-by: dubbod
+    gateway.networking.k8s.io/gateway-name: {{ .Gateway.Name }}
+rules:
+- apiGroups: [""]
+  resources: ["secrets"]
+  verbs: ["get"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: {{ .ServiceAccount }}-credentials
+  namespace: {{ .Gateway.Namespace }}
+  labels:
+    app.kubernetes.io/name: dxgate
+    app.kubernetes.io/instance: {{ .DeploymentName }}
+    app.kubernetes.io/managed-by: dubbod
+    gateway.networking.k8s.io/gateway-name: {{ .Gateway.Name }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: {{ .ServiceAccount }}-credentials
+subjects:
+- kind: ServiceAccount
+  name: {{ .ServiceAccount }}
+  namespace: {{ .Gateway.Namespace }}
 ---
 apiVersion: apps/v1
 kind: Deployment

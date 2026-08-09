@@ -13,6 +13,22 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+{{- $defaults := .Values._internal_default_values_not_set | default dict }}
+{{- $defaultGlobal := $defaults.global | default dict }}
+{{- $defaultProxyless := $defaultGlobal.proxyless | default dict }}
+{{- $defaultCNI := $defaultProxyless.cni | default dict }}
+{{- $global := .Values.global | default dict }}
+{{- $proxyless := $global.proxyless | default dict }}
+{{- $cni := $proxyless.cni | default dict }}
+{{- $image := coalesce $cni.image $defaultCNI.image (printf "ghcr.io/apache/dubbo-kubernetes/dubbod:%s" .Chart.AppVersion) }}
+{{- $injectorValues := deepCopy (omit .Values "_internal_default_values_not_set") }}
+{{- $injectorGlobal := get $injectorValues "global" | default dict }}
+{{- $_ := set $injectorValues "global" $injectorGlobal }}
+{{- $injectorProxyless := get $injectorGlobal "proxyless" | default dict }}
+{{- $_ = set $injectorGlobal "proxyless" $injectorProxyless }}
+{{- $injectorCNI := get $injectorProxyless "cni" | default dict }}
+{{- $_ = set $injectorProxyless "cni" $injectorCNI }}
+{{- $_ = set $injectorCNI "image" $image }}
 apiVersion: v1
 kind: ConfigMap
 metadata:
@@ -31,3 +47,4 @@ data:
       gateway: |
 {{ .Files.Get "files/kube-gateway.yaml" | trim | indent 8 }}
   values: |-
+{{ $injectorValues | toYaml | indent 4 }}

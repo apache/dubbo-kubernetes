@@ -48,6 +48,8 @@ func GetWriteClient[T runtime.Object](c ClientGetter, namespace string) ktypes.W
 		return c.Kube().AppsV1().DaemonSets(namespace).(ktypes.WriteAPI[T])
 	case *k8sioapiappsv1.Deployment:
 		return c.Kube().AppsV1().Deployments(namespace).(ktypes.WriteAPI[T])
+	case *apigithubcomapachedubbokubernetesapinetworkingv1alpha3.DxgateService:
+		return c.Dubbo().NetworkingV1alpha3().DxgateServices(namespace).(ktypes.WriteAPI[T])
 	case *k8sioapidiscoveryv1.EndpointSlice:
 		return c.Kube().DiscoveryV1().EndpointSlices(namespace).(ktypes.WriteAPI[T])
 	case *k8sioapicorev1.Endpoints:
@@ -119,6 +121,8 @@ func GetClient[T, TL runtime.Object](c ClientGetter, namespace string) ktypes.Re
 		return c.Kube().AppsV1().DaemonSets(namespace).(ktypes.ReadWriteAPI[T, TL])
 	case *k8sioapiappsv1.Deployment:
 		return c.Kube().AppsV1().Deployments(namespace).(ktypes.ReadWriteAPI[T, TL])
+	case *apigithubcomapachedubbokubernetesapinetworkingv1alpha3.DxgateService:
+		return c.Dubbo().NetworkingV1alpha3().DxgateServices(namespace).(ktypes.ReadWriteAPI[T, TL])
 	case *k8sioapidiscoveryv1.EndpointSlice:
 		return c.Kube().DiscoveryV1().EndpointSlices(namespace).(ktypes.ReadWriteAPI[T, TL])
 	case *k8sioapicorev1.Endpoints:
@@ -190,6 +194,8 @@ func gvrToObject(g schema.GroupVersionResource) runtime.Object {
 		return &k8sioapiappsv1.DaemonSet{}
 	case gvr.Deployment:
 		return &k8sioapiappsv1.Deployment{}
+	case gvr.DxgateService:
+		return &apigithubcomapachedubbokubernetesapinetworkingv1alpha3.DxgateService{}
 	case gvr.EndpointSlice:
 		return &k8sioapidiscoveryv1.EndpointSlice{}
 	case gvr.Endpoints:
@@ -298,6 +304,13 @@ func getInformerFiltered(c ClientGetter, opts ktypes.InformerOptions, g schema.G
 		}
 		w = func(options metav1.ListOptions) (watch.Interface, error) {
 			return c.Kube().AppsV1().Deployments(opts.Namespace).Watch(context.Background(), options)
+		}
+	case gvr.DxgateService:
+		l = func(options metav1.ListOptions) (runtime.Object, error) {
+			return c.Dubbo().NetworkingV1alpha3().DxgateServices(opts.Namespace).List(context.Background(), options)
+		}
+		w = func(options metav1.ListOptions) (watch.Interface, error) {
+			return c.Dubbo().NetworkingV1alpha3().DxgateServices(opts.Namespace).Watch(context.Background(), options)
 		}
 	case gvr.EndpointSlice:
 		l = func(options metav1.ListOptions) (runtime.Object, error) {

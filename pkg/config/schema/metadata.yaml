@@ -240,6 +240,16 @@ resources:
     statusProto: "dubbo.meta.v1alpha1.DubboStatus"
     statusProtoPackage: "github.com/kdubbo/api/meta/v1alpha1"
 
+  - kind: DxgateService
+    plural: "dxgateservices"
+    group: "networking.dubbo.apache.org"
+    version: "v1alpha3"
+    proto: "dubbo.networking.v1alpha3.DxgateService"
+    protoPackage: "github.com/kdubbo/api/networking/v1alpha3"
+    validate: "validation.ValidateDxgateService"
+    statusProto: "dubbo.meta.v1alpha1.DubboStatus"
+    statusProtoPackage: "github.com/kdubbo/api/meta/v1alpha1"
+
   - kind: ServiceActivationPolicy
     plural: "serviceactivationpolicies"
     group: "networking.dubbo.apache.org"

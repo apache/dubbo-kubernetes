@@ -1,0 +1,86 @@
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: ordinary-http
+spec:
+  parentRefs:
+    - {name: public, sectionName: http}
+  rules:
+    - matches:
+        - path: {type: PathPrefix, value: /users}
+        - path: {type: PathPrefix, value: /orders}
+      backendRefs:
+        - {name: mock-http, port: 8080}
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: openai
+spec:
+  parentRefs:
+    - {name: public, sectionName: http}
+  rules:
+    - matches:
+        - path: {type: PathPrefix, value: /openai}
+      filters:
+        - type: URLRewrite
+          urlRewrite:
+            path:
+              type: ReplacePrefixMatch
+              replacePrefixMatch: /v1
+      backendRefs:
+        - group: networking.dubbo.apache.org
+          kind: DxgateService
+          name: openai
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: anthropic
+spec:
+  parentRefs:
+    - {name: public, sectionName: http}
+  rules:
+    - matches:
+        - path: {type: PathPrefix, value: /anthropic}
+      filters:
+        - type: URLRewrite
+          urlRewrite:
+            path:
+              type: ReplacePrefixMatch
+              replacePrefixMatch: /v1
+      backendRefs:
+        - group: networking.dubbo.apache.org
+          kind: DxgateService
+          name: anthropic
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: tools
+spec:
+  parentRefs:
+    - {name: public, sectionName: http}
+  rules:
+    - matches:
+        - path: {type: Exact, value: /mcp}
+      backendRefs:
+        - group: networking.dubbo.apache.org
+          kind: DxgateService
+          name: tools
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: planner
+spec:
+  parentRefs:
+    - {name: public, sectionName: http}
+  rules:
+    - matches:
+        - path: {type: Exact, value: /a2a}
+        - path: {type: Exact, value: /.well-known/agent-card.json}
+      backendRefs:
+        - group: networking.dubbo.apache.org
+          kind: DxgateService
+          name: planner

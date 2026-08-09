@@ -32,6 +32,7 @@
 #   KIND            path to the kind binary      (default: kind)
 #   KIND_NODE_IMAGE kind node image override     (default: kind release default)
 #   ACTIVATION_E2E  install KEDA and run real scale-to-zero E2E (default: 0)
+#   AI_MESH_E2E     run no-key HTTP/LLM/MCP/A2A E2E (default: 0)
 #   DXGATE_IMAGE    prebuilt dxgate image used by managed Gateways
 #   KEDA_VERSION    pinned KEDA chart/app version (default: 2.20.2)
 
@@ -52,7 +53,9 @@ PREVIOUS_CHART=""
 KIND="${KIND:-kind}"
 KIND_NODE_IMAGE="${KIND_NODE_IMAGE:-}"
 ACTIVATION_E2E="${ACTIVATION_E2E:-0}"
+AI_MESH_E2E="${AI_MESH_E2E:-0}"
 DXGATE_IMAGE="${DXGATE_IMAGE:-kdubbo/dxgate:latest}"
+AGENT_MOCK_IMAGE="${AGENT_MOCK_IMAGE:-kdubbo/agent-mock:latest}"
 ACTIVATION_APP_IMAGE="${ACTIVATION_APP_IMAGE:-kdubbo/activation-e2e:latest}"
 ACTIVATION_CLIENT_IMAGE="${ACTIVATION_CLIENT_IMAGE:-kdubbo/activation-client:latest}"
 KEDA_VERSION="${KEDA_VERSION:-2.20.2}"
@@ -81,6 +84,7 @@ fail() {
 
 cleanup() {
   if [[ -n "${PF_PID:-}" ]]; then kill "${PF_PID}" 2>/dev/null || true; fi
+  if [[ -n "${AI_PF_PID:-}" ]]; then kill "${AI_PF_PID}" 2>/dev/null || true; fi
   if [[ "${KEEP_CLUSTER:-0}" != "1" ]]; then
     "${KIND}" delete cluster --name "${CLUSTER_NAME}" || true
   fi
@@ -89,6 +93,14 @@ cleanup() {
   fi
 }
 trap cleanup EXIT
+
+apply_activation_fixture() {
+  sed \
+    -e "s#kdubbo/activation-e2e:latest#${ACTIVATION_APP_IMAGE}#g" \
+    -e "s#kdubbo/activation-client:latest#${ACTIVATION_CLIENT_IMAGE}#g" \
+    "$1" \
+    | "${KUBECTL[@]}" apply -f -
+}
 
 prepare_previous_chart() {
   if [[ -n "${UPGRADE_FROM_CHART}" ]]; then
@@ -152,17 +164,38 @@ log "loading ${IMAGE} into kind"
 if [[ "${IMAGE}" != "${UPGRADE_FROM_IMAGE}" ]]; then
   "${KIND}" load docker-image "${UPGRADE_FROM_IMAGE}" --name "${CLUSTER_NAME}"
 fi
-if [[ "${ACTIVATION_E2E}" == "1" ]]; then
+if [[ "${ACTIVATION_E2E}" == "1" || "${AI_MESH_E2E}" == "1" ]]; then
   docker image inspect "${DXGATE_IMAGE}" >/dev/null 2>&1 \
-    || fail "ACTIVATION_E2E requires prebuilt ${DXGATE_IMAGE}"
-  log "building ${ACTIVATION_APP_IMAGE}"
-  docker build -t "${ACTIVATION_APP_IMAGE}" "${ROOT}/tests/e2e/activationapp"
+    || fail "data-plane E2E requires prebuilt ${DXGATE_IMAGE}"
+fi
+if [[ "${ACTIVATION_E2E}" == "1" ]]; then
+  if [[ "${SKIP_BUILD:-0}" != "1" ]]; then
+    log "building ${ACTIVATION_APP_IMAGE}"
+    docker build -t "${ACTIVATION_APP_IMAGE}" "${ROOT}/tests/e2e/activationapp"
+  else
+    docker image inspect "${ACTIVATION_APP_IMAGE}" >/dev/null 2>&1 \
+      || fail "SKIP_BUILD=1 requires prebuilt ${ACTIVATION_APP_IMAGE}"
+  fi
   docker tag "${IMAGE}" "${ACTIVATION_CLIENT_IMAGE}"
   log "loading activation data-plane images into kind"
   "${KIND}" load docker-image \
     "${DXGATE_IMAGE}" \
     "${ACTIVATION_APP_IMAGE}" \
     "${ACTIVATION_CLIENT_IMAGE}" \
+    --name "${CLUSTER_NAME}"
+fi
+if [[ "${AI_MESH_E2E}" == "1" ]]; then
+  if [[ "${SKIP_BUILD:-0}" != "1" ]]; then
+    log "building ${AGENT_MOCK_IMAGE}"
+    docker build -t "${AGENT_MOCK_IMAGE}" "${ROOT}/tests/e2e/agentmock"
+  else
+    docker image inspect "${AGENT_MOCK_IMAGE}" >/dev/null 2>&1 \
+      || fail "SKIP_BUILD=1 requires prebuilt ${AGENT_MOCK_IMAGE}"
+  fi
+  log "loading AI mesh data-plane images into kind"
+  "${KIND}" load docker-image \
+    "${DXGATE_IMAGE}" \
+    "${AGENT_MOCK_IMAGE}" \
     --name "${CLUSTER_NAME}"
 fi
 
@@ -354,6 +387,93 @@ GATEWAY_ENV="$("${KUBECTL[@]}" -n "${APP_NS}" get deploy public-dubbo \
   | grep -qx metadata.name \
   || fail "gateway does not inject POD_NAME; demand reports would not be attributable to a replica"
 
+if [[ "${AI_MESH_E2E}" == "1" ]]; then
+  log "applying mesh-native HTTP, OpenAI, Anthropic, MCP, and A2A sample"
+  sed "s#kdubbo/agent-mock:latest#${AGENT_MOCK_IMAGE}#g" \
+    "${ROOT}/samples/ai-mesh/backends.yaml" \
+    | "${KUBECTL[@]}" -n "${APP_NS}" apply -f -
+  "${KUBECTL[@]}" -n "${APP_NS}" apply -f "${ROOT}/samples/ai-mesh/services.yaml"
+  "${KUBECTL[@]}" -n "${APP_NS}" apply -f "${ROOT}/samples/ai-mesh/routes.yaml"
+  "${KUBECTL[@]}" -n "${APP_NS}" rollout status deploy/agent-mock --timeout=300s \
+    || fail "agent mock deployment did not become ready"
+  "${KUBECTL[@]}" -n "${APP_NS}" rollout status deploy/public-dubbo --timeout=300s \
+    || fail "mesh gateway deployment did not become ready"
+
+  "${KUBECTL[@]}" get crd dxgateservices.networking.dubbo.apache.org >/dev/null \
+    || fail "DxgateService CRD is missing"
+  "${KUBECTL[@]}" -n "${APP_NS}" get role public-dubbo-credentials >/dev/null \
+    || fail "dxgate credential Role is missing"
+  "${KUBECTL[@]}" -n "${APP_NS}" get rolebinding public-dubbo-credentials >/dev/null \
+    || fail "dxgate credential RoleBinding is missing"
+  "${KUBECTL[@]}" auth can-i get secret/agent-credentials \
+    --as="system:serviceaccount:${APP_NS}:public-dubbo" -n "${APP_NS}" \
+    | grep -qx yes || fail "dxgate ServiceAccount cannot resolve referenced Secret"
+
+  log "port-forwarding mesh gateway"
+  "${KUBECTL[@]}" -n "${APP_NS}" port-forward svc/public-dubbo 18081:80 >/dev/null 2>&1 &
+  AI_PF_PID=$!
+  ai_get() { curl -sf --max-time 10 "http://127.0.0.1:18081$1"; }
+  ai_post() {
+    local path="$1" body="$2"
+    curl -sf --max-time 10 -H 'content-type: application/json' \
+      -d "${body}" "http://127.0.0.1:18081${path}"
+  }
+  ai_openai() {
+    curl -sf --max-time 10 -H 'content-type: application/json' \
+      -H 'x-client-key: mock-client-key' \
+      -d '{"model":"gpt-mock","messages":[{"role":"user","content":"ping"}]}' \
+      http://127.0.0.1:18081/openai/chat/completions
+  }
+
+  retry "ordinary /users Service route" ai_get /users
+  [[ "$(ai_get /users | jq -r .path)" == "/users" ]] \
+    || fail "ordinary /users route returned the wrong backend response"
+  [[ "$(ai_get /orders | jq -r .path)" == "/orders" ]] \
+    || fail "ordinary /orders route returned the wrong backend response"
+  retry "OpenAI DxgateService route and Secret resolution" ai_openai
+  OPENAI_RESPONSE="$(ai_openai)"
+  [[ "$(jq -r .choices[0].message.content <<<"${OPENAI_RESPONSE}")" == "openai-mock" ]] \
+    || fail "OpenAI mock response was not proxied"
+  [[ "$(jq -r .provider_authorization <<<"${OPENAI_RESPONSE}")" == "Bearer mock-openai-key" ]] \
+    || fail "OpenAI provider credential was not resolved from the Secret"
+
+  ANTHROPIC_RESPONSE="$(ai_post /anthropic/chat/completions \
+    '{"model":"claude-mock","messages":[{"role":"user","content":"ping"}]}')"
+  [[ "$(jq -r .choices[0].message.content <<<"${ANTHROPIC_RESPONSE}")" == "anthropic-mock" ]] \
+    || fail "Anthropic native response was not translated to OpenAI"
+
+  MCP_RESPONSE="$(ai_post /mcp '{"jsonrpc":"2.0","id":1,"method":"tools/list"}')"
+  [[ "$(jq -r '[.result.tools[].name] | sort | join(",")' <<<"${MCP_RESPONSE}")" == "calendar,search" ]] \
+    || fail "MCP tools/list was not federated across both targets"
+  [[ "$(ai_post /mcp '{"jsonrpc":"2.0","id":2,"method":"tools/call","params":{"name":"search","arguments":{}}}' \
+      | jq -r .result.content[0].text)" == "search-ok" ]] \
+    || fail "MCP tools/call did not reach the selected target"
+
+  [[ "$(ai_get /.well-known/agent-card.json | jq -r .name)" == "planner" ]] \
+    || fail "A2A Agent Card was not proxied"
+  [[ "$(ai_post /a2a '{"jsonrpc":"2.0","id":3,"method":"message/send","params":{}}' \
+      | jq -r .result.status.state)" == "completed" ]] \
+    || fail "A2A task request did not complete"
+
+  check_agent_config_programmed() {
+    local pod
+    pod="$("${KUBECTL[@]}" -n "${APP_NS}" get pods \
+      -l gateway.networking.k8s.io/gateway-name=public \
+      -o jsonpath='{.items[0].metadata.name}')"
+    "${KUBECTL[@]}" get --raw \
+      "/api/v1/namespaces/${APP_NS}/pods/${pod}:26021/proxy/debug/config" \
+      | jq -e '
+          ([.providers[].name] | length) == 2 and
+          ([.backends[] | select(.type == "llm")] | length) == 2 and
+          ([.backends[] | select(.type == "mcp")] | length) == 2 and
+          ([.backends[] | select(.type == "a2a")] | length) == 1 and
+          ([.routes[] | .protocol] | sort | join(",")) == "a2a,llm,llm,mcp"
+        ' >/dev/null
+  }
+  retry "compiled AgentConfig visible in dxgate /debug/config" check_agent_config_programmed
+  log "mesh-native HTTP, LLM, MCP, and A2A E2E passed"
+fi
+
 if [[ "${ACTIVATION_E2E}" == "1" ]]; then
   log "asserting multiple Gateways have isolated resources"
   "${KUBECTL[@]}" -n "${APP_NS}" get deploy dxgate-gateway public-dubbo >/dev/null \
@@ -364,7 +484,7 @@ if [[ "${ACTIVATION_E2E}" == "1" ]]; then
     || fail "second managed gateway did not become ready"
 
   log "deploying the proxyless activation target and KEDA ScaledObject"
-  "${KUBECTL[@]}" apply -f "${ROOT}/tests/e2e/testdata/eastwest-activation.yaml"
+  apply_activation_fixture "${ROOT}/tests/e2e/testdata/eastwest-activation.yaml"
   "${KUBECTL[@]}" apply -f "${ROOT}/tests/e2e/testdata/eastwest-activation-scaledobject.yaml"
   "${KUBECTL[@]}" -n "${APP_NS}" wait --for=condition=Ready scaledobject/payment --timeout=180s \
     || fail "KEDA ScaledObject did not become ready"
@@ -426,7 +546,7 @@ if [[ "${ACTIVATION_E2E}" == "1" ]]; then
 
   log "sending one proxyless request while payment is at zero"
   "${KUBECTL[@]}" -n "${APP_NS}" delete pod payment-client --ignore-not-found
-  "${KUBECTL[@]}" apply -f "${ROOT}/tests/e2e/testdata/eastwest-activation-client.yaml"
+  apply_activation_fixture "${ROOT}/tests/e2e/testdata/eastwest-activation-client.yaml"
   activation_metrics() {
     local pod
     while read -r pod; do
@@ -475,7 +595,7 @@ if [[ "${ACTIVATION_E2E}" == "1" ]]; then
     local before after
     before="$(activation_payment_requests_total)"
     "${KUBECTL[@]}" -n "${APP_NS}" delete pod payment-client --ignore-not-found --wait=true >/dev/null
-    "${KUBECTL[@]}" apply -f "${ROOT}/tests/e2e/testdata/eastwest-activation-client.yaml" >/dev/null
+    apply_activation_fixture "${ROOT}/tests/e2e/testdata/eastwest-activation-client.yaml" >/dev/null
     "${KUBECTL[@]}" -n "${APP_NS}" wait \
       --for=jsonpath='{.status.containerStatuses[?(@.name=="client")].state.terminated.exitCode}'=0 \
       pod/payment-client --timeout=30s >/dev/null || return 1

@@ -44,6 +44,10 @@ func getGvk(obj any) (config.GroupVersionKind, bool) {
 		return gvk.DaemonSet, true
 	case *k8sioapiappsv1.Deployment:
 		return gvk.Deployment, true
+	case *githubcomkdubboapinetworkingv1alpha3.DxgateService:
+		return gvk.DxgateService, true
+	case *apigithubcomapachedubbokubernetesapinetworkingv1alpha3.DxgateService:
+		return gvk.DxgateService, true
 	case *k8sioapidiscoveryv1.EndpointSlice:
 		return gvk.EndpointSlice, true
 	case *k8sioapicorev1.Endpoints:
