@@ -63,7 +63,7 @@ func (g *GrpcConfigGenerator) BuildHTTPRoutes(node *model.Proxy, req *model.Push
 func buildHTTPRoute(node *model.Proxy, push *model.PushContext, routeName string) *route.RouteConfiguration {
 	log.Debugf("called with routeName=%s, node.ID=%s, node.Type=%v, node.IsRouter()=%v", routeName, node.ID, node.Type, node.IsRouter())
 	// For Gateway Pod inbound listeners, routeName is just the port number (e.g., "80")
-	// For proxyless gRPC inbound routes, routeName is just the port number (e.g., "17070")
+	// For Inherent gRPC inbound routes, routeName is just the port number (e.g., "17070")
 	// For outbound routes, routeName is cluster format (outbound|port||hostname)
 	parsedPort, err := strconv.Atoi(routeName)
 	if err != nil {
@@ -74,7 +74,7 @@ func buildHTTPRoute(node *model.Proxy, push *model.PushContext, routeName string
 			return nil
 		}
 
-		// Build outbound route configuration for gRPC proxyless
+		// Build outbound route configuration for gRPC inherent
 		// This is used by ApiListener to route traffic to the correct cluster
 		svc := push.ServiceForHostname(node, hostname)
 		if svc == nil {
@@ -104,7 +104,7 @@ func buildHTTPRoute(node *model.Proxy, push *model.PushContext, routeName string
 		}
 
 		if node.IsRouter() {
-			// Gateway routers use Gateway API HTTPRoute; service-to-service proxyless clients
+			// Gateway routers use Gateway API HTTPRoute; service-to-service Inherent clients
 			// must not let an unrelated north-south HTTPRoute shadow their service route.
 			httpRoutes := push.HTTPRouteForHost(host.Name("*"))
 			if len(httpRoutes) == 0 {

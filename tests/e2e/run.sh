@@ -227,14 +227,24 @@ helm upgrade --install dubbo-base "${ROOT}/manifests/charts/base" \
 install_dubbod() {
   local chart="$1"
   local image="$2"
-  # The CNI daemonset needs privileged host access; keep the smoke test to the
-  # control plane itself.
+  local -a chart_values
+  if [[ "${chart}" == "${ROOT}/manifests/charts/dubbod" ]]; then
+    chart_values=(
+      --set-string "image=${image}"
+      --set-string "gateway.image=${DXGATE_IMAGE}"
+    )
+  else
+    # The previous chart still exposes its legacy CNI configuration.
+    chart_values=(
+      --set "global.inherent.cni.enabled=false"
+      --set-string "global.inherent.cni.image=${image}"
+      --set-string "global.gateway.image=${DXGATE_IMAGE}"
+    )
+  fi
   helm upgrade --install dubbod "${chart}" \
     --kube-context "kind-${CLUSTER_NAME}" \
     -n "${SYSTEM_NS}" \
-    --set global.proxyless.cni.enabled=false \
-    --set-string global.proxyless.cni.image="${image}" \
-    --set-string global.gateway.image="${DXGATE_IMAGE}" \
+    "${chart_values[@]}" \
     --set replicaCount="${DUBBOD_REPLICAS}"
 }
 
@@ -483,7 +493,7 @@ if [[ "${ACTIVATION_E2E}" == "1" ]]; then
   "${KUBECTL[@]}" -n "${APP_NS}" rollout status deploy/public-dubbo --timeout=300s \
     || fail "second managed gateway did not become ready"
 
-  log "deploying the proxyless activation target and KEDA ScaledObject"
+  log "deploying the inherent activation target and KEDA ScaledObject"
   apply_activation_fixture "${ROOT}/tests/e2e/testdata/eastwest-activation.yaml"
   "${KUBECTL[@]}" apply -f "${ROOT}/tests/e2e/testdata/eastwest-activation-scaledobject.yaml"
   "${KUBECTL[@]}" -n "${APP_NS}" wait --for=condition=Ready scaledobject/payment --timeout=180s \
@@ -544,7 +554,7 @@ if [[ "${ACTIVATION_E2E}" == "1" ]]; then
   retry "payment policy remains runtime-ready after HA failover" \
     check_payment_policy_runtime_ready
 
-  log "sending one proxyless request while payment is at zero"
+  log "sending one inherent request while payment is at zero"
   "${KUBECTL[@]}" -n "${APP_NS}" delete pod payment-client --ignore-not-found
   apply_activation_fixture "${ROOT}/tests/e2e/testdata/eastwest-activation-client.yaml"
   activation_metrics() {
@@ -574,11 +584,11 @@ if [[ "${ACTIVATION_E2E}" == "1" ]]; then
   "${KUBECTL[@]}" -n "${APP_NS}" wait \
     --for=jsonpath='{.status.containerStatuses[?(@.name=="client")].state.terminated.exitCode}'=0 \
     pod/payment-client --timeout=120s \
-    || fail "held proxyless request did not complete after automatic scale-up"
+    || fail "held inherent request did not complete after automatic scale-up"
   check_payment_client_success() {
     "${KUBECTL[@]}" -n "${APP_NS}" logs payment-client -c client 2>/dev/null | grep -qx payment-ok
   }
-  retry "cold proxyless response is available in the pod log" \
+  retry "cold inherent response is available in the pod log" \
     check_payment_client_success
   COLD_ACTIVATOR_REQUESTS="$(activation_payment_requests_total)"
   log "cold request completed through Activator (route requests=${COLD_ACTIVATOR_REQUESTS})"
@@ -603,9 +613,9 @@ if [[ "${ACTIVATION_E2E}" == "1" ]]; then
     after="$(activation_payment_requests_total)"
     [[ "${after}" == "${before}" ]]
   }
-  retry "hot proxyless request bypasses the Activator after EDS convergence" \
+  retry "hot inherent request bypasses the Activator after EDS convergence" \
     hot_request_bypasses_activator
-  log "hot proxyless request bypassed the Activator"
+  log "hot inherent request bypassed the Activator"
 
   "${KUBECTL[@]}" -n "${APP_NS}" patch scaledobject payment --type=merge \
     -p '{"spec":{"minReplicaCount":0}}' >/dev/null

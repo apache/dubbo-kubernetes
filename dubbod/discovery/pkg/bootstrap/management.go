@@ -167,7 +167,7 @@ type managementOverviewStatus struct {
 	CachesSynced    bool `json:"cachesSynced"`
 	ServicesSynced  bool `json:"servicesSynced"`
 	ConfigSynced    bool `json:"configSynced"`
-	ProxylessSynced bool `json:"proxylessSynced"`
+	InherentSynced  bool `json:"inherentSynced"`
 	InjectorReady   bool `json:"injectorReady"`
 	ValidationReady bool `json:"validationReady"`
 }
@@ -611,7 +611,7 @@ func (s *Server) buildManagementOverview() managementOverview {
 			CachesSynced:    s.cachesSynced(),
 			ServicesSynced:  s.ServiceController().HasSynced(),
 			ConfigSynced:    s.configController != nil && s.configController.HasSynced(),
-			ProxylessSynced: s.proxylessGRPCWorkloadsSynced(),
+			InherentSynced:  s.inherentGRPCWorkloadsSynced(),
 			InjectorReady:   s.kubeClient == nil || s.readinessFlags.InjectorReady.Load(),
 			ValidationReady: s.kubeClient == nil || s.readinessFlags.configValidationReady.Load(),
 		},
@@ -773,18 +773,18 @@ func (s *Server) managementXDSClientsByIP() map[string]managementWorkload {
 	return byIP
 }
 
-// managementSidecarContainer returns the dxplane inbound sidecar in a pod, or nil when
+// managementSidecarContainer returns the dxproxy inbound sidecar in a pod, or nil when
 // the pod is not part of the data plane.
 func managementSidecarContainer(pod corev1.Pod) *corev1.Container {
 	for i := range pod.Spec.Containers {
-		if pod.Spec.Containers[i].Name == inject.ProxylessGRPCInboundContainerName {
+		if pod.Spec.Containers[i].Name == inject.InherentGRPCInboundContainerName {
 			return &pod.Spec.Containers[i]
 		}
 	}
 	return nil
 }
 
-// managementSidecarAddresses reads the listener and upstream dxplane was started with.
+// managementSidecarAddresses reads the listener and upstream dxproxy was started with.
 // The sidecar takes both as `--listen`/`--upstream` flags, so the running
 // configuration is readable from the pod spec without contacting the pod.
 func managementSidecarAddresses(container corev1.Container) (inbound, upstream string) {
@@ -825,7 +825,7 @@ func managementContainerEnv(container corev1.Container, name string) string {
 	return ""
 }
 
-// managementActiveRootCert mirrors proxylessGRPCWorkloadController.activeRootCert so
+// managementActiveRootCert mirrors inherentGRPCWorkloadController.activeRootCert so
 // the console compares workload secrets against the same root the issuer uses.
 func (s *Server) managementActiveRootCert() []byte {
 	authority := s.RA
@@ -849,13 +849,13 @@ func (s *Server) managementActiveRootCert() []byte {
 // running with, so the mTLS mode and certificate expiry reported here are what
 // is actually in force — not a restatement of the policy dubbod intended.
 func (s *Server) managementWorkloadSecretState(ctx context.Context, pod corev1.Pod, activeRoot []byte) (modes []string, expiresAt *time.Time, rootActive bool, problem string) {
-	name := inject.ProxylessGRPCSecretNameForMeta(pod.ObjectMeta)
+	name := inject.InherentGRPCSecretNameForMeta(pod.ObjectMeta)
 	secret, err := s.kubeClient.Kube().CoreV1().Secrets(pod.Namespace).Get(ctx, name, metav1.GetOptions{})
 	if err != nil {
 		return nil, nil, false, fmt.Sprintf("workload secret %s not readable: %v", name, err)
 	}
 
-	if raw := secret.Data[inject.ProxylessGRPCConfigFileName]; len(raw) > 0 {
+	if raw := secret.Data[inject.InherentGRPCConfigFileName]; len(raw) > 0 {
 		var runtime struct {
 			Services []struct {
 				Ports []struct {
@@ -900,7 +900,7 @@ func (s *Server) managementWorkloadSecretState(ctx context.Context, pod corev1.P
 	return modes, expiresAt, rootActive, problem
 }
 
-// buildManagementDataPlane lists the pods carrying the proxyless gRPC sidecar and joins
+// buildManagementDataPlane lists the pods carrying the Inherent gRPC sidecar and joins
 // each to its ADS stream. Gateway pods are excluded — they are reported
 // separately as the external data plane.
 func (s *Server) buildManagementDataPlane() ([]managementWorkload, map[string]int) {
@@ -1191,7 +1191,7 @@ func (s *Server) buildManagementServices() []managementService {
 				shards.RLock()
 				for _, eps := range shards.Shards {
 					for _, ep := range eps {
-						if ep.Labels != nil && (ep.Labels["proxyless.dubbo.apache.org/inject"] == "true" || ep.Labels["dubbo.apache.org/rev"] != "") {
+						if ep.Labels != nil && (ep.Labels["inherent.dubbo.apache.org/inject"] == "true" || ep.Labels["dubbo.apache.org/rev"] != "") {
 							injected = true
 							break
 						}

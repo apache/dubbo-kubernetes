@@ -1419,7 +1419,7 @@ func IsManaged(gw *gateway.GatewaySpec) bool {
 }
 
 func getDefaultName(name string, kgw *gateway.GatewaySpec, disableNameSuffix bool) string {
-	// Keep the canonical Activator Service stable: proxyless cold EDS points at
+	// Keep the canonical Activator Service stable: inherent cold EDS points at
 	// this namespace-local name. Every other Gateway needs its own resources or
 	// two Gateway reconciles overwrite the same Deployment, Service and config.
 	if name == defaultDxgateGatewayName {
@@ -1476,7 +1476,7 @@ func gatewayServiceTargetPort(gw gateway.Gateway) intstr.IntOrString {
 	if port, ok := positiveIntAnnotation(gw, serviceTargetPortAnnotation); ok {
 		return intstr.FromInt(port)
 	}
-	return intstr.FromInt(inject.ProxylessGRPCInboundPort)
+	return intstr.FromInt(inject.InherentGRPCInboundPort)
 }
 
 func gatewayServiceNodePort(gw gateway.Gateway) int32 {

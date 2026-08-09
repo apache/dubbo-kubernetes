@@ -76,7 +76,7 @@ func (p *K8sPodInfoProvider) ManagedPodsOnNode(ctx context.Context, nodeName, la
 		if pod.Status.PodIP == "" || pod.DeletionTimestamp != nil {
 			continue
 		}
-		excluded, err := inject.ProxylessExcludedInboundPorts(pod)
+		excluded, err := inject.InherentExcludedInboundPorts(pod)
 		if err != nil {
 			// One malformed annotation must not stop the rest of the node from
 			// being reconciled; that pod keeps whatever rules it already has.
@@ -106,7 +106,7 @@ func (p *K8sPodInfoProvider) PodInfo(ctx context.Context, ref PodRef) (PodInfo, 
 	if pod.Status.PodIP != "" && len(ips) == 0 {
 		ips = append(ips, pod.Status.PodIP)
 	}
-	excluded, err := inject.ProxylessExcludedInboundPorts(pod)
+	excluded, err := inject.InherentExcludedInboundPorts(pod)
 	if err != nil {
 		return PodInfo{}, fmt.Errorf("pod %s/%s: %w", ref.Namespace, ref.Name, err)
 	}

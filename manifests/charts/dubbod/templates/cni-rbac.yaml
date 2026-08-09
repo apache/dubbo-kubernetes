@@ -13,21 +13,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-{{- $defaults := .Values._internal_default_values_not_set | default dict }}
-{{- $defaultGlobal := $defaults.global | default dict }}
-{{- $defaultProxyless := $defaultGlobal.proxyless | default dict }}
-{{- $defaultCNI := $defaultProxyless.cni | default dict }}
-{{- $global := .Values.global | default dict }}
-{{- $proxyless := $global.proxyless | default dict }}
-{{- $cni := $proxyless.cni | default dict }}
-{{- $enabled := false }}
-{{- if hasKey $defaultCNI "enabled" }}
-{{- $enabled = $defaultCNI.enabled }}
-{{- end }}
-{{- if hasKey $cni "enabled" }}
-{{- $enabled = $cni.enabled }}
-{{- end }}
-{{- if $enabled }}
 apiVersion: v1
 kind: ServiceAccount
 metadata:
@@ -55,4 +40,3 @@ subjects:
   - kind: ServiceAccount
     name: dubbo-cni
     namespace: dubbo-system
-{{- end }}

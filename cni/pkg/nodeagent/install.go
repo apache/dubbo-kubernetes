@@ -64,11 +64,11 @@ func DefaultInstallerOptions() InstallerOptions {
 		StateDir:                defaultStateDir,
 		ServiceAccountTokenPath: defaultServiceAccountTokenPath,
 		ServiceAccountCAPath:    defaultServiceAccountCAPath,
-		ManagedLabel:            inject.ProxylessManagedLabel,
-		ManagedLabelValue:       inject.ProxylessManagedLabelValue,
+		ManagedLabel:            inject.InherentManagedLabel,
+		ManagedLabelValue:       inject.InherentManagedLabelValue,
 		IPTablesPath:            defaultIPTablesPath,
 		IPSetPath:               defaultIPSetPath,
-		GRPCInboundPort:         inject.ProxylessGRPCInboundPort,
+		GRPCInboundPort:         inject.InherentGRPCInboundPort,
 	}
 }
 

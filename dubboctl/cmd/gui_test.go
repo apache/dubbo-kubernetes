@@ -16,6 +16,8 @@
 package cmd
 
 import (
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 )
@@ -33,21 +35,21 @@ func TestBuildGUIURLs(t *testing.T) {
 			listen:      "127.0.0.1:8080",
 			basePath:    "/",
 			wantConsole: "http://127.0.0.1:8080/",
-			wantHealth:  "http://127.0.0.1:8080/healthz",
+			wantHealth:  "http://127.0.0.1:8080/readyz",
 		},
 		{
 			name:        "wildcard listen address",
 			listen:      ":8080",
 			basePath:    "/console",
 			wantConsole: "http://127.0.0.1:8080/console/",
-			wantHealth:  "http://127.0.0.1:8080/console/healthz",
+			wantHealth:  "http://127.0.0.1:8080/console/readyz",
 		},
 		{
 			name:        "base path without leading slash",
 			listen:      "0.0.0.0:9090",
 			basePath:    "dashboard",
 			wantConsole: "http://127.0.0.1:9090/dashboard/",
-			wantHealth:  "http://127.0.0.1:9090/dashboard/healthz",
+			wantHealth:  "http://127.0.0.1:9090/dashboard/readyz",
 		},
 	}
 
@@ -64,6 +66,32 @@ func TestBuildGUIURLs(t *testing.T) {
 				t.Fatalf("buildGUIURLs() health URL = %q, want %q", gotHealth, test.wantHealth)
 			}
 		})
+	}
+}
+
+func TestFindConsoleBinaryNextToDubboctl(t *testing.T) {
+	tempDir := t.TempDir()
+	name := "test-dubbod-console"
+	filename := consoleBinaryFilename(name)
+	binary := filepath.Join(tempDir, filename)
+	if err := os.WriteFile(binary, []byte("test"), 0o700); err != nil {
+		t.Fatalf("write console binary: %v", err)
+	}
+
+	originalExecutable := osExecutable
+	osExecutable = func() (string, error) {
+		return filepath.Join(tempDir, "dubboctl"), nil
+	}
+	t.Cleanup(func() {
+		osExecutable = originalExecutable
+	})
+
+	got, err := findConsoleBinary(name)
+	if err != nil {
+		t.Fatalf("findConsoleBinary() returned error: %v", err)
+	}
+	if got != binary {
+		t.Fatalf("findConsoleBinary() = %q, want %q", got, binary)
 	}
 }
 

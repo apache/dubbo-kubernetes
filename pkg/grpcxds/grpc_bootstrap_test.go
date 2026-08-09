@@ -25,7 +25,7 @@ import (
 func TestGenerateBootstrapUsesTLSForDirectDiscovery(t *testing.T) {
 	bootstrap, err := GenerateBootstrap(GenerateBootstrapOptions{
 		Node: &pkgmodel.Node{
-			ID:       "proxyless~10.0.0.1~app.default~default.svc.cluster.local",
+			ID:       "inherent~10.0.0.1~app.default~default.svc.cluster.local",
 			Metadata: &pkgmodel.BootstrapNodeMetadata{},
 		},
 		DiscoveryAddress: "dubbod.dubbo-system.svc:26012",
@@ -74,7 +74,7 @@ func TestGenerateBootstrapUsesTLSForDirectDiscovery(t *testing.T) {
 func TestGenerateBootstrapUsesInsecureForUDS(t *testing.T) {
 	bootstrap, err := GenerateBootstrap(GenerateBootstrapOptions{
 		Node: &pkgmodel.Node{
-			ID:       "proxyless~10.0.0.1~app.default~default.svc.cluster.local",
+			ID:       "inherent~10.0.0.1~app.default~default.svc.cluster.local",
 			Metadata: &pkgmodel.BootstrapNodeMetadata{},
 		},
 		XdsUdsPath: "/tmp/xds.sock",

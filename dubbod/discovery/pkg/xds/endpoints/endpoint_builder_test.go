@@ -55,7 +55,7 @@ func TestBuildClusterLoadAssignmentKeepsAppPortWithoutDUBBOMutual(t *testing.T) 
 	}
 }
 
-func TestColdActivationRewritesProxylessEDSAndSwitchesBack(t *testing.T) {
+func TestColdActivationRewritesInherentEDSAndSwitchesBack(t *testing.T) {
 	targetHost := host.Name("payment.app.svc.cluster.local")
 	activatorHost := host.Name("dxgate-gateway.app.svc.cluster.local")
 	target := newEndpointTestService("payment", "app", string(targetHost), 8080)
@@ -337,8 +337,8 @@ func newEndpointTestPushContext(t *testing.T, configs []config.Config, services 
 
 func newEndpointTestProxy() *model.Proxy {
 	return &model.Proxy{
-		ID:              "proxyless~10.0.0.2~nginx-consumer.app~app.svc.cluster.local",
-		Type:            model.Proxyless,
+		ID:              "inherent~10.0.0.2~nginx-consumer.app~app.svc.cluster.local",
+		Type:            model.Inherent,
 		ConfigNamespace: "app",
 		Metadata: &model.NodeMetadata{
 			Generator: "grpc",

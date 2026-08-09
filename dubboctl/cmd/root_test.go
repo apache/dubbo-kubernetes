@@ -16,12 +16,34 @@
 
 package cmd
 
-import "testing"
+import (
+	"strings"
+	"testing"
+)
 
-func TestRootCommandDoesNotExposeRepo(t *testing.T) {
-	for _, command := range GetRootCmd(nil).Commands() {
-		if command.Name() == "repo" {
-			t.Fatal("repo command must not be registered")
+func TestRootCommandDoesNotExposeRemovedCommands(t *testing.T) {
+	for _, name := range []string{"admin", "create", "dashboard", "image", "repo"} {
+		t.Run(name, func(t *testing.T) {
+			root := GetRootCmd([]string{name})
+			if err := root.Execute(); err == nil || !strings.Contains(err.Error(), "unknown command") {
+				t.Fatalf("%q command error = %v, want unknown command", name, err)
+			}
+		})
+	}
+}
+
+func TestRootCommandHelpDoesNotListRemovedCommands(t *testing.T) {
+	root := GetRootCmd([]string{"--help"})
+	var output strings.Builder
+	root.SetOut(&output)
+	root.SetErr(&output)
+	if err := root.Execute(); err != nil {
+		t.Fatalf("root help failed: %v", err)
+	}
+
+	for _, name := range []string{"admin", "create", "dashboard", "image", "repo"} {
+		if strings.Contains(output.String(), "\n  "+name+" ") {
+			t.Fatalf("%q command found in root help:\n%s", name, output.String())
 		}
 	}
 }

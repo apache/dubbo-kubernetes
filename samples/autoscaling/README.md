@@ -39,7 +39,7 @@ topic 空闲时副本数降到 0，有积压时自动拉起。
 
 ### 为什么东西向的服务仍然不能缩到零
 
-出向是 proxyless 的：调用方进程内的 gRPC xDS client 直接拿 EDS 端点建连。副本归零时
+出向是 inherent 的：调用方进程内的 gRPC xDS client 直接拿 EDS 端点建连。副本归零时
 dubbod 下发一个空的 CLA（`dubbod/discovery/pkg/xds/endpoints/endpoint_builder.go`），
 调用方立即失败。服务之间的调用路径上没有任何组件能扣住这个请求去触发扩容 —— sidecar
 网格里由 sidecar 承担的那个位置，在这里是空的。
@@ -59,17 +59,17 @@ KEDA 和 Deployment 控制器来回改同一个数字。`kafka-consumer.yaml` �
 
 ### 缩容时的排空
 
-被缩掉的 pod 会走注入的 dxplane 排空流程：先 5s 只失败 readiness（让 EndpointSlice 摘掉），
+被缩掉的 pod 会走注入的 dxproxy 排空流程：先 5s 只失败 readiness（让 EndpointSlice 摘掉），
 再关监听并等在途连接最多 25s。`terminationGracePeriodSeconds` 必须大于两者之和，
 样例里设的是 40s。设成默认 30s 也够，但没有余量。
 
-排空是否超预算，看 `dxplane_connections_force_closed_total`：非零说明 25s 不够，
+排空是否超预算，看 `dxproxy_connections_force_closed_total`：非零说明 25s 不够，
 调 `DUBBO_GRPC_INBOUND_TERMINATION_DRAIN_DURATION`。
 
 ### 冷启动的代价
 
 每个新副本都要重新取证书、建 xDS 连接、等首次 CDS/EDS 收敛，这笔开销在 sidecar 方案里
-由常驻 sidecar 摊销掉，proxyless 下每个副本重付。上生产前先量一下从 Pod Running 到
+由常驻 sidecar 摊销掉，inherent 下每个副本重付。上生产前先量一下从 Pod Running 到
 能收发流量的时间，再决定 `cooldownPeriod` 和 `stabilizationWindowSeconds`。
 
 ### 检查高可用配置

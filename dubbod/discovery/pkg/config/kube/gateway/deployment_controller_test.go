@@ -717,8 +717,8 @@ func TestKubeGatewayTemplateRendersDxgateResources(t *testing.T) {
 	if !strings.Contains(rendered[4], "DXGATE_BOOTSTRAP") || strings.Contains(rendered[4], "DXGATE_STATIC_CONFIG") {
 		t.Fatalf("deployment did not switch from static config to bootstrap:\n%s", rendered[4])
 	}
-	if !strings.Contains(rendered[4], `proxyless.dubbo.apache.org/inject: "true"`) {
-		t.Fatalf("deployment pod template did not enable proxyless injection for dxgate mTLS certs:\n%s", rendered[4])
+	if !strings.Contains(rendered[4], `inherent.dubbo.apache.org/inject: "true"`) {
+		t.Fatalf("deployment pod template did not enable inherent injection for dxgate mTLS certs:\n%s", rendered[4])
 	}
 	if !strings.Contains(rendered[4], "inject.dubbo.apache.org/templates: grpc-engine") {
 		t.Fatalf("deployment pod template did not request grpc-engine injection:\n%s", rendered[4])
@@ -752,8 +752,8 @@ func TestKubeGatewayTemplateRendersDxgateResources(t *testing.T) {
 	if !strings.Contains(rendered[5], "targetPort: 15080") {
 		t.Fatalf("service did not target grpc-inbound port:\n%s", rendered[5])
 	}
-	if !strings.Contains(rendered[5], `proxyless.dubbo.apache.org/inject: "false"`) {
-		t.Fatalf("service did not opt out of proxyless targetPort rewriting:\n%s", rendered[5])
+	if !strings.Contains(rendered[5], `inherent.dubbo.apache.org/inject: "false"`) {
+		t.Fatalf("service did not opt out of inherent targetPort rewriting:\n%s", rendered[5])
 	}
 	if !strings.Contains(rendered[5], "app.kubernetes.io/instance: public-dubbo") {
 		t.Fatalf("service did not render stable dxgate instance selector:\n%s", rendered[5])

@@ -81,8 +81,8 @@ func TestStrictPeerAuthenticationEmitsActivationSANPinnedMTLSCluster(t *testing.
 	}, []*model.Service{service})
 
 	resources := (&GrpcConfigGenerator{}).BuildClusters(&model.Proxy{
-		ID:              "proxyless~10.0.0.2~caller.app~app.svc.cluster.local",
-		Type:            model.Proxyless,
+		ID:              "inherent~10.0.0.2~caller.app~app.svc.cluster.local",
+		Type:            model.Inherent,
 		ConfigNamespace: "app",
 	}, push, []string{"outbound|8080||" + string(hostName)})
 	if len(resources) != 1 {

@@ -27,9 +27,9 @@ import (
 	"github.com/apache/dubbo-kubernetes/pkg/util/sets"
 )
 
-func TestConnectionWatchesAnyServiceFiltersProxylessEDS(t *testing.T) {
+func TestConnectionWatchesAnyServiceFiltersInherentEDS(t *testing.T) {
 	con := &Connection{proxy: &model.Proxy{
-		Type: model.Proxyless,
+		Type: model.Inherent,
 		Metadata: &model.NodeMetadata{
 			Generator: "grpc",
 		},
@@ -45,16 +45,16 @@ func TestConnectionWatchesAnyServiceFiltersProxylessEDS(t *testing.T) {
 	}}
 
 	if !connectionWatchesAnyService(con, sets.New("nginx.app.svc.cluster.local")) {
-		t.Fatalf("expected proxyless connection to watch nginx")
+		t.Fatalf("expected Inherent connection to watch nginx")
 	}
 	if connectionWatchesAnyService(con, sets.New("api.app.svc.cluster.local")) {
-		t.Fatalf("expected proxyless connection not to watch api")
+		t.Fatalf("expected Inherent connection not to watch api")
 	}
 }
 
 func TestConnectionWatchesAnyServiceKeepsBroadPushForUnknownWatch(t *testing.T) {
 	con := &Connection{proxy: &model.Proxy{
-		Type: model.Proxyless,
+		Type: model.Inherent,
 		Metadata: &model.NodeMetadata{
 			Generator: "grpc",
 		},
@@ -66,8 +66,8 @@ func TestConnectionWatchesAnyServiceKeepsBroadPushForUnknownWatch(t *testing.T) 
 	}
 }
 
-func TestClientsForPushProxylessLargeScaleTargetsWatchedService(t *testing.T) {
-	server, req := newProxylessTargetedPushServer(10000, 100, "svc-7.app.svc.cluster.local")
+func TestClientsForPushInherentLargeScaleTargetsWatchedService(t *testing.T) {
+	server, req := newInherentTargetedPushServer(10000, 100, "svc-7.app.svc.cluster.local")
 
 	clients := server.clientsForPush(req)
 	if len(clients) != 100 {
@@ -80,8 +80,8 @@ func TestClientsForPushProxylessLargeScaleTargetsWatchedService(t *testing.T) {
 	}
 }
 
-func TestPushConnectionExercisesProxylessPushPath(t *testing.T) {
-	server, con, stream := newProxylessXDSTestServer(t)
+func TestPushConnectionExercisesInherentPushPath(t *testing.T) {
+	server, con, stream := newInherentXDSTestServer(t)
 	req := &model.PushRequest{
 		Full:   true,
 		Push:   con.proxy.LastPushContext,
@@ -112,7 +112,7 @@ func TestPushConnectionExercisesProxylessPushPath(t *testing.T) {
 
 func TestPushConnectionSkipsUnreadyAndUnneededPushes(t *testing.T) {
 	t.Run("uninitialized connection", func(t *testing.T) {
-		server, _, stream := newProxylessXDSTestServer(t)
+		server, _, stream := newInherentXDSTestServer(t)
 		con := &Connection{}
 		if err := server.pushConnection(con, &Event{pushRequest: &model.PushRequest{Full: true}}); err != nil {
 			t.Fatalf("pushConnection() failed: %v", err)
@@ -121,7 +121,7 @@ func TestPushConnectionSkipsUnreadyAndUnneededPushes(t *testing.T) {
 	})
 
 	t.Run("nil request", func(t *testing.T) {
-		server, con, stream := newProxylessXDSTestServer(t)
+		server, con, stream := newInherentXDSTestServer(t)
 		if err := server.pushConnection(con, &Event{}); err != nil {
 			t.Fatalf("pushConnection() failed: %v", err)
 		}
@@ -129,7 +129,7 @@ func TestPushConnectionSkipsUnreadyAndUnneededPushes(t *testing.T) {
 	})
 
 	t.Run("proxy does not need push", func(t *testing.T) {
-		server, con, stream := newProxylessXDSTestServer(t)
+		server, con, stream := newInherentXDSTestServer(t)
 		server.ProxyNeedsPush = func(_ *model.Proxy, req *model.PushRequest) (*model.PushRequest, bool) {
 			return req, false
 		}
@@ -143,8 +143,8 @@ func TestPushConnectionSkipsUnreadyAndUnneededPushes(t *testing.T) {
 func TestDiscoveryPushQueuesAndNotifies(t *testing.T) {
 	for _, full := range []bool{false, true} {
 		t.Run(fmt.Sprintf("full=%v", full), func(t *testing.T) {
-			server, con, _ := newProxylessXDSTestServer(t)
-			server.addCon("proxyless-1", con)
+			server, con, _ := newInherentXDSTestServer(t)
+			server.addCon("inherent-1", con)
 
 			var notified *model.PushRequest
 			server.RuntimeConfigUpdate = func(req *model.PushRequest) {
@@ -192,8 +192,8 @@ func TestPushStatusJSONIncludesOperationalSummary(t *testing.T) {
 	env.SetPushContext(push)
 
 	server := NewDiscoveryServer(env, nil, nil)
-	con := &Connection{proxy: proxylessConnectionProxy("svc-7.app.svc.cluster.local")}
-	server.adsClients["proxyless-1"] = con
+	con := &Connection{proxy: inherentConnectionProxy("svc-7.app.svc.cluster.local")}
+	server.adsClients["inherent-1"] = con
 	server.InboundUpdates.Store(3)
 	server.CommittedUpdates.Store(2)
 	server.pushQueue.Enqueue(con, &model.PushRequest{Push: push})
@@ -213,8 +213,8 @@ func TestPushStatusJSONIncludesOperationalSummary(t *testing.T) {
 	if got.PushVersion != "v1" {
 		t.Fatalf("PushVersion = %q, want v1", got.PushVersion)
 	}
-	if got.Clients.ConnectedEndpoints != 1 || got.Clients.ProxylessGRPC != 1 || got.Clients.ProxylessGRPCEDSWatchers != 1 {
-		t.Fatalf("Clients = %+v, want one connected proxyless EDS watcher", got.Clients)
+	if got.Clients.ConnectedEndpoints != 1 || got.Clients.InherentGRPC != 1 || got.Clients.InherentGRPCEDSWatchers != 1 {
+		t.Fatalf("Clients = %+v, want one connected inherent EDS watcher", got.Clients)
 	}
 	if got.Queue.Pending != 1 || got.Queue.Queued != 1 {
 		t.Fatalf("Queue = %+v, want one pending queued push", got.Queue)
@@ -227,8 +227,8 @@ func TestPushStatusJSONIncludesOperationalSummary(t *testing.T) {
 	}
 }
 
-func BenchmarkClientsForPushProxylessTargeted10k(b *testing.B) {
-	server, req := newProxylessTargetedPushServer(10000, 100, "svc-7.app.svc.cluster.local")
+func BenchmarkClientsForPushInherentTargeted10k(b *testing.B) {
+	server, req := newInherentTargetedPushServer(10000, 100, "svc-7.app.svc.cluster.local")
 	b.ReportAllocs()
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
@@ -239,10 +239,10 @@ func BenchmarkClientsForPushProxylessTargeted10k(b *testing.B) {
 	}
 }
 
-func BenchmarkClientsForPushProxylessTargetedScale(b *testing.B) {
+func BenchmarkClientsForPushInherentTargetedScale(b *testing.B) {
 	for _, clientCount := range []int{10000, 50000, 100000} {
 		b.Run(fmt.Sprintf("%d-clients", clientCount), func(b *testing.B) {
-			server, req := newProxylessTargetedPushServer(clientCount, 100, "svc-7.app.svc.cluster.local")
+			server, req := newInherentTargetedPushServer(clientCount, 100, "svc-7.app.svc.cluster.local")
 			want := clientCount / 100
 			b.ReportAllocs()
 			b.ResetTimer()
@@ -256,12 +256,12 @@ func BenchmarkClientsForPushProxylessTargetedScale(b *testing.B) {
 	}
 }
 
-func newProxylessTargetedPushServer(clientCount, serviceCount int, targetService string) (*DiscoveryServer, *model.PushRequest) {
+func newInherentTargetedPushServer(clientCount, serviceCount int, targetService string) (*DiscoveryServer, *model.PushRequest) {
 	server := &DiscoveryServer{adsClients: map[string]*Connection{}}
 	for i := 0; i < clientCount; i++ {
 		service := fmt.Sprintf("svc-%d.app.svc.cluster.local", i%serviceCount)
-		con := &Connection{proxy: proxylessConnectionProxy(service)}
-		con.SetID(fmt.Sprintf("proxyless-%d", i))
+		con := &Connection{proxy: inherentConnectionProxy(service)}
+		con.SetID(fmt.Sprintf("inherent-%d", i))
 		server.adsClients[con.ID()] = con
 	}
 	req := &model.PushRequest{
@@ -274,9 +274,9 @@ func newProxylessTargetedPushServer(clientCount, serviceCount int, targetService
 	return server, req
 }
 
-func proxylessConnectionProxy(service string) *model.Proxy {
+func inherentConnectionProxy(service string) *model.Proxy {
 	return &model.Proxy{
-		Type: model.Proxyless,
+		Type: model.Inherent,
 		Metadata: &model.NodeMetadata{
 			Generator: "grpc",
 		},

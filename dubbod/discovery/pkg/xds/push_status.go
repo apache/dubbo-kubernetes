@@ -36,11 +36,11 @@ type pushStatusReport struct {
 }
 
 type pushClientStatus struct {
-	ConnectedEndpoints       int `json:"connectedEndpoints"`
-	ProxylessGRPC            int `json:"proxylessGrpc"`
-	ProxylessGRPCEDSWatchers int `json:"proxylessGrpcEdsWatchers"`
-	ProxylessGRPCUnknownEDS  int `json:"proxylessGrpcUnknownEds"`
-	WatchedEDSResources      int `json:"watchedEdsResources"`
+	ConnectedEndpoints      int `json:"connectedEndpoints"`
+	InherentGRPC            int `json:"inherentGrpc"`
+	InherentGRPCEDSWatchers int `json:"inherentGrpcEdsWatchers"`
+	InherentGRPCUnknownEDS  int `json:"inherentGrpcUnknownEds"`
+	WatchedEDSResources     int `json:"watchedEdsResources"`
 }
 
 type pushUpdateStatus struct {
@@ -90,14 +90,14 @@ func summarizePushClients(clients []*Connection) pushClientStatus {
 			continue
 		}
 		con.proxy.RLock()
-		isProxylessGRPC := con.proxy.Metadata != nil && con.proxy.Metadata.Generator == "grpc"
+		isInherentGRPC := con.proxy.Metadata != nil && con.proxy.Metadata.Generator == "grpc"
 		watched := con.proxy.WatchedResources[v1.EndpointType]
-		if isProxylessGRPC {
-			out.ProxylessGRPC++
+		if isInherentGRPC {
+			out.InherentGRPC++
 			if watched == nil {
-				out.ProxylessGRPCUnknownEDS++
+				out.InherentGRPCUnknownEDS++
 			} else {
-				out.ProxylessGRPCEDSWatchers++
+				out.InherentGRPCEDSWatchers++
 				out.WatchedEDSResources += len(watched.ResourceNames)
 			}
 		}

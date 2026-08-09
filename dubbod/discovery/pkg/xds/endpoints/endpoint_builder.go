@@ -92,7 +92,7 @@ func (b *EndpointBuilder) rewriteColdServiceToActivator(
 	gateways map[cluster.ID]multicluster.EastWestGateway,
 	assignment *endpoint.ClusterLoadAssignment,
 ) *endpoint.ClusterLoadAssignment {
-	if b == nil || b.proxy == nil || !b.proxy.IsProxylessGrpc() || b.proxy.IsRouter() ||
+	if b == nil || b.proxy == nil || !b.proxy.IsInherentGrpc() || b.proxy.IsRouter() ||
 		b.push == nil || b.service == nil || b.service.Attributes.Name == model.ActivationGatewayServiceName ||
 		!b.push.ServiceActivationEnabled(b.service.Attributes.Namespace, b.service.Attributes.Name) ||
 		hasLbEndpoints(assignment) {
@@ -262,7 +262,7 @@ func (b *EndpointBuilder) BuildClusterLoadAssignmentWithGateways(endpointIndex *
 	}
 
 	if len(lbEndpoints) == 0 {
-		// For proxyless gRPC, log empty endpoints at INFO level to help diagnose connection issues
+		// For Inherent gRPC, log empty endpoints at INFO level to help diagnose connection issues
 		// This helps identify when endpoints are not available vs when they're filtered out
 		logLevel := log.Infof // If no endpoints exist at all, this is informational
 		if totalEndpoints > 0 {
@@ -409,13 +409,13 @@ func (b *EndpointBuilder) eastWestGatewayForCluster(endpointCluster cluster.ID, 
 
 func (b *EndpointBuilder) endpointPort(ep *model.DubboEndpoint) uint32 {
 	if b.useGRPCInboundEndpointPort() {
-		return inject.ProxylessGRPCInboundPort
+		return inject.InherentGRPCInboundPort
 	}
 	return ep.EndpointPort
 }
 
 func (b *EndpointBuilder) useGRPCInboundEndpointPort() bool {
-	if b == nil || b.proxy == nil || !b.proxy.IsProxylessGrpc() || b.push == nil ||
+	if b == nil || b.proxy == nil || !b.proxy.IsInherentGrpc() || b.push == nil ||
 		b.push.AuthenticationPolicies == nil || b.service == nil {
 		return false
 	}

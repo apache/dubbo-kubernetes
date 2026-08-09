@@ -127,11 +127,11 @@ type Server struct {
 
 	webhookInfo *webhookInfo
 
-	RWConfigStore                   model.ConfigStoreController
-	proxylessGRPCWorkloadController *proxylessGRPCWorkloadController
-	proxylessGRPCRemoteControllers  *multicluster.Component[*proxylessGRPCClusterController]
-	statusManager                   *status.Manager
-	activation                      *activation.Server
+	RWConfigStore                  model.ConfigStoreController
+	inherentGRPCWorkloadController *inherentGRPCWorkloadController
+	inherentGRPCRemoteControllers  *multicluster.Component[*inherentGRPCClusterController]
+	statusManager                  *status.Manager
+	activation                     *activation.Server
 }
 
 type readinessFlags struct {
@@ -280,7 +280,7 @@ func NewServer(args *DubboArgs, initFuncs ...func(*Server)) (*Server, error) {
 		s.initSecureWebhookServer(args)
 		wh, err := s.initInjector(args)
 		if err != nil {
-			return nil, fmt.Errorf("error initializing proxyless injector: %v", err)
+			return nil, fmt.Errorf("error initializing Inherent injector: %v", err)
 		}
 		s.readinessFlags.InjectorReady.Store(true)
 		s.webhookInfo.mu.Lock()
@@ -581,10 +581,10 @@ func (s *Server) initReadinessProbes() {
 		"discovery": func() bool {
 			return s.XDSServer.IsServerReady()
 		},
-		"proxyless grpc workloads": func() bool {
-			return s.proxylessGRPCWorkloadController == nil || s.proxylessGRPCWorkloadController.HasSynced()
+		"Inherent gRPC workloads": func() bool {
+			return s.inherentGRPCWorkloadController == nil || s.inherentGRPCWorkloadController.HasSynced()
 		},
-		"proxyless injector": func() bool {
+		"Inherent injector": func() bool {
 			return s.readinessFlags.InjectorReady.Load()
 		},
 		"config validation": func() bool {
@@ -715,8 +715,8 @@ func (s *Server) initControllers(args *DubboArgs) error {
 	if err := s.initServiceControllers(args); err != nil {
 		return fmt.Errorf("error initializing service controllers: %v", err)
 	}
-	if err := s.initProxylessGRPCWorkloads(); err != nil {
-		return fmt.Errorf("error initializing proxyless grpc workloads: %v", err)
+	if err := s.initInherentGRPCWorkloads(); err != nil {
+		return fmt.Errorf("error initializing Inherent gRPC workloads: %v", err)
 	}
 	return nil
 }
@@ -858,7 +858,7 @@ func (s *Server) cachesSynced() bool {
 	if !s.configController.HasSynced() {
 		return false
 	}
-	if !s.proxylessGRPCWorkloadsSynced() {
+	if !s.inherentGRPCWorkloadsSynced() {
 		return false
 	}
 	return true

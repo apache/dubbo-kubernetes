@@ -14,46 +14,23 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package sdk
+package version
 
 import (
-	"context"
-	"github.com/apache/dubbo-kubernetes/dubboctl/pkg/sdk/dubbo"
-	"github.com/apache/dubbo-kubernetes/dubboctl/pkg/util"
-	"path"
+	"strings"
+	"testing"
 )
 
-type template struct {
-	name       string
-	runtime    string
-	repository string
-	fs         util.Filesystem
-}
+func TestVersionCommandDoesNotPrintUnknown(t *testing.T) {
+	command := NewVersionCommand()
+	var output strings.Builder
+	command.SetOut(&output)
+	command.SetArgs(nil)
 
-type Template interface {
-	Name() string
-	Fullname() string
-	Runtime() string
-	Write(ctx context.Context, f *dubbo.DubboConfig) error
-}
-
-func (t template) Name() string {
-	return t.name
-}
-
-func (t template) Fullname() string {
-	return t.repository + "/" + t.name
-}
-
-func (t template) Runtime() string {
-	return t.runtime
-}
-
-func (t template) Write(ctx context.Context, dc *dubbo.DubboConfig) error {
-	mask := func(p string) bool {
-		_, f := path.Split(p)
-		return f == "template.yaml"
+	if err := command.Execute(); err != nil {
+		t.Fatalf("version command failed: %v", err)
 	}
-
-	return util.CopyFromFS(".", dc.Root, util.NewMaskingFS(mask, t.fs))
+	if strings.Contains(output.String(), "unknown") {
+		t.Fatalf("version command output = %q, want a resolved version", output.String())
+	}
 }

@@ -77,8 +77,8 @@ type (
 )
 
 const (
-	Proxyless = pm.Proxyless
-	Router    = pm.Router
+	Inherent = pm.Inherent
+	Router   = pm.Router
 )
 
 type Watcher = meshwatcher.WatcherCollection
@@ -230,8 +230,8 @@ func (node *Proxy) IsRouter() bool {
 	return node != nil && node.Type == Router
 }
 
-func (node *Proxy) IsProxyless() bool {
-	return node != nil && node.Type == Proxyless
+func (node *Proxy) IsInherent() bool {
+	return node != nil && node.Type == Inherent
 }
 
 func (node *Proxy) NewWatchedResource(typeURL string, names []string) {
@@ -265,7 +265,7 @@ func (node *Proxy) UpdateWatchedResource(typeURL string, updateFn func(*WatchedR
 	}
 }
 
-func (node *Proxy) IsProxylessGrpc() bool {
+func (node *Proxy) IsInherentGrpc() bool {
 	return node.Metadata != nil && node.Metadata.Generator == "grpc"
 }
 
@@ -364,7 +364,7 @@ func ParseServiceNodeWithMetadata(nodeID string, metadata *NodeMetadata) (*Proxy
 	out.ID = parts[2]
 	out.DNSDomain = parts[3]
 
-	// Validate that ID is not empty - this is critical for proxyless gRPC
+	// Validate that ID is not empty - this is critical for Inherent gRPC
 	if len(out.ID) == 0 {
 		return out, fmt.Errorf("node ID is empty in service node %q (parts[2] is empty)", nodeID)
 	}

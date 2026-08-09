@@ -16,7 +16,7 @@
 ##@ Test
 
 BENCHMARK_PACKAGES ?= ./pkg/kube/krt ./dubbod/discovery/pkg/xds
-BENCHMARK_PATTERN  ?= Benchmark(KRTFetch|ClientsForPushProxylessTargeted|Proxyless(Push|FullPush)Scale)
+BENCHMARK_PATTERN  ?= Benchmark(KRTFetch|ClientsForPushInherentTargeted|Inherent(Push|FullPush)Scale)
 BENCHMARK_TIME     ?= 1s
 BENCHMARK_COUNT    ?= 3
 BENCHMARK_CPU      ?= 1
@@ -39,4 +39,4 @@ benchmark: ## Run repeatable control-plane microbenchmarks (override BENCHMARK_*
 
 .PHONY: benchmark-smoke
 benchmark-smoke: ## Run representative targeted/full xDS scale cases as a correctness gate.
-	go test ./dubbod/discovery/pkg/xds -run '^TestProxylessPushBenchmarkFixture$$' -bench '^BenchmarkProxyless(Push|FullPush)Scale$$/^services=100$$/^endpoints_per_service=10$$/^connections=100$$' -benchmem -benchtime=1x -count=1 -cpu=1
+	go test ./dubbod/discovery/pkg/xds -run '^TestInherentPushBenchmarkFixture$$' -bench '^BenchmarkInherent(Push|FullPush)Scale$$/^services=100$$/^endpoints_per_service=10$$/^connections=100$$' -benchmem -benchtime=1x -count=1 -cpu=1

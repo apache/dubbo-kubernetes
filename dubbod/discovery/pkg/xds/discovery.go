@@ -465,7 +465,7 @@ func (s *DiscoveryServer) EDSUpdate(shard model.ShardKey, serviceName string, na
 		// This happens when:
 		// 1. All old endpoints were unhealthy and new endpoints are also unhealthy (health status didn't change)
 		// 2. But we still need to notify clients about the current state
-		// For proxyless gRPC, we should push even if endpoints are empty to ensure clients know the state
+		// For Inherent gRPC, we should push even if endpoints are empty to ensure clients know the state
 		if len(dubboEndpoints) == 0 {
 			log.Debugf("service %s/%s endpoints became empty [NoPush], forcing push to clear client cache", namespace, serviceName)
 			s.ConfigUpdate(&model.PushRequest{
@@ -475,7 +475,7 @@ func (s *DiscoveryServer) EDSUpdate(shard model.ShardKey, serviceName string, na
 			})
 		} else {
 			// Endpoints exist but NoPush was returned - this means health status didn't change
-			// For proxyless gRPC, we should still push to ensure clients have the latest endpoint info
+			// For Inherent gRPC, we should still push to ensure clients have the latest endpoint info
 			// This is especially important when endpoints become available after being empty
 			log.Debugf("service %s/%s has %d endpoints but NoPush returned (health status unchanged), skipping push", namespace, serviceName, len(dubboEndpoints))
 		}

@@ -193,7 +193,7 @@ func (pc *PodCache) deleteIP(ip string, podKey types.NamespacedName) bool {
 
 func (pc *PodCache) labelFilter(old, cur *v1.Pod) bool {
 	// If labels updated, trigger proxy push
-	// In proxyless mesh, we don't need to check ambient redirection annotations
+	// In Inherent mesh, we don't need to check ambient redirection annotations
 	return !maps.Equal(old.Labels, cur.Labels)
 }
 

@@ -96,13 +96,13 @@ func ParseNetConf(data []byte) (NetConf, error) {
 		conf.CNIVersion = "1.0.0"
 	}
 	if conf.ManagedLabel == "" {
-		conf.ManagedLabel = inject.ProxylessManagedLabel
+		conf.ManagedLabel = inject.InherentManagedLabel
 	}
 	if conf.ManagedLabelValue == "" {
-		conf.ManagedLabelValue = inject.ProxylessManagedLabelValue
+		conf.ManagedLabelValue = inject.InherentManagedLabelValue
 	}
 	if conf.GRPCInboundPort == 0 {
-		conf.GRPCInboundPort = inject.ProxylessGRPCInboundPort
+		conf.GRPCInboundPort = inject.InherentGRPCInboundPort
 	}
 	if conf.IPTablesPath == "" {
 		conf.IPTablesPath = defaultIPTablesPath

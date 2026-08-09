@@ -54,7 +54,7 @@ func TestDeltaSecretsRespondsToSubscribeAndPush(t *testing.T) {
 	}()
 
 	stream.recvCh <- &discovery.DeltaDiscoveryRequest{
-		Node:                   &core.Node{Id: "proxyless~10.0.0.1~pod-1~app.svc.cluster.local"},
+		Node:                   &core.Node{Id: "inherent~10.0.0.1~pod-1~app.svc.cluster.local"},
 		TypeUrl:                xdsmodel.SecretType,
 		ResourceNamesSubscribe: []string{"default"},
 	}

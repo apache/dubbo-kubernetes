@@ -348,7 +348,7 @@ func ShouldRespond(w Watcher, id string, request *discovery.DiscoveryRequest) (b
 	// previousInfo.NonceSent can be empty if we previously had shouldRespond=true but didn't send any resources.
 	if request.ResponseNonce != previousInfo.NonceSent {
 		newResources := sets.New(request.ResourceNames...)
-		// Proxyless gRPC clients may send a stale nonce while changing subscriptions.
+		// Inherent gRPC clients may send a stale nonce while changing subscriptions.
 		// Treat this as a resource change rather than an ACK.
 		previousResourcesCopy := previousInfo.ResourceNames.Copy()
 		if !newResources.Equals(previousResourcesCopy) && len(newResources) > 0 {
@@ -406,15 +406,15 @@ func ShouldRespond(w Watcher, id string, request *discovery.DiscoveryRequest) (b
 	removed := previousResources.Difference(cur)
 	added := cur.Difference(previousResources)
 
-	// For proxyless gRPC, if client sends wildcard (empty ResourceNames) after receiving specific resources,
+	// For Inherent gRPC, if client sends wildcard (empty ResourceNames) after receiving specific resources,
 	// this is likely an ACK and we should NOT push all resources again
 	// Check if this is a wildcard request after specific resources were sent
 	if len(request.ResourceNames) == 0 && len(previousResources) > 0 && previousInfo.NonceSent != "" {
 		// This is a wildcard request after specific resources were sent
-		// For proxyless gRPC clients, this should be treated as ACK, not a request for all resources
+		// For Inherent gRPC clients, this should be treated as ACK, not a request for all resources
 		// The client already has the resources from the previous push
-		// Check if this is proxyless by attempting to get the proxy from watcher
-		// For now, we'll check if this is a proxyless scenario by the context
+		// Check if this is inherent by attempting to get the proxy from watcher
+		// For now, we'll check if this is a inherent scenario by the context
 		// If previous resources existed and client sends empty names with matching nonce, it's an ACK
 		Log.Debugf("%s: wildcard request after specific resources (prev: %d resources, nonce: %s), treating as ACK",
 			stype, len(previousResources), previousInfo.NonceSent)

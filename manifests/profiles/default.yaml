@@ -24,7 +24,5 @@ spec:
       enabled: true
     dubbod:
       enabled: true
-  values:
-    global: {}
-
+  values: {}
 

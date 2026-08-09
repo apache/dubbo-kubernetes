@@ -121,9 +121,9 @@ func (eds *EdsGenerator) buildEndpoints(proxy *model.Proxy, req *model.PushReque
 			}
 		}
 
-		// For proxyless gRPC, if serviceWasUpdated is true, we must regenerate
-		if shouldRegenerate && proxy.IsProxylessGrpc() {
-			log.Debugf("proxyless gRPC, forcing regeneration for cluster %s (hostname=%s, serviceWasUpdated=%v)", clusterName, hostname, serviceWasUpdated)
+		// For Inherent gRPC, if serviceWasUpdated is true, we must regenerate
+		if shouldRegenerate && proxy.IsInherentGrpc() {
+			log.Debugf("Inherent gRPC, forcing regeneration for cluster %s (hostname=%s, serviceWasUpdated=%v)", clusterName, hostname, serviceWasUpdated)
 		}
 
 		// Try to get from cache only if we don't need to regenerate
@@ -157,8 +157,8 @@ func (eds *EdsGenerator) buildEndpoints(proxy *model.Proxy, req *model.PushReque
 
 		if len(l.Endpoints) == 0 {
 			empty++
-			if proxy.IsProxylessGrpc() {
-				log.Debugf("proxyless gRPC, pushing empty EDS for cluster %s (hostname=%s, serviceWasUpdated=%v, shouldRegenerate=%v)",
+			if proxy.IsInherentGrpc() {
+				log.Debugf("Inherent gRPC, pushing empty EDS for cluster %s (hostname=%s, serviceWasUpdated=%v, shouldRegenerate=%v)",
 					clusterName, hostname, serviceWasUpdated, shouldRegenerate)
 			}
 		} else {
@@ -167,8 +167,8 @@ func (eds *EdsGenerator) buildEndpoints(proxy *model.Proxy, req *model.PushReque
 			for _, localityLbEp := range l.Endpoints {
 				totalEndpointsInCLA += len(localityLbEp.LbEndpoints)
 			}
-			if proxy.IsProxylessGrpc() {
-				log.Debugf("proxyless gRPC, pushing EDS for cluster %s (hostname=%s, endpoints=%d, serviceWasUpdated=%v, shouldRegenerate=%v)",
+			if proxy.IsInherentGrpc() {
+				log.Debugf("Inherent gRPC, pushing EDS for cluster %s (hostname=%s, endpoints=%d, serviceWasUpdated=%v, shouldRegenerate=%v)",
 					clusterName, hostname, totalEndpointsInCLA, serviceWasUpdated, shouldRegenerate)
 			}
 		}
@@ -231,9 +231,9 @@ func (eds *EdsGenerator) buildDeltaEndpoints(proxy *model.Proxy, req *model.Push
 			}
 		}
 
-		// For proxyless gRPC, if serviceWasUpdated is true, we must regenerate
-		if shouldRegenerate && proxy.IsProxylessGrpc() {
-			log.Debugf("proxyless gRPC, forcing regeneration for cluster %s (hostname=%s, serviceWasUpdated=%v)", clusterName, hostname, serviceWasUpdated)
+		// For Inherent gRPC, if serviceWasUpdated is true, we must regenerate
+		if shouldRegenerate && proxy.IsInherentGrpc() {
+			log.Debugf("Inherent gRPC, forcing regeneration for cluster %s (hostname=%s, serviceWasUpdated=%v)", clusterName, hostname, serviceWasUpdated)
 		}
 
 		// Try to get from cache only if we don't need to regenerate
@@ -267,8 +267,8 @@ func (eds *EdsGenerator) buildDeltaEndpoints(proxy *model.Proxy, req *model.Push
 
 		if len(l.Endpoints) == 0 {
 			empty++
-			if proxy.IsProxylessGrpc() {
-				log.Debugf("proxyless gRPC, pushing empty EDS for cluster %s (hostname=%s, serviceWasUpdated=%v, shouldRegenerate=%v)",
+			if proxy.IsInherentGrpc() {
+				log.Debugf("Inherent gRPC, pushing empty EDS for cluster %s (hostname=%s, serviceWasUpdated=%v, shouldRegenerate=%v)",
 					clusterName, hostname, serviceWasUpdated, shouldRegenerate)
 			}
 		} else {
@@ -277,8 +277,8 @@ func (eds *EdsGenerator) buildDeltaEndpoints(proxy *model.Proxy, req *model.Push
 			for _, localityLbEp := range l.Endpoints {
 				totalEndpointsInCLA += len(localityLbEp.LbEndpoints)
 			}
-			if proxy.IsProxylessGrpc() {
-				log.Debugf("proxyless gRPC, pushing EDS for cluster %s (hostname=%s, endpoints=%d, serviceWasUpdated=%v, shouldRegenerate=%v)",
+			if proxy.IsInherentGrpc() {
+				log.Debugf("Inherent gRPC, pushing EDS for cluster %s (hostname=%s, endpoints=%d, serviceWasUpdated=%v, shouldRegenerate=%v)",
 					clusterName, hostname, totalEndpointsInCLA, serviceWasUpdated, shouldRegenerate)
 			}
 		}

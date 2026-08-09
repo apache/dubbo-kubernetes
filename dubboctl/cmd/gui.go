@@ -24,6 +24,7 @@ import (
 	"os/exec"
 	"os/signal"
 	"path"
+	"path/filepath"
 	"runtime"
 	"strings"
 	"syscall"
@@ -37,6 +38,8 @@ import (
 const launchEnvVar = "DUBBOCTL_GUI_LAUNCH"
 
 const defaultConsoleBinary = "dubbod-console"
+
+var osExecutable = os.Executable
 
 type guiArgs struct {
 	binary     string
@@ -63,12 +66,13 @@ func GuiCmd() *cobra.Command {
 		Short: "Start the dubbod console and open it in a browser",
 		Long: "Start the dubbod console and open it in a browser.\n\n" +
 			"The console is a separate binary that aggregates the management API of every\n" +
-			"discovered control plane. It only runs when started through this command.\n" +
+			"discovered control plane. Put dubbod-console next to dubboctl or in PATH.\n" +
+			"The console only runs when started through this command.\n" +
 			"Arguments after -- are passed to the console unchanged.",
 		RunE: func(cmd *cobra.Command, extraArgs []string) error {
-			binary, err := exec.LookPath(args.binary)
+			binary, err := findConsoleBinary(args.binary)
 			if err != nil {
-				return fmt.Errorf("console binary %q not found: %w", args.binary, err)
+				return err
 			}
 
 			consoleURL, healthURL, err := buildGUIURLs(args.listen, args.basePath)
@@ -174,9 +178,37 @@ func buildGUIURLs(listen, basePath string) (string, string, error) {
 	}
 
 	healthURL := *baseURL
-	healthURL.Path = path.Join(consoleURL.Path, "healthz")
+	healthURL.Path = path.Join(consoleURL.Path, "readyz")
 
 	return consoleURL.String(), healthURL.String(), nil
+}
+
+func findConsoleBinary(name string) (string, error) {
+	if binary, err := exec.LookPath(name); err == nil {
+		return binary, nil
+	}
+
+	if filepath.Base(name) == name {
+		executable, err := osExecutable()
+		if err == nil {
+			candidate := filepath.Join(filepath.Dir(executable), consoleBinaryFilename(name))
+			if info, statErr := os.Stat(candidate); statErr == nil && !info.IsDir() {
+				return candidate, nil
+			}
+		}
+	}
+
+	return "", fmt.Errorf(
+		"console binary %q not found; install it next to dubboctl, add it to PATH, or pass --binary",
+		name,
+	)
+}
+
+func consoleBinaryFilename(name string) string {
+	if runtime.GOOS == "windows" && filepath.Ext(name) == "" {
+		return name + ".exe"
+	}
+	return name
 }
 
 // normalizeListenHost turns a wildcard listen address into something dialable,

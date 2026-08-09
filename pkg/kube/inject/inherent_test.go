@@ -40,7 +40,7 @@ func TestInstallerGRPCEngineTemplateInjectsDirectXDSConnection(t *testing.T) {
 		t.Fatalf("failed to read grpc-engine.yaml: %v", err)
 	}
 	templates, err := ParseTemplates(RawTemplates{
-		ProxylessGRPCTemplateName: string(templateBytes),
+		InherentGRPCTemplateName: string(templateBytes),
 	})
 	if err != nil {
 		t.Fatalf("ParseTemplates() failed: %v", err)
@@ -55,7 +55,7 @@ func TestInstallerGRPCEngineTemplateInjectsDirectXDSConnection(t *testing.T) {
 			Name:      "grpc-provider-6d4c7b8c9f-abcde",
 			Namespace: "grpc-app",
 			Annotations: map[string]string{
-				ProxylessInjectTemplatesAnnoName: ProxylessGRPCTemplateName,
+				InherentInjectTemplatesAnnoName: InherentGRPCTemplateName,
 			},
 		},
 		Spec: corev1.PodSpec{
@@ -95,7 +95,7 @@ func TestInstallerGRPCEngineTemplateInjectsDirectXDSConnection(t *testing.T) {
 	if len(mergedPod.Spec.Containers) != 2 {
 		t.Fatalf("containers = %d, want application container plus grpc-inbound", len(mergedPod.Spec.Containers))
 	}
-	assertDirectXDSConnection(t, mergedPod, "app", ProxylessGRPCSecretNameForMeta(pod.ObjectMeta))
+	assertDirectXDSConnection(t, mergedPod, "app", InherentGRPCSecretNameForMeta(pod.ObjectMeta))
 	assertGRPCInboundContainer(t, mergedPod)
 }
 
@@ -110,7 +110,7 @@ func TestInstallerGRPCEngineTemplateUsesGenerateNameForDeploymentPods(t *testing
 		t.Fatalf("failed to read grpc-engine.yaml: %v", err)
 	}
 	templates, err := ParseTemplates(RawTemplates{
-		ProxylessGRPCTemplateName: string(templateBytes),
+		InherentGRPCTemplateName: string(templateBytes),
 	})
 	if err != nil {
 		t.Fatalf("ParseTemplates() failed: %v", err)
@@ -125,7 +125,7 @@ func TestInstallerGRPCEngineTemplateUsesGenerateNameForDeploymentPods(t *testing
 			GenerateName: "nginx-95575cc5d-",
 			Namespace:    "app",
 			Annotations: map[string]string{
-				ProxylessInjectTemplatesAnnoName: ProxylessGRPCTemplateName,
+				InherentInjectTemplatesAnnoName: InherentGRPCTemplateName,
 			},
 		},
 		Spec: corev1.PodSpec{
@@ -158,9 +158,9 @@ func TestInstallerGRPCEngineTemplateUsesGenerateNameForDeploymentPods(t *testing
 	if len(mergedPod.Spec.Containers) != 2 {
 		t.Fatalf("containers = %d, want original nginx container plus grpc-inbound", len(mergedPod.Spec.Containers))
 	}
-	assertDirectXDSConnection(t, mergedPod, "nginx", ProxylessGRPCSecretNameForMeta(pod.ObjectMeta))
+	assertDirectXDSConnection(t, mergedPod, "nginx", InherentGRPCSecretNameForMeta(pod.ObjectMeta))
 	assertGRPCInboundContainer(t, mergedPod)
-	if got := mergedPod.Spec.Volumes[0].Secret.SecretName; got == ProxylessGRPCSecretName("") {
+	if got := mergedPod.Spec.Volumes[0].Secret.SecretName; got == InherentGRPCSecretName("") {
 		t.Fatalf("secret name = %q, want generateName-based secret", got)
 	}
 }
@@ -172,14 +172,14 @@ func assertDirectXDSConnection(t *testing.T, pod *corev1.Pod, containerName, sec
 	if container.Name != containerName {
 		t.Fatalf("container name = %q, want %q", container.Name, containerName)
 	}
-	if !hasEnv(container.Env, "GRPC_XDS_BOOTSTRAP", ProxylessGRPCBootstrapPath) {
+	if !hasEnv(container.Env, "GRPC_XDS_BOOTSTRAP", InherentGRPCBootstrapPath) {
 		t.Fatalf("GRPC_XDS_BOOTSTRAP env missing")
 	}
-	if !hasEnv(container.Env, ProxylessGRPCConfigEnvName, ProxylessGRPCConfigPath) {
-		t.Fatalf("%s env missing", ProxylessGRPCConfigEnvName)
+	if !hasEnv(container.Env, InherentGRPCConfigEnvName, InherentGRPCConfigPath) {
+		t.Fatalf("%s env missing", InherentGRPCConfigEnvName)
 	}
-	if !hasEnv(container.Env, ProxylessXDSAddressEnvName, "dubbod.dubbo-system.svc:26012") {
-		t.Fatalf("%s env missing", ProxylessXDSAddressEnvName)
+	if !hasEnv(container.Env, InherentXDSAddressEnvName, "dubbod.dubbo-system.svc:26012") {
+		t.Fatalf("%s env missing", InherentXDSAddressEnvName)
 	}
 	if !hasEnv(container.Env, "DUBBO_GRPC_XDS_RESOLVER", "xds:///") {
 		t.Fatalf("DUBBO_GRPC_XDS_RESOLVER env missing")
@@ -187,17 +187,17 @@ func assertDirectXDSConnection(t *testing.T, pod *corev1.Pod, containerName, sec
 	if !hasEnv(container.Env, "DUBBO_GRPC_XDS_CREDENTIALS", "true") {
 		t.Fatalf("DUBBO_GRPC_XDS_CREDENTIALS env missing")
 	}
-	if !hasEnv(container.Env, ProxylessGRPCKeepaliveEnvName, ProxylessGRPCKeepaliveValue) {
-		t.Fatalf("%s env missing", ProxylessGRPCKeepaliveEnvName)
+	if !hasEnv(container.Env, InherentGRPCKeepaliveEnvName, InherentGRPCKeepaliveValue) {
+		t.Fatalf("%s env missing", InherentGRPCKeepaliveEnvName)
 	}
-	if !hasEnv(container.Env, ProxylessGRPCKeepaliveTimeEnv, ProxylessGRPCKeepaliveTime) {
-		t.Fatalf("%s env missing", ProxylessGRPCKeepaliveTimeEnv)
+	if !hasEnv(container.Env, InherentGRPCKeepaliveTimeEnv, InherentGRPCKeepaliveTime) {
+		t.Fatalf("%s env missing", InherentGRPCKeepaliveTimeEnv)
 	}
-	if !hasEnv(container.Env, ProxylessGRPCKeepaliveTimeoutEnv, ProxylessGRPCKeepaliveTimeout) {
-		t.Fatalf("%s env missing", ProxylessGRPCKeepaliveTimeoutEnv)
+	if !hasEnv(container.Env, InherentGRPCKeepaliveTimeoutEnv, InherentGRPCKeepaliveTimeout) {
+		t.Fatalf("%s env missing", InherentGRPCKeepaliveTimeoutEnv)
 	}
-	if !hasEnv(container.Env, ProxylessGRPCKeepalivePermitWithoutStreamEnv, ProxylessGRPCKeepaliveValue) {
-		t.Fatalf("%s env missing", ProxylessGRPCKeepalivePermitWithoutStreamEnv)
+	if !hasEnv(container.Env, InherentGRPCKeepalivePermitWithoutStreamEnv, InherentGRPCKeepaliveValue) {
+		t.Fatalf("%s env missing", InherentGRPCKeepalivePermitWithoutStreamEnv)
 	}
 	if !hasEnv(container.Env, "CA_ADDRESS", "dubbod.dubbo-system.svc:26012") {
 		t.Fatalf("CA_ADDRESS env missing")
@@ -211,13 +211,13 @@ func assertDirectXDSConnection(t *testing.T, pod *corev1.Pod, containerName, sec
 	if !hasFieldRefEnv(container.Env, "INSTANCE_IP", "status.podIP") {
 		t.Fatalf("INSTANCE_IP fieldRef env missing")
 	}
-	if !hasMount(container.VolumeMounts, ProxylessXDSVolumeName, ProxylessXDSMountPath, true) {
-		t.Fatalf("proxyless xds mount missing")
+	if !hasMount(container.VolumeMounts, InherentXDSVolumeName, InherentXDSMountPath, true) {
+		t.Fatalf("inherent xds mount missing")
 	}
 	if len(pod.Spec.Volumes) != 1 {
 		t.Fatalf("volumes = %d, want 1", len(pod.Spec.Volumes))
 	}
-	if got, want := pod.Spec.Volumes[0].Name, ProxylessXDSVolumeName; got != want {
+	if got, want := pod.Spec.Volumes[0].Name, InherentXDSVolumeName; got != want {
 		t.Fatalf("volume name = %q, want %q", got, want)
 	}
 	if pod.Spec.Volumes[0].Secret == nil {
@@ -244,15 +244,15 @@ func assertNoArgs(t *testing.T, pod *corev1.Pod) {
 	}
 }
 
-// proxylessDrainDelay mirrors the sidecar's default termination drain delay.
+// inherentDrainDelay mirrors the sidecar's default termination drain delay.
 // The readiness probe must detect termination inside this window.
-const proxylessDrainDelay = 5 * time.Second
+const inherentDrainDelay = 5 * time.Second
 
 func assertGRPCInboundContainer(t *testing.T, pod *corev1.Pod) {
 	t.Helper()
-	container := FindContainer(ProxylessGRPCInboundContainerName, pod.Spec.Containers)
+	container := FindContainer(InherentGRPCInboundContainerName, pod.Spec.Containers)
 	if container == nil {
-		t.Fatalf("%s container missing", ProxylessGRPCInboundContainerName)
+		t.Fatalf("%s container missing", InherentGRPCInboundContainerName)
 	}
 	if container.Image != "kdubbo/dubbod:debug" {
 		t.Fatalf("grpc-inbound image = %q, want kdubbo/dubbod:debug", container.Image)
@@ -261,8 +261,8 @@ func assertGRPCInboundContainer(t *testing.T, pod *corev1.Pod) {
 	if strings.Join(container.Args, ",") != strings.Join(wantArgs, ",") {
 		t.Fatalf("grpc-inbound args = %v, want %v", container.Args, wantArgs)
 	}
-	if !hasMount(container.VolumeMounts, ProxylessXDSVolumeName, ProxylessXDSMountPath, true) {
-		t.Fatalf("grpc-inbound proxyless xds mount missing")
+	if !hasMount(container.VolumeMounts, InherentXDSVolumeName, InherentXDSMountPath, true) {
+		t.Fatalf("grpc-inbound inherent xds mount missing")
 	}
 	assertDrainReadinessProbe(t, container)
 }
@@ -277,32 +277,26 @@ func assertDrainReadinessProbe(t *testing.T, container *corev1.Container) {
 	if probe == nil || probe.TCPSocket == nil {
 		t.Fatalf("grpc-inbound readiness probe missing")
 	}
-	if probe.TCPSocket.Port.IntValue() != ProxylessGRPCInboundPort {
+	if probe.TCPSocket.Port.IntValue() != InherentGRPCInboundPort {
 		t.Fatalf("grpc-inbound readiness probe = %v, want TCP port %d",
-			probe.TCPSocket.Port, ProxylessGRPCInboundPort)
+			probe.TCPSocket.Port, InherentGRPCInboundPort)
 	}
 	// The probe has to fail before the sidecar stops accepting, otherwise the
 	// endpoint is withdrawn only after the listener is already gone.
-	if detection := time.Duration(probe.PeriodSeconds*probe.FailureThreshold) * time.Second; detection >= proxylessDrainDelay {
-		t.Fatalf("readiness detection window = %v, want less than the %v drain delay", detection, proxylessDrainDelay)
+	if detection := time.Duration(probe.PeriodSeconds*probe.FailureThreshold) * time.Second; detection >= inherentDrainDelay {
+		t.Fatalf("readiness detection window = %v, want less than the %v drain delay", detection, inherentDrainDelay)
 	}
-	if !hasContainerPort(container.Ports, ProxylessGRPCInboundPort) {
-		t.Fatalf("grpc-inbound port %d not declared", ProxylessGRPCInboundPort)
+	if !hasContainerPort(container.Ports, InherentGRPCInboundPort) {
+		t.Fatalf("grpc-inbound port %d not declared", InherentGRPCInboundPort)
 	}
 }
 
-func TestGetProxyImageFallsBackToSharedCNIImage(t *testing.T) {
+func TestGetProxyImageUsesTopLevelImage(t *testing.T) {
 	values := map[string]any{
-		"global": map[string]any{
-			"proxyless": map[string]any{
-				"cni": map[string]any{
-					"image": "kdubbo/dubbod:test",
-				},
-			},
-		},
+		"image": "kdubbo/dubbod:test",
 	}
 	if got := getProxyImage(values, "default"); got != "kdubbo/dubbod:test" {
-		t.Fatalf("getProxyImage() = %q, want shared CNI image", got)
+		t.Fatalf("getProxyImage() = %q, want top-level image", got)
 	}
 }
 
@@ -315,13 +309,13 @@ func hasContainerPort(ports []corev1.ContainerPort, want int) bool {
 	return false
 }
 
-func TestAddApplicationContainerConfigInjectsProxylessGRPCContract(t *testing.T) {
+func TestAddApplicationContainerConfigInjectsInherentGRPCContract(t *testing.T) {
 	pod := &corev1.Pod{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "grpc-provider-6d4c7b8c9f-abcde",
 			Namespace: "grpc-app",
 			Annotations: map[string]string{
-				ProxylessInjectTemplatesAnnoName: ProxylessGRPCTemplateName,
+				InherentInjectTemplatesAnnoName: InherentGRPCTemplateName,
 			},
 		},
 		Spec: corev1.PodSpec{
@@ -351,25 +345,25 @@ func TestAddApplicationContainerConfigInjectsProxylessGRPCContract(t *testing.T)
 		t.Fatalf("volumes = %d, want 1", len(pod.Spec.Volumes))
 	}
 	vol := pod.Spec.Volumes[0]
-	if got, want := vol.Name, ProxylessXDSVolumeName; got != want {
+	if got, want := vol.Name, InherentXDSVolumeName; got != want {
 		t.Fatalf("volume name = %q, want %q", got, want)
 	}
 	if vol.Secret == nil {
 		t.Fatalf("volume secret = nil, want SecretVolumeSource")
 	}
-	if got, want := vol.Secret.SecretName, ProxylessGRPCSecretNameForMeta(pod.ObjectMeta); got != want {
+	if got, want := vol.Secret.SecretName, InherentGRPCSecretNameForMeta(pod.ObjectMeta); got != want {
 		t.Fatalf("secret name = %q, want %q", got, want)
 	}
 
 	container := pod.Spec.Containers[0]
-	if !hasEnv(container.Env, "GRPC_XDS_BOOTSTRAP", ProxylessGRPCBootstrapPath) {
+	if !hasEnv(container.Env, "GRPC_XDS_BOOTSTRAP", InherentGRPCBootstrapPath) {
 		t.Fatalf("GRPC_XDS_BOOTSTRAP env missing")
 	}
-	if !hasEnv(container.Env, ProxylessGRPCConfigEnvName, ProxylessGRPCConfigPath) {
-		t.Fatalf("%s env missing", ProxylessGRPCConfigEnvName)
+	if !hasEnv(container.Env, InherentGRPCConfigEnvName, InherentGRPCConfigPath) {
+		t.Fatalf("%s env missing", InherentGRPCConfigEnvName)
 	}
-	if !hasEnv(container.Env, ProxylessXDSAddressEnvName, "dubbod.dubbo-system.svc:26012") {
-		t.Fatalf("%s env missing", ProxylessXDSAddressEnvName)
+	if !hasEnv(container.Env, InherentXDSAddressEnvName, "dubbod.dubbo-system.svc:26012") {
+		t.Fatalf("%s env missing", InherentXDSAddressEnvName)
 	}
 	if !hasEnv(container.Env, "GRPC_XDS_EXPERIMENTAL_SECURITY_SUPPORT", "true") {
 		t.Fatalf("GRPC_XDS_EXPERIMENTAL_SECURITY_SUPPORT env missing")
@@ -380,8 +374,8 @@ func TestAddApplicationContainerConfigInjectsProxylessGRPCContract(t *testing.T)
 	if !hasEnv(container.Env, "DUBBO_GRPC_XDS_RESOLVER", "xds:///") {
 		t.Fatalf("DUBBO_GRPC_XDS_RESOLVER env missing")
 	}
-	if !hasMount(container.VolumeMounts, ProxylessXDSVolumeName, ProxylessXDSMountPath, true) {
-		t.Fatalf("proxyless xds mount missing")
+	if !hasMount(container.VolumeMounts, InherentXDSVolumeName, InherentXDSMountPath, true) {
+		t.Fatalf("inherent xds mount missing")
 	}
 }
 
@@ -404,9 +398,9 @@ func TestAddApplicationContainerConfigOverridesRemoteClusterEnvs(t *testing.T) {
 			},
 		},
 		proxyEnvs: map[string]string{
-			ProxylessXDSAddressEnvName: "192.168.15.164:32049",
-			"CA_ADDRESS":               "192.168.15.164:32049",
-			"DUBBO_META_CLUSTER_ID":    "remote",
+			InherentXDSAddressEnvName: "192.168.15.164:32049",
+			"CA_ADDRESS":              "192.168.15.164:32049",
+			"DUBBO_META_CLUSTER_ID":   "remote",
 		},
 	}
 	if err := addApplicationContainerConfig(pod, req); err != nil {
@@ -445,7 +439,7 @@ func TestInstallerGRPCEngineTemplateConfiguresXDSClientForDubbodImage(t *testing
 		t.Fatalf("failed to read grpc-engine.yaml: %v", err)
 	}
 	templates, err := ParseTemplates(RawTemplates{
-		ProxylessGRPCTemplateName: string(templateBytes),
+		InherentGRPCTemplateName: string(templateBytes),
 	})
 	if err != nil {
 		t.Fatalf("ParseTemplates() failed: %v", err)
@@ -460,7 +454,7 @@ func TestInstallerGRPCEngineTemplateConfiguresXDSClientForDubbodImage(t *testing
 			Name:      "nginx-consumer-6d4c7b8c9f-abcde",
 			Namespace: "app",
 			Annotations: map[string]string{
-				ProxylessInjectTemplatesAnnoName: ProxylessGRPCTemplateName,
+				InherentInjectTemplatesAnnoName: InherentGRPCTemplateName,
 			},
 		},
 		Spec: corev1.PodSpec{
@@ -485,9 +479,9 @@ func TestInstallerGRPCEngineTemplateConfiguresXDSClientForDubbodImage(t *testing
 			DiscoveryAddress: "dubbod.dubbo-system.svc:26012",
 		},
 		proxyEnvs: map[string]string{
-			ProxylessXDSAddressEnvName: "192.168.15.164:32049",
-			"CA_ADDRESS":               "192.168.15.164:32049",
-			"DUBBO_META_CLUSTER_ID":    "remote",
+			InherentXDSAddressEnvName: "192.168.15.164:32049",
+			"CA_ADDRESS":              "192.168.15.164:32049",
+			"DUBBO_META_CLUSTER_ID":   "remote",
 		},
 	}
 
@@ -522,7 +516,7 @@ func TestInstallerGRPCEngineTemplateDoesNotConfigureXDSClientForNonDubbodImage(t
 		t.Fatalf("failed to read grpc-engine.yaml: %v", err)
 	}
 	templates, err := ParseTemplates(RawTemplates{
-		ProxylessGRPCTemplateName: string(templateBytes),
+		InherentGRPCTemplateName: string(templateBytes),
 	})
 	if err != nil {
 		t.Fatalf("ParseTemplates() failed: %v", err)
@@ -537,7 +531,7 @@ func TestInstallerGRPCEngineTemplateDoesNotConfigureXDSClientForNonDubbodImage(t
 			Name:      "nginx-v1-6d4c7b8c9f-abcde",
 			Namespace: "app",
 			Annotations: map[string]string{
-				ProxylessInjectTemplatesAnnoName: ProxylessGRPCTemplateName,
+				InherentInjectTemplatesAnnoName: InherentGRPCTemplateName,
 			},
 		},
 		Spec: corev1.PodSpec{
@@ -573,43 +567,43 @@ func TestInstallerGRPCEngineTemplateDoesNotConfigureXDSClientForNonDubbodImage(t
 	assertNoArgs(t, mergedPod)
 }
 
-func TestEnsureProxylessGRPCTemplateAnnotation(t *testing.T) {
+func TestEnsureInherentGRPCTemplateAnnotation(t *testing.T) {
 	pod := &corev1.Pod{}
-	ensureProxylessGRPCTemplateAnnotation(pod)
-	if got := pod.Annotations[ProxylessInjectTemplatesAnnoName]; got != ProxylessGRPCTemplateName {
-		t.Fatalf("template annotation = %q, want %q", got, ProxylessGRPCTemplateName)
+	ensureInherentGRPCTemplateAnnotation(pod)
+	if got := pod.Annotations[InherentInjectTemplatesAnnoName]; got != InherentGRPCTemplateName {
+		t.Fatalf("template annotation = %q, want %q", got, InherentGRPCTemplateName)
 	}
 
-	ensureProxylessGRPCTemplateAnnotation(pod)
-	if got := pod.Annotations[ProxylessInjectTemplatesAnnoName]; got != ProxylessGRPCTemplateName {
-		t.Fatalf("template annotation after second call = %q, want %q", got, ProxylessGRPCTemplateName)
+	ensureInherentGRPCTemplateAnnotation(pod)
+	if got := pod.Annotations[InherentInjectTemplatesAnnoName]; got != InherentGRPCTemplateName {
+		t.Fatalf("template annotation after second call = %q, want %q", got, InherentGRPCTemplateName)
 	}
 
-	pod.Annotations[ProxylessInjectTemplatesAnnoName] = "custom"
-	ensureProxylessGRPCTemplateAnnotation(pod)
-	if got, want := pod.Annotations[ProxylessInjectTemplatesAnnoName], "custom,"+ProxylessGRPCTemplateName; got != want {
+	pod.Annotations[InherentInjectTemplatesAnnoName] = "custom"
+	ensureInherentGRPCTemplateAnnotation(pod)
+	if got, want := pod.Annotations[InherentInjectTemplatesAnnoName], "custom,"+InherentGRPCTemplateName; got != want {
 		t.Fatalf("template annotation = %q, want %q", got, want)
 	}
 }
 
-func TestEnsureProxylessManagedLabel(t *testing.T) {
+func TestEnsureInherentManagedLabel(t *testing.T) {
 	pod := &corev1.Pod{}
-	ensureProxylessManagedLabel(pod)
-	if got := pod.Labels[ProxylessManagedLabel]; got != ProxylessManagedLabelValue {
-		t.Fatalf("managed label = %q, want %q", got, ProxylessManagedLabelValue)
+	ensureInherentManagedLabel(pod)
+	if got := pod.Labels[InherentManagedLabel]; got != InherentManagedLabelValue {
+		t.Fatalf("managed label = %q, want %q", got, InherentManagedLabelValue)
 	}
 }
 
-func TestProxylessGRPCSecretNameFitsKubernetesLengthLimit(t *testing.T) {
-	name := ProxylessGRPCSecretName("grpc-provider-012345678901234567890123456789012345678901234567890123")
+func TestInherentGRPCSecretNameFitsKubernetesLengthLimit(t *testing.T) {
+	name := InherentGRPCSecretName("grpc-provider-012345678901234567890123456789012345678901234567890123")
 	if len(name) > 63 {
 		t.Fatalf("secret name length = %d, want <= 63", len(name))
 	}
 }
 
-func TestProxylessGRPCSecretNameForMetaPrefersGenerateName(t *testing.T) {
+func TestInherentGRPCSecretNameForMetaPrefersGenerateName(t *testing.T) {
 	meta := metav1.ObjectMeta{Name: "nginx-95575cc5d-kh98x", GenerateName: "nginx-95575cc5d-"}
-	if got, want := ProxylessGRPCSecretNameForMeta(meta), ProxylessGRPCSecretName(meta.GenerateName); got != want {
+	if got, want := InherentGRPCSecretNameForMeta(meta), InherentGRPCSecretName(meta.GenerateName); got != want {
 		t.Fatalf("secret name = %q, want %q", got, want)
 	}
 }
@@ -655,7 +649,7 @@ func TestInstallerGRPCEngineTemplateInjectsTelemetryEnv(t *testing.T) {
 		t.Fatalf("failed to read grpc-engine.yaml: %v", err)
 	}
 	templates, err := ParseTemplates(RawTemplates{
-		ProxylessGRPCTemplateName: string(templateBytes),
+		InherentGRPCTemplateName: string(templateBytes),
 	})
 	if err != nil {
 		t.Fatalf("ParseTemplates() failed: %v", err)
@@ -671,7 +665,7 @@ func TestInstallerGRPCEngineTemplateInjectsTelemetryEnv(t *testing.T) {
 				Name:      "grpc-provider-6d4c7b8c9f-abcde",
 				Namespace: "grpc-app",
 				Annotations: map[string]string{
-					ProxylessInjectTemplatesAnnoName: ProxylessGRPCTemplateName,
+					InherentInjectTemplatesAnnoName: InherentGRPCTemplateName,
 				},
 			},
 			Spec: corev1.PodSpec{
@@ -750,7 +744,7 @@ func TestInstallerGRPCEngineTemplateInjectsTelemetryEnv(t *testing.T) {
 	}
 }
 
-func TestProxylessExcludedInboundPortsDefaultsToUnmeshedPorts(t *testing.T) {
+func TestInherentExcludedInboundPortsDefaultsToUnmeshedPorts(t *testing.T) {
 	pod := &corev1.Pod{
 		Spec: corev1.PodSpec{
 			Containers: []corev1.Container{
@@ -763,16 +757,16 @@ func TestProxylessExcludedInboundPortsDefaultsToUnmeshedPorts(t *testing.T) {
 					},
 				},
 				{
-					Name: ProxylessGRPCInboundContainerName,
+					Name: InherentGRPCInboundContainerName,
 					Args: []string{"grpc-inbound", "--listen", ":15080", "--upstream", "127.0.0.1:9080"},
 				},
 			},
 		},
 	}
 
-	ports, err := ProxylessExcludedInboundPorts(pod)
+	ports, err := InherentExcludedInboundPorts(pod)
 	if err != nil {
-		t.Fatalf("ProxylessExcludedInboundPorts() failed: %v", err)
+		t.Fatalf("InherentExcludedInboundPorts() failed: %v", err)
 	}
 	// 9080 is forwarded by the listener and 15080 is the listener itself.
 	if len(ports) != 2 || ports[0] != 9090 || ports[1] != 15020 {
@@ -780,10 +774,10 @@ func TestProxylessExcludedInboundPortsDefaultsToUnmeshedPorts(t *testing.T) {
 	}
 }
 
-func TestProxylessExcludedInboundPortsAnnotationOverrides(t *testing.T) {
+func TestInherentExcludedInboundPortsAnnotationOverrides(t *testing.T) {
 	pod := &corev1.Pod{
 		ObjectMeta: metav1.ObjectMeta{
-			Annotations: map[string]string{ProxylessExcludeInboundPortsAnnotation: "9090, 9090,15020"},
+			Annotations: map[string]string{InherentExcludeInboundPortsAnnotation: "9090, 9090,15020"},
 		},
 		Spec: corev1.PodSpec{
 			Containers: []corev1.Container{{
@@ -793,29 +787,29 @@ func TestProxylessExcludedInboundPortsAnnotationOverrides(t *testing.T) {
 		},
 	}
 
-	ports, err := ProxylessExcludedInboundPorts(pod)
+	ports, err := InherentExcludedInboundPorts(pod)
 	if err != nil {
-		t.Fatalf("ProxylessExcludedInboundPorts() failed: %v", err)
+		t.Fatalf("InherentExcludedInboundPorts() failed: %v", err)
 	}
 	if len(ports) != 2 || ports[0] != 9090 || ports[1] != 15020 {
 		t.Fatalf("excluded ports = %v, want [9090 15020]", ports)
 	}
 }
 
-func TestProxylessExcludedInboundPortsRejectsBadAnnotation(t *testing.T) {
+func TestInherentExcludedInboundPortsRejectsBadAnnotation(t *testing.T) {
 	for _, raw := range []string{"http", "0", "70000"} {
 		pod := &corev1.Pod{
 			ObjectMeta: metav1.ObjectMeta{
-				Annotations: map[string]string{ProxylessExcludeInboundPortsAnnotation: raw},
+				Annotations: map[string]string{InherentExcludeInboundPortsAnnotation: raw},
 			},
 		}
-		if _, err := ProxylessExcludedInboundPorts(pod); err == nil {
+		if _, err := InherentExcludedInboundPorts(pod); err == nil {
 			t.Fatalf("annotation %q returned nil error", raw)
 		}
 	}
 }
 
-func TestProxylessExcludedInboundPortsWithoutInboundContainer(t *testing.T) {
+func TestInherentExcludedInboundPortsWithoutInboundContainer(t *testing.T) {
 	pod := &corev1.Pod{
 		Spec: corev1.PodSpec{
 			Containers: []corev1.Container{{
@@ -825,9 +819,9 @@ func TestProxylessExcludedInboundPortsWithoutInboundContainer(t *testing.T) {
 		},
 	}
 
-	ports, err := ProxylessExcludedInboundPorts(pod)
+	ports, err := InherentExcludedInboundPorts(pod)
 	if err != nil {
-		t.Fatalf("ProxylessExcludedInboundPorts() failed: %v", err)
+		t.Fatalf("InherentExcludedInboundPorts() failed: %v", err)
 	}
 	// Without a rendered listener only the well-known inbound port is meshed.
 	if len(ports) != 1 || ports[0] != 9080 {

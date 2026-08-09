@@ -181,7 +181,7 @@ func (c *Controller) GetProxyServiceTargets(proxy *model.Proxy) []model.ServiceT
 		}
 	} else if proxy.ID != "" {
 		// If IP address is empty, try to find pod by node ID
-		// Node ID format for proxyless is: podname.namespace
+		// Node ID format for inherent is: podname.namespace
 		parts := strings.Split(proxy.ID, ".")
 		if len(parts) >= 2 {
 			podName := parts[0]

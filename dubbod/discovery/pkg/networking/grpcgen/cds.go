@@ -272,7 +272,7 @@ func (b *clusterBuilder) buildUpstreamTLSContext(c *cluster.Cluster) *tlsv1.Upst
 			}
 		}
 	}
-	// Proxyless gRPC always speaks HTTP/2, advertise h2 via ALPN.
+	// Inherent gRPC always speaks HTTP/2, advertise h2 via ALPN.
 	tlsContext.CommonTlsContext.AlpnProtocols = []string{"h2"}
 	return tlsContext
 }

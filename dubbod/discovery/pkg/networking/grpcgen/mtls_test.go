@@ -131,8 +131,8 @@ func TestRootNamespacePeerAuthenticationBuildsGlobalStrictListener(t *testing.T)
 
 func newMTLSTestProxy() *model.Proxy {
 	return &model.Proxy{
-		ID:              "proxyless~10.0.0.1~nginx-consumer.app~app.svc.cluster.local",
-		Type:            model.Proxyless,
+		ID:              "inherent~10.0.0.1~nginx-consumer.app~app.svc.cluster.local",
+		Type:            model.Inherent,
 		DNSDomain:       "app.svc.cluster.local",
 		ConfigNamespace: "app",
 		Metadata: &model.NodeMetadata{

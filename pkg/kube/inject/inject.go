@@ -213,23 +213,8 @@ func getProxyImage(values map[string]any, defaultImage string) string {
 		return defaultImage
 	}
 
-	if global, ok := values["global"].(map[string]any); ok {
-		if proxy, ok := global["proxy"].(map[string]any); ok {
-			if image, ok := proxy["image"].(string); ok && image != "" {
-				return image
-			}
-		}
-		// Check global.proxyImage (alternative pattern)
-		if image, ok := global["proxyImage"].(string); ok && image != "" {
-			return image
-		}
-		if proxyless, ok := global["proxyless"].(map[string]any); ok {
-			if cni, ok := proxyless["cni"].(map[string]any); ok {
-				if image, ok := cni["image"].(string); ok && image != "" {
-					return image
-				}
-			}
-		}
+	if image, ok := values["image"].(string); ok && image != "" {
+		return image
 	}
 
 	return defaultImage
@@ -303,7 +288,7 @@ func stripPod(req InjectionParameters) *corev1.Pod {
 		pod.Spec.Containers = modifyContainers(pod.Spec.Containers, c, Remove)
 	}
 
-	delete(pod.Annotations, annotation.OrgApacheDubboProxylessStatus.Name)
+	delete(pod.Annotations, annotation.OrgApacheDubboInherentStatus.Name)
 
 	return pod
 }
@@ -360,8 +345,8 @@ func injectRequired(ignored []string, config *Config, podSpec *corev1.PodSpec, m
 	var useDefault bool
 	var inject bool
 
-	objectSelector := annos[annotation.OrgApacheDubboProxylessInject.Name]
-	if lbl, labelPresent := metadata.GetLabels()[annotation.OrgApacheDubboProxylessInject.Name]; labelPresent {
+	objectSelector := annos[annotation.OrgApacheDubboInherentInject.Name]
+	if lbl, labelPresent := metadata.GetLabels()[annotation.OrgApacheDubboInherentInject.Name]; labelPresent {
 		// The label is the new API; if both are present we prefer the label
 		objectSelector = lbl
 	}
@@ -374,7 +359,7 @@ func injectRequired(ignored []string, config *Config, podSpec *corev1.PodSpec, m
 		useDefault = true
 	default:
 		log.Warnf("Invalid value for %s: %q. Only 'true' and 'false' are accepted. Falling back to default injection policy.",
-			annotation.OrgApacheDubboProxylessInject.Name, objectSelector)
+			annotation.OrgApacheDubboInherentInject.Name, objectSelector)
 		useDefault = true
 	}
 
@@ -404,7 +389,7 @@ func injectRequired(ignored []string, config *Config, podSpec *corev1.PodSpec, m
 func injectionStatus(pod *corev1.Pod) *InjectionStatus {
 	var statusBytes []byte
 	if pod.Annotations != nil {
-		if value, ok := pod.Annotations[annotation.OrgApacheDubboProxylessStatus.Name]; ok {
+		if value, ok := pod.Annotations[annotation.OrgApacheDubboInherentStatus.Name]; ok {
 			statusBytes = []byte(value)
 		}
 	}

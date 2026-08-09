@@ -220,9 +220,34 @@ func validateDubboOperator(dop values.Map, logger clog.Logger) error {
 }
 
 // applyComponentValuesToHelmValues translates a generic values set into a component-specific one.
-func applyComponentValuesToHelmValues(_ component.Component, spec apis.DefaultCompSpec, merged values.Map) values.Map {
+func applyComponentValuesToHelmValues(comp component.Component, spec apis.DefaultCompSpec, merged values.Map) values.Map {
 	if spec.Namespace != "" {
 		spec.Namespace = "dubbo-system"
 	}
-	return merged
+	if comp.UserFacingName != component.DubboDiscoveryComponentName {
+		return merged
+	}
+
+	cloned, err := values.MapFromJSON([]byte(merged.JSON()))
+	if err != nil {
+		return merged
+	}
+	chartValues, ok := cloned.GetPathMap("spec.values")
+	if !ok {
+		return cloned
+	}
+	global, ok := chartValues.GetPathMap("global")
+	if !ok {
+		return cloned
+	}
+
+	flattened := values.Map{}
+	flattened.MergeFrom(global)
+	delete(chartValues, "global")
+	flattened.MergeFrom(chartValues)
+	specMap, ok := cloned.GetPathMap("spec")
+	if ok {
+		specMap["values"] = flattened
+	}
+	return cloned
 }

@@ -57,18 +57,18 @@ import (
 )
 
 const (
-	proxylessGRPCControllerName = "proxyless grpc workloads"
-	serviceNodeSeparator        = "~"
+	inherentGRPCControllerName = "Inherent gRPC workloads"
+	serviceNodeSeparator       = "~"
 
-	proxylessGRPCManagedPodIndex     = "proxyless-grpc-managed"
-	proxylessGRPCManagedPodIndexKey  = "true"
-	proxylessGRPCBundleRequeueBatch  = 250
-	proxylessGRPCBundleRequeuePeriod = 100 * time.Millisecond
+	inherentGRPCManagedPodIndex     = "inherent-grpc-managed"
+	inherentGRPCManagedPodIndexKey  = "true"
+	inherentGRPCBundleRequeueBatch  = 250
+	inherentGRPCBundleRequeuePeriod = 100 * time.Millisecond
 )
 
-var proxylessGRPCLog = log.RegisterScope("proxylessgrpc", "proxyless grpc workload controller")
+var inherentGRPCLog = log.RegisterScope("inherentgrpc", "Inherent gRPC workload controller")
 
-type proxylessGRPCWorkloadController struct {
+type inherentGRPCWorkloadController struct {
 	server *Server
 	client kubelib.Client
 	pods   kclient.Client[*corev1.Pod]
@@ -85,36 +85,36 @@ type proxylessGRPCWorkloadController struct {
 	nextRotation  time.Time
 }
 
-type proxylessGRPCClusterController struct {
-	controller *proxylessGRPCWorkloadController
+type inherentGRPCClusterController struct {
+	controller *inherentGRPCWorkloadController
 	stop       chan struct{}
 }
 
-func (c *proxylessGRPCClusterController) Close() {
+func (c *inherentGRPCClusterController) Close() {
 	if c.stop != nil {
 		close(c.stop)
 	}
 }
 
-func (c *proxylessGRPCClusterController) HasSynced() bool {
+func (c *inherentGRPCClusterController) HasSynced() bool {
 	return c.controller == nil || c.controller.HasSynced()
 }
 
-func (s *Server) initProxylessGRPCWorkloads() error {
+func (s *Server) initInherentGRPCWorkloads() error {
 	if s.kubeClient == nil {
 		return nil
 	}
 
-	controller := newProxylessGRPCWorkloadController(s, s.kubeClient)
-	s.proxylessGRPCWorkloadController = controller
+	controller := newInherentGRPCWorkloadController(s, s.kubeClient)
+	s.inherentGRPCWorkloadController = controller
 	if s.multiclusterController != nil {
-		s.proxylessGRPCRemoteControllers = multicluster.BuildMultiClusterComponent(s.multiclusterController,
-			func(cluster *multicluster.Cluster) *proxylessGRPCClusterController {
+		s.inherentGRPCRemoteControllers = multicluster.BuildMultiClusterComponent(s.multiclusterController,
+			func(cluster *multicluster.Cluster) *inherentGRPCClusterController {
 				if cluster.ID == s.clusterID {
-					return &proxylessGRPCClusterController{}
+					return &inherentGRPCClusterController{}
 				}
-				remote := newProxylessGRPCWorkloadController(s, cluster.Client)
-				wrapped := &proxylessGRPCClusterController{
+				remote := newInherentGRPCWorkloadController(s, cluster.Client)
+				wrapped := &inherentGRPCClusterController{
 					controller: remote,
 					stop:       make(chan struct{}),
 				}
@@ -129,8 +129,8 @@ func (s *Server) initProxylessGRPCWorkloads() error {
 				previous(req)
 			}
 			controller.handleRuntimeConfigUpdate(req)
-			if s.proxylessGRPCRemoteControllers != nil {
-				for _, remote := range s.proxylessGRPCRemoteControllers.All() {
+			if s.inherentGRPCRemoteControllers != nil {
+				for _, remote := range s.inherentGRPCRemoteControllers.All() {
 					if remote.controller != nil {
 						remote.controller.handleRuntimeConfigUpdate(req)
 					}
@@ -138,22 +138,22 @@ func (s *Server) initProxylessGRPCWorkloads() error {
 			}
 		}
 	}
-	s.addStartFunc(proxylessGRPCControllerName, func(stop <-chan struct{}) error {
+	s.addStartFunc(inherentGRPCControllerName, func(stop <-chan struct{}) error {
 		go controller.Run(stop)
 		return nil
 	})
 	return nil
 }
 
-func (s *Server) proxylessGRPCWorkloadsSynced() bool {
-	if s.proxylessGRPCWorkloadController != nil && !s.proxylessGRPCWorkloadController.HasSynced() {
+func (s *Server) inherentGRPCWorkloadsSynced() bool {
+	if s.inherentGRPCWorkloadController != nil && !s.inherentGRPCWorkloadController.HasSynced() {
 		return false
 	}
-	return s.proxylessGRPCRemoteControllers == nil || s.proxylessGRPCRemoteControllers.HasSynced()
+	return s.inherentGRPCRemoteControllers == nil || s.inherentGRPCRemoteControllers.HasSynced()
 }
 
-func newProxylessGRPCWorkloadController(s *Server, client kubelib.Client) *proxylessGRPCWorkloadController {
-	c := &proxylessGRPCWorkloadController{
+func newInherentGRPCWorkloadController(s *Server, client kubelib.Client) *inherentGRPCWorkloadController {
+	c := &inherentGRPCWorkloadController{
 		server: s,
 		client: client,
 		pods: kclient.NewFiltered[*corev1.Pod](client, kclient.Filter{
@@ -161,13 +161,13 @@ func newProxylessGRPCWorkloadController(s *Server, client kubelib.Client) *proxy
 		}),
 		rotations: make(map[types.NamespacedName]time.Time),
 	}
-	c.managedPods = c.pods.Index(proxylessGRPCManagedPodIndex, func(pod *corev1.Pod) []string {
-		if shouldManageProxylessGRPCPod(pod) {
-			return []string{proxylessGRPCManagedPodIndexKey}
+	c.managedPods = c.pods.Index(inherentGRPCManagedPodIndex, func(pod *corev1.Pod) []string {
+		if shouldManageInherentGRPCPod(pod) {
+			return []string{inherentGRPCManagedPodIndexKey}
 		}
 		return nil
 	})
-	c.queue = controllers.NewQueue(proxylessGRPCControllerName,
+	c.queue = controllers.NewQueue(inherentGRPCControllerName,
 		controllers.WithReconciler(func(key types.NamespacedName) error {
 			return c.reconcile(key)
 		}),
@@ -176,15 +176,15 @@ func newProxylessGRPCWorkloadController(s *Server, client kubelib.Client) *proxy
 
 	c.pods.AddEventHandler(controllers.FilteredObjectSpecHandler(c.queue.AddObject, func(o controllers.Object) bool {
 		pod := controllers.Extract[*corev1.Pod](o)
-		return shouldManageProxylessGRPCPod(pod)
+		return shouldManageInherentGRPCPod(pod)
 	}))
 
 	return c
 }
 
-func (c *proxylessGRPCWorkloadController) Run(stop <-chan struct{}) {
+func (c *inherentGRPCWorkloadController) Run(stop <-chan struct{}) {
 	c.pods.Start(stop)
-	if !kubelib.WaitForCacheSync(proxylessGRPCControllerName, stop, c.pods.HasSynced) {
+	if !kubelib.WaitForCacheSync(inherentGRPCControllerName, stop, c.pods.HasSynced) {
 		c.queue.ShutDownEarly()
 		return
 	}
@@ -198,11 +198,11 @@ func (c *proxylessGRPCWorkloadController) Run(stop <-chan struct{}) {
 	c.queue.Run(stop)
 }
 
-func (c *proxylessGRPCWorkloadController) HasSynced() bool {
+func (c *inherentGRPCWorkloadController) HasSynced() bool {
 	return c.pods.HasSynced() && c.queue.HasSynced()
 }
 
-func (c *proxylessGRPCWorkloadController) watchBundleChanges(stop <-chan struct{}) {
+func (c *inherentGRPCWorkloadController) watchBundleChanges(stop <-chan struct{}) {
 	for {
 		select {
 		case <-stop:
@@ -216,20 +216,20 @@ func (c *proxylessGRPCWorkloadController) watchBundleChanges(stop <-chan struct{
 	}
 }
 
-func (c *proxylessGRPCWorkloadController) enqueueAllPods() {
+func (c *inherentGRPCWorkloadController) enqueueAllPods() {
 	for _, key := range c.managedPodKeys() {
 		c.queue.Add(key)
 	}
 }
 
-func (c *proxylessGRPCWorkloadController) handleRuntimeConfigUpdate(req *discoverymodel.PushRequest) {
-	if !proxylessGRPCRuntimeConfigNeedsUpdate(req) {
+func (c *inherentGRPCWorkloadController) handleRuntimeConfigUpdate(req *discoverymodel.PushRequest) {
+	if !inherentGRPCRuntimeConfigNeedsUpdate(req) {
 		return
 	}
 	c.enqueueAllPods()
 }
 
-func proxylessGRPCRuntimeConfigNeedsUpdate(req *discoverymodel.PushRequest) bool {
+func inherentGRPCRuntimeConfigNeedsUpdate(req *discoverymodel.PushRequest) bool {
 	if req == nil {
 		return false
 	}
@@ -248,10 +248,10 @@ func proxylessGRPCRuntimeConfigNeedsUpdate(req *discoverymodel.PushRequest) bool
 	return false
 }
 
-func (c *proxylessGRPCWorkloadController) enqueueManagedPodsBatched(stop <-chan struct{}) {
+func (c *inherentGRPCWorkloadController) enqueueManagedPodsBatched(stop <-chan struct{}) {
 	keys := c.managedPodKeys()
-	for start := 0; start < len(keys); start += proxylessGRPCBundleRequeueBatch {
-		end := start + proxylessGRPCBundleRequeueBatch
+	for start := 0; start < len(keys); start += inherentGRPCBundleRequeueBatch {
+		end := start + inherentGRPCBundleRequeueBatch
 		if end > len(keys) {
 			end = len(keys)
 		}
@@ -261,7 +261,7 @@ func (c *proxylessGRPCWorkloadController) enqueueManagedPodsBatched(stop <-chan 
 		if end == len(keys) {
 			return
 		}
-		timer := time.NewTimer(proxylessGRPCBundleRequeuePeriod)
+		timer := time.NewTimer(inherentGRPCBundleRequeuePeriod)
 		select {
 		case <-stop:
 			timer.Stop()
@@ -271,10 +271,10 @@ func (c *proxylessGRPCWorkloadController) enqueueManagedPodsBatched(stop <-chan 
 	}
 }
 
-func (c *proxylessGRPCWorkloadController) managedPodKeys() []types.NamespacedName {
+func (c *inherentGRPCWorkloadController) managedPodKeys() []types.NamespacedName {
 	var pods []*corev1.Pod
 	if c.managedPods != nil {
-		for _, item := range c.managedPods.Lookup(proxylessGRPCManagedPodIndexKey) {
+		for _, item := range c.managedPods.Lookup(inherentGRPCManagedPodIndexKey) {
 			pod, ok := item.(*corev1.Pod)
 			if ok && pod != nil {
 				pods = append(pods, pod)
@@ -286,7 +286,7 @@ func (c *proxylessGRPCWorkloadController) managedPodKeys() []types.NamespacedNam
 
 	keys := make([]types.NamespacedName, 0, len(pods))
 	for _, pod := range pods {
-		if shouldManageProxylessGRPCPod(pod) {
+		if shouldManageInherentGRPCPod(pod) {
 			keys = append(keys, types.NamespacedName{Name: pod.Name, Namespace: pod.Namespace})
 		}
 	}
@@ -299,18 +299,18 @@ func (c *proxylessGRPCWorkloadController) managedPodKeys() []types.NamespacedNam
 	return keys
 }
 
-func (c *proxylessGRPCWorkloadController) reconcile(key types.NamespacedName) error {
+func (c *inherentGRPCWorkloadController) reconcile(key types.NamespacedName) error {
 	pod := c.pods.Get(key.Name, key.Namespace)
 	if pod == nil {
 		c.clearRotation(key)
 		return c.deleteSecret(key)
 	}
-	if !shouldManageProxylessGRPCPod(pod) || pod.DeletionTimestamp != nil {
+	if !shouldManageInherentGRPCPod(pod) || pod.DeletionTimestamp != nil {
 		c.clearRotation(key)
 		return c.deleteSecretForPod(pod)
 	}
 	secrets := c.client.Kube().CoreV1().Secrets(pod.Namespace)
-	secretName := inject.ProxylessGRPCSecretNameForMeta(pod.ObjectMeta)
+	secretName := inject.InherentGRPCSecretNameForMeta(pod.ObjectMeta)
 	current, err := secrets.Get(context.Background(), secretName, metav1.GetOptions{})
 	if err != nil {
 		if !apierrors.IsNotFound(err) {
@@ -340,9 +340,9 @@ func (c *proxylessGRPCWorkloadController) reconcile(key types.NamespacedName) er
 	return nil
 }
 
-const proxylessGRPCRuntimeConfigVersion = "dubbo.apache.org/proxyless-grpc/v1"
+const inherentGRPCRuntimeConfigVersion = "dubbo.apache.org/inherent-grpc/v1"
 
-type proxylessGRPCWorkloadContext struct {
+type inherentGRPCWorkloadContext struct {
 	node             *pkgmodel.Node
 	nodeID           string
 	podName          string
@@ -355,25 +355,25 @@ type proxylessGRPCWorkloadContext struct {
 	caAddress        string
 }
 
-type proxylessGRPCRuntimeConfig struct {
-	Version      string                              `json:"version"`
-	Mode         string                              `json:"mode"`
-	Env          map[string]string                   `json:"env"`
-	Bootstrap    proxylessGRPCBootstrapRuntimeConfig `json:"bootstrap"`
-	Certificates proxylessGRPCCertRuntimeConfig      `json:"certificates"`
-	Keepalive    proxylessGRPCKeepaliveRuntimeConfig `json:"keepalive"`
-	Workload     proxylessGRPCWorkloadRuntimeConfig  `json:"workload"`
-	Services     []proxylessGRPCServiceRuntimeConfig `json:"services,omitempty"`
-	Routes       []proxylessGRPCRouteRuntimeConfig   `json:"routes,omitempty"`
+type inherentGRPCRuntimeConfig struct {
+	Version      string                             `json:"version"`
+	Mode         string                             `json:"mode"`
+	Env          map[string]string                  `json:"env"`
+	Bootstrap    inherentGRPCBootstrapRuntimeConfig `json:"bootstrap"`
+	Certificates inherentGRPCCertRuntimeConfig      `json:"certificates"`
+	Keepalive    inherentGRPCKeepaliveRuntimeConfig `json:"keepalive"`
+	Workload     inherentGRPCWorkloadRuntimeConfig  `json:"workload"`
+	Services     []inherentGRPCServiceRuntimeConfig `json:"services,omitempty"`
+	Routes       []inherentGRPCRouteRuntimeConfig   `json:"routes,omitempty"`
 }
 
-type proxylessGRPCBootstrapRuntimeConfig struct {
+type inherentGRPCBootstrapRuntimeConfig struct {
 	Path             string `json:"path"`
 	DiscoveryAddress string `json:"discoveryAddress"`
 	Resolver         string `json:"resolver"`
 }
 
-type proxylessGRPCCertRuntimeConfig struct {
+type inherentGRPCCertRuntimeConfig struct {
 	Provider   string `json:"provider"`
 	Directory  string `json:"directory"`
 	CertChain  string `json:"certChain"`
@@ -381,14 +381,14 @@ type proxylessGRPCCertRuntimeConfig struct {
 	RootCert   string `json:"rootCert"`
 }
 
-type proxylessGRPCKeepaliveRuntimeConfig struct {
+type inherentGRPCKeepaliveRuntimeConfig struct {
 	Enabled             bool   `json:"enabled"`
 	Time                string `json:"time"`
 	Timeout             string `json:"timeout"`
 	PermitWithoutStream bool   `json:"permitWithoutStream"`
 }
 
-type proxylessGRPCWorkloadRuntimeConfig struct {
+type inherentGRPCWorkloadRuntimeConfig struct {
 	NodeID         string `json:"nodeId"`
 	PodName        string `json:"podName"`
 	Namespace      string `json:"namespace"`
@@ -398,51 +398,51 @@ type proxylessGRPCWorkloadRuntimeConfig struct {
 	ClusterID      string `json:"clusterId"`
 }
 
-type proxylessGRPCServiceRuntimeConfig struct {
-	Host      string                               `json:"host"`
-	Namespace string                               `json:"namespace"`
-	Name      string                               `json:"name"`
-	Ports     []proxylessGRPCPortRuntimeConfig     `json:"ports,omitempty"`
-	Endpoints []proxylessGRPCEndpointRuntimeConfig `json:"endpoints,omitempty"`
+type inherentGRPCServiceRuntimeConfig struct {
+	Host      string                              `json:"host"`
+	Namespace string                              `json:"namespace"`
+	Name      string                              `json:"name"`
+	Ports     []inherentGRPCPortRuntimeConfig     `json:"ports,omitempty"`
+	Endpoints []inherentGRPCEndpointRuntimeConfig `json:"endpoints,omitempty"`
 }
 
-type proxylessGRPCPortRuntimeConfig struct {
-	Name     string                           `json:"name,omitempty"`
-	Port     int                              `json:"port"`
-	MTLSMode string                           `json:"mtlsMode,omitempty"`
-	Fault    *proxylessGRPCFaultRuntimeConfig `json:"fault,omitempty"`
+type inherentGRPCPortRuntimeConfig struct {
+	Name     string                          `json:"name,omitempty"`
+	Port     int                             `json:"port"`
+	MTLSMode string                          `json:"mtlsMode,omitempty"`
+	Fault    *inherentGRPCFaultRuntimeConfig `json:"fault,omitempty"`
 }
 
-type proxylessGRPCFaultRuntimeConfig struct {
-	Delay *proxylessGRPCFaultDelayRuntimeConfig `json:"delay,omitempty"`
-	Abort *proxylessGRPCFaultAbortRuntimeConfig `json:"abort,omitempty"`
+type inherentGRPCFaultRuntimeConfig struct {
+	Delay *inherentGRPCFaultDelayRuntimeConfig `json:"delay,omitempty"`
+	Abort *inherentGRPCFaultAbortRuntimeConfig `json:"abort,omitempty"`
 }
 
-type proxylessGRPCFaultDelayRuntimeConfig struct {
+type inherentGRPCFaultDelayRuntimeConfig struct {
 	FixedDelay string `json:"fixedDelay"`
 	Percentage uint32 `json:"percentage"`
 }
 
-type proxylessGRPCFaultAbortRuntimeConfig struct {
+type inherentGRPCFaultAbortRuntimeConfig struct {
 	HTTPStatus uint32 `json:"httpStatus"`
 	Percentage uint32 `json:"percentage"`
 }
 
-type proxylessGRPCRouteRuntimeConfig struct {
-	Host         string                                  `json:"host"`
-	Port         int                                     `json:"port"`
-	Destinations []proxylessGRPCDestinationRuntimeConfig `json:"destinations"`
+type inherentGRPCRouteRuntimeConfig struct {
+	Host         string                                 `json:"host"`
+	Port         int                                    `json:"port"`
+	Destinations []inherentGRPCDestinationRuntimeConfig `json:"destinations"`
 }
 
-type proxylessGRPCDestinationRuntimeConfig struct {
-	Host      string                               `json:"host"`
-	Subset    string                               `json:"subset,omitempty"`
-	Weight    int                                  `json:"weight"`
-	TLSMode   string                               `json:"tlsMode,omitempty"`
-	Endpoints []proxylessGRPCEndpointRuntimeConfig `json:"endpoints,omitempty"`
+type inherentGRPCDestinationRuntimeConfig struct {
+	Host      string                              `json:"host"`
+	Subset    string                              `json:"subset,omitempty"`
+	Weight    int                                 `json:"weight"`
+	TLSMode   string                              `json:"tlsMode,omitempty"`
+	Endpoints []inherentGRPCEndpointRuntimeConfig `json:"endpoints,omitempty"`
 }
 
-type proxylessGRPCEndpointRuntimeConfig struct {
+type inherentGRPCEndpointRuntimeConfig struct {
 	Address        string            `json:"address"`
 	Port           uint32            `json:"port"`
 	Labels         map[string]string `json:"labels,omitempty"`
@@ -451,7 +451,7 @@ type proxylessGRPCEndpointRuntimeConfig struct {
 	HealthStatus   string            `json:"healthStatus,omitempty"`
 }
 
-func (c *proxylessGRPCWorkloadController) buildSecret(pod *corev1.Pod, current *corev1.Secret) (*corev1.Secret, time.Time, error) {
+func (c *inherentGRPCWorkloadController) buildSecret(pod *corev1.Pod, current *corev1.Secret) (*corev1.Secret, time.Time, error) {
 	workload, err := c.buildWorkloadContext(pod)
 	if err != nil {
 		return nil, time.Time{}, err
@@ -476,14 +476,14 @@ func (c *proxylessGRPCWorkloadController) buildSecret(pod *corev1.Pod, current *
 		}
 	}
 
-	secret := buildProxylessGRPCSecret(pod, bootstrapJSON, runtimeConfigJSON, certChain, keyPEM, rootCert)
+	secret := buildInherentGRPCSecret(pod, bootstrapJSON, runtimeConfigJSON, certChain, keyPEM, rootCert)
 	return secret, expireAt, nil
 }
 
-func buildProxylessGRPCSecret(pod *corev1.Pod, bootstrapJSON, runtimeConfigJSON, certChain, keyPEM, rootCert []byte) *corev1.Secret {
+func buildInherentGRPCSecret(pod *corev1.Pod, bootstrapJSON, runtimeConfigJSON, certChain, keyPEM, rootCert []byte) *corev1.Secret {
 	return &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      inject.ProxylessGRPCSecretNameForMeta(pod.ObjectMeta),
+			Name:      inject.InherentGRPCSecretNameForMeta(pod.ObjectMeta),
 			Namespace: pod.Namespace,
 			OwnerReferences: []metav1.OwnerReference{{
 				APIVersion: "v1",
@@ -494,8 +494,8 @@ func buildProxylessGRPCSecret(pod *corev1.Pod, bootstrapJSON, runtimeConfigJSON,
 		},
 		Type: corev1.SecretTypeOpaque,
 		Data: map[string][]byte{
-			inject.ProxylessGRPCBootstrapFileName:      bootstrapJSON,
-			inject.ProxylessGRPCConfigFileName:         runtimeConfigJSON,
+			inject.InherentGRPCBootstrapFileName:       bootstrapJSON,
+			inject.InherentGRPCConfigFileName:          runtimeConfigJSON,
 			constants.CertChainFilename:                certChain,
 			constants.KeyFilename:                      keyPEM,
 			constants.CACertNamespaceConfigMapDataName: rootCert,
@@ -526,7 +526,7 @@ func reusableWorkloadCertificate(secret *corev1.Secret, activeRootCert []byte) (
 	return certChain, keyPEM, rootCert, expireAt, true
 }
 
-func (c *proxylessGRPCWorkloadController) buildWorkloadContext(pod *corev1.Pod) (*proxylessGRPCWorkloadContext, error) {
+func (c *inherentGRPCWorkloadController) buildWorkloadContext(pod *corev1.Pod) (*inherentGRPCWorkloadContext, error) {
 	pod = c.latestPodForWorkloadContext(pod)
 
 	trustDomain := constants.DefaultClusterLocalDomain
@@ -552,13 +552,13 @@ func (c *proxylessGRPCWorkloadController) buildWorkloadContext(pod *corev1.Pod) 
 		podIP = "0.0.0.0"
 	}
 	clusterID := podEnvValue(pod, "DUBBO_META_CLUSTER_ID", constants.DefaultClusterName)
-	discoveryAddress := podEnvValue(pod, inject.ProxylessXDSAddressEnvName, proxyConfig.GetDiscoveryAddress())
+	discoveryAddress := podEnvValue(pod, inject.InherentXDSAddressEnvName, proxyConfig.GetDiscoveryAddress())
 	caAddress := podEnvValue(pod, "CA_ADDRESS", discoveryAddress)
 	proxyConfig = proto.Clone(proxyConfig).(*meshv1alpha1.ProxyConfig)
 	proxyConfig.DiscoveryAddress = discoveryAddress
 
 	nodeID := strings.Join([]string{
-		string(pkgmodel.Proxyless),
+		string(pkgmodel.Inherent),
 		podIP,
 		pod.Name + "." + pod.Namespace,
 		fmt.Sprintf("%s.svc.%s", pod.Namespace, domainSuffix),
@@ -584,7 +584,7 @@ func (c *proxylessGRPCWorkloadController) buildWorkloadContext(pod *corev1.Pod) 
 		return nil, err
 	}
 
-	return &proxylessGRPCWorkloadContext{
+	return &inherentGRPCWorkloadContext{
 		node:             node,
 		nodeID:           nodeID,
 		podName:          pod.Name,
@@ -598,13 +598,13 @@ func (c *proxylessGRPCWorkloadController) buildWorkloadContext(pod *corev1.Pod) 
 	}, nil
 }
 
-func (c *proxylessGRPCWorkloadController) latestPodForWorkloadContext(pod *corev1.Pod) *corev1.Pod {
-	if pod == nil || c.client == nil || hasConcretePodEnv(pod, "DUBBO_META_CLUSTER_ID") || hasConcretePodEnv(pod, inject.ProxylessXDSAddressEnvName) {
+func (c *inherentGRPCWorkloadController) latestPodForWorkloadContext(pod *corev1.Pod) *corev1.Pod {
+	if pod == nil || c.client == nil || hasConcretePodEnv(pod, "DUBBO_META_CLUSTER_ID") || hasConcretePodEnv(pod, inject.InherentXDSAddressEnvName) {
 		return pod
 	}
 	latest, err := c.client.Kube().CoreV1().Pods(pod.Namespace).Get(context.Background(), pod.Name, metav1.GetOptions{})
 	if err != nil {
-		proxylessGRPCLog.Warnf("failed to refresh pod before building workload context: %s/%s: %v", pod.Namespace, pod.Name, err)
+		inherentGRPCLog.Warnf("failed to refresh pod before building workload context: %s/%s: %v", pod.Namespace, pod.Name, err)
 		return pod
 	}
 	return latest
@@ -638,11 +638,11 @@ func podEnvValue(pod *corev1.Pod, name, fallback string) string {
 	return fallback
 }
 
-func buildBootstrapJSON(workload *proxylessGRPCWorkloadContext) ([]byte, error) {
+func buildBootstrapJSON(workload *inherentGRPCWorkloadContext) ([]byte, error) {
 	bootstrapCfg, err := grpcxds.GenerateBootstrap(grpcxds.GenerateBootstrapOptions{
 		Node:             workload.node,
 		DiscoveryAddress: workload.discoveryAddress,
-		CertDir:          inject.ProxylessXDSMountPath,
+		CertDir:          inject.InherentXDSMountPath,
 	})
 	if err != nil {
 		return nil, err
@@ -650,51 +650,51 @@ func buildBootstrapJSON(workload *proxylessGRPCWorkloadContext) ([]byte, error) 
 	return json.MarshalIndent(bootstrapCfg, "", "  ")
 }
 
-func buildRuntimeConfigJSON(workload *proxylessGRPCWorkloadContext, services []proxylessGRPCServiceRuntimeConfig, routes []proxylessGRPCRouteRuntimeConfig) ([]byte, error) {
-	cfg := proxylessGRPCRuntimeConfig{
-		Version: proxylessGRPCRuntimeConfigVersion,
-		Mode:    "proxyless-grpc",
+func buildRuntimeConfigJSON(workload *inherentGRPCWorkloadContext, services []inherentGRPCServiceRuntimeConfig, routes []inherentGRPCRouteRuntimeConfig) ([]byte, error) {
+	cfg := inherentGRPCRuntimeConfig{
+		Version: inherentGRPCRuntimeConfigVersion,
+		Mode:    "inherent-grpc",
 		Env: map[string]string{
-			"GRPC_XDS_BOOTSTRAP":                                inject.ProxylessGRPCBootstrapPath,
-			inject.ProxylessGRPCConfigEnvName:                   inject.ProxylessGRPCConfigPath,
-			"GRPC_XDS_EXPERIMENTAL_SECURITY_SUPPORT":            "true",
-			"DUBBO_GRPC_XDS_CREDENTIALS":                        "true",
-			"DUBBO_GRPC_XDS_RESOLVER":                           "xds:///",
-			inject.ProxylessGRPCKeepaliveEnvName:                inject.ProxylessGRPCKeepaliveValue,
-			inject.ProxylessGRPCKeepaliveTimeEnv:                inject.ProxylessGRPCKeepaliveTime,
-			inject.ProxylessGRPCKeepaliveTimeoutEnv:             inject.ProxylessGRPCKeepaliveTimeout,
-			inject.ProxylessGRPCKeepalivePermitWithoutStreamEnv: inject.ProxylessGRPCKeepaliveValue,
-			"DUBBO_META_GENERATOR":                              "grpc",
-			"DUBBO_META_CLUSTER_ID":                             workload.clusterID,
-			"DUBBO_META_NAMESPACE":                              workload.podNamespace,
-			"DUBBO_META_MESH_ID":                                workload.trustDomain,
-			"TRUST_DOMAIN":                                      workload.trustDomain,
-			"POD_NAME":                                          workload.podName,
-			"POD_NAMESPACE":                                     workload.podNamespace,
-			"INSTANCE_IP":                                       workload.podIP,
-			"SERVICE_ACCOUNT":                                   workload.serviceAccount,
-			inject.ProxylessXDSAddressEnvName:                   workload.discoveryAddress,
-			"CA_ADDRESS":                                        workload.caAddress,
+			"GRPC_XDS_BOOTSTRAP":                               inject.InherentGRPCBootstrapPath,
+			inject.InherentGRPCConfigEnvName:                   inject.InherentGRPCConfigPath,
+			"GRPC_XDS_EXPERIMENTAL_SECURITY_SUPPORT":           "true",
+			"DUBBO_GRPC_XDS_CREDENTIALS":                       "true",
+			"DUBBO_GRPC_XDS_RESOLVER":                          "xds:///",
+			inject.InherentGRPCKeepaliveEnvName:                inject.InherentGRPCKeepaliveValue,
+			inject.InherentGRPCKeepaliveTimeEnv:                inject.InherentGRPCKeepaliveTime,
+			inject.InherentGRPCKeepaliveTimeoutEnv:             inject.InherentGRPCKeepaliveTimeout,
+			inject.InherentGRPCKeepalivePermitWithoutStreamEnv: inject.InherentGRPCKeepaliveValue,
+			"DUBBO_META_GENERATOR":                             "grpc",
+			"DUBBO_META_CLUSTER_ID":                            workload.clusterID,
+			"DUBBO_META_NAMESPACE":                             workload.podNamespace,
+			"DUBBO_META_MESH_ID":                               workload.trustDomain,
+			"TRUST_DOMAIN":                                     workload.trustDomain,
+			"POD_NAME":                                         workload.podName,
+			"POD_NAMESPACE":                                    workload.podNamespace,
+			"INSTANCE_IP":                                      workload.podIP,
+			"SERVICE_ACCOUNT":                                  workload.serviceAccount,
+			inject.InherentXDSAddressEnvName:                   workload.discoveryAddress,
+			"CA_ADDRESS":                                       workload.caAddress,
 		},
-		Bootstrap: proxylessGRPCBootstrapRuntimeConfig{
-			Path:             inject.ProxylessGRPCBootstrapPath,
+		Bootstrap: inherentGRPCBootstrapRuntimeConfig{
+			Path:             inject.InherentGRPCBootstrapPath,
 			DiscoveryAddress: workload.discoveryAddress,
 			Resolver:         "xds:///",
 		},
-		Certificates: proxylessGRPCCertRuntimeConfig{
+		Certificates: inherentGRPCCertRuntimeConfig{
 			Provider:   grpcxds.FileWatcherCertProviderName,
-			Directory:  inject.ProxylessXDSMountPath,
-			CertChain:  inject.ProxylessXDSMountPath + "/" + constants.CertChainFilename,
-			PrivateKey: inject.ProxylessXDSMountPath + "/" + constants.KeyFilename,
-			RootCert:   inject.ProxylessXDSMountPath + "/" + constants.CACertNamespaceConfigMapDataName,
+			Directory:  inject.InherentXDSMountPath,
+			CertChain:  inject.InherentXDSMountPath + "/" + constants.CertChainFilename,
+			PrivateKey: inject.InherentXDSMountPath + "/" + constants.KeyFilename,
+			RootCert:   inject.InherentXDSMountPath + "/" + constants.CACertNamespaceConfigMapDataName,
 		},
-		Keepalive: proxylessGRPCKeepaliveRuntimeConfig{
+		Keepalive: inherentGRPCKeepaliveRuntimeConfig{
 			Enabled:             true,
-			Time:                inject.ProxylessGRPCKeepaliveTime,
-			Timeout:             inject.ProxylessGRPCKeepaliveTimeout,
+			Time:                inject.InherentGRPCKeepaliveTime,
+			Timeout:             inject.InherentGRPCKeepaliveTimeout,
 			PermitWithoutStream: true,
 		},
-		Workload: proxylessGRPCWorkloadRuntimeConfig{
+		Workload: inherentGRPCWorkloadRuntimeConfig{
 			NodeID:         workload.nodeID,
 			PodName:        workload.podName,
 			Namespace:      workload.podNamespace,
@@ -709,7 +709,7 @@ func buildRuntimeConfigJSON(workload *proxylessGRPCWorkloadContext, services []p
 	return json.MarshalIndent(cfg, "", "  ")
 }
 
-func (c *proxylessGRPCWorkloadController) buildRuntimeTrafficConfig() ([]proxylessGRPCServiceRuntimeConfig, []proxylessGRPCRouteRuntimeConfig) {
+func (c *inherentGRPCWorkloadController) buildRuntimeTrafficConfig() ([]inherentGRPCServiceRuntimeConfig, []inherentGRPCRouteRuntimeConfig) {
 	if c.server == nil || c.server.environment == nil {
 		return nil, nil
 	}
@@ -723,8 +723,8 @@ func (c *proxylessGRPCWorkloadController) buildRuntimeTrafficConfig() ([]proxyle
 		return string(services[i].Hostname) < string(services[j].Hostname)
 	})
 
-	serviceConfigs := make([]proxylessGRPCServiceRuntimeConfig, 0, len(services))
-	routeConfigs := make([]proxylessGRPCRouteRuntimeConfig, 0, len(services))
+	serviceConfigs := make([]inherentGRPCServiceRuntimeConfig, 0, len(services))
+	routeConfigs := make([]inherentGRPCRouteRuntimeConfig, 0, len(services))
 	for _, svc := range services {
 		if svc == nil {
 			continue
@@ -740,8 +740,8 @@ func (c *proxylessGRPCWorkloadController) buildRuntimeTrafficConfig() ([]proxyle
 	return serviceConfigs, routeConfigs
 }
 
-func buildRuntimeServiceConfig(push *discoverymodel.PushContext, endpointIndex *discoverymodel.EndpointIndex, svc *discoverymodel.Service) proxylessGRPCServiceRuntimeConfig {
-	cfg := proxylessGRPCServiceRuntimeConfig{
+func buildRuntimeServiceConfig(push *discoverymodel.PushContext, endpointIndex *discoverymodel.EndpointIndex, svc *discoverymodel.Service) inherentGRPCServiceRuntimeConfig {
+	cfg := inherentGRPCServiceRuntimeConfig{
 		Host:      string(svc.Hostname),
 		Namespace: svc.Attributes.Namespace,
 		Name:      svc.Attributes.Name,
@@ -750,7 +750,7 @@ func buildRuntimeServiceConfig(push *discoverymodel.PushContext, endpointIndex *
 		if port == nil {
 			continue
 		}
-		cfg.Ports = append(cfg.Ports, proxylessGRPCPortRuntimeConfig{
+		cfg.Ports = append(cfg.Ports, inherentGRPCPortRuntimeConfig{
 			Name:     port.Name,
 			Port:     port.Port,
 			MTLSMode: runtimeInboundMTLSMode(push, svc.Attributes.Namespace, port.Port),
@@ -762,20 +762,20 @@ func buildRuntimeServiceConfig(push *discoverymodel.PushContext, endpointIndex *
 	return cfg
 }
 
-func runtimeFaultInjection(push *discoverymodel.PushContext, namespace, name, portName string) *proxylessGRPCFaultRuntimeConfig {
+func runtimeFaultInjection(push *discoverymodel.PushContext, namespace, name, portName string) *inherentGRPCFaultRuntimeConfig {
 	settings, found := push.FaultInjectionForService(namespace, name, portName)
 	if !found {
 		return nil
 	}
-	fault := &proxylessGRPCFaultRuntimeConfig{}
+	fault := &inherentGRPCFaultRuntimeConfig{}
 	if settings.Delay > 0 {
-		fault.Delay = &proxylessGRPCFaultDelayRuntimeConfig{
+		fault.Delay = &inherentGRPCFaultDelayRuntimeConfig{
 			FixedDelay: settings.Delay.String(),
 			Percentage: settings.DelayPercentage,
 		}
 	}
 	if settings.AbortStatus != 0 {
-		fault.Abort = &proxylessGRPCFaultAbortRuntimeConfig{
+		fault.Abort = &inherentGRPCFaultAbortRuntimeConfig{
 			HTTPStatus: settings.AbortStatus,
 			Percentage: settings.AbortPercentage,
 		}
@@ -786,11 +786,11 @@ func runtimeFaultInjection(push *discoverymodel.PushContext, namespace, name, po
 	return fault
 }
 
-func buildRuntimeRouteConfig(_ *discoverymodel.PushContext, endpointIndex *discoverymodel.EndpointIndex, svc *discoverymodel.Service, port int) proxylessGRPCRouteRuntimeConfig {
-	return proxylessGRPCRouteRuntimeConfig{
+func buildRuntimeRouteConfig(_ *discoverymodel.PushContext, endpointIndex *discoverymodel.EndpointIndex, svc *discoverymodel.Service, port int) inherentGRPCRouteRuntimeConfig {
+	return inherentGRPCRouteRuntimeConfig{
 		Host: string(svc.Hostname),
 		Port: port,
-		Destinations: []proxylessGRPCDestinationRuntimeConfig{{
+		Destinations: []inherentGRPCDestinationRuntimeConfig{{
 			Host:      string(svc.Hostname),
 			Weight:    100,
 			Endpoints: runtimeEndpointsForService(endpointIndex, svc, port, nil),
@@ -818,7 +818,7 @@ func runtimeMutualTLSModeString(mode discoverymodel.MutualTLSMode) string {
 	}
 }
 
-func normalizeRuntimeRouteWeights(destinations []proxylessGRPCDestinationRuntimeConfig) {
+func normalizeRuntimeRouteWeights(destinations []inherentGRPCDestinationRuntimeConfig) {
 	hasPositiveWeight := false
 	for i := range destinations {
 		if destinations[i].Weight < 0 {
@@ -840,7 +840,7 @@ func normalizeRuntimeRouteWeights(destinations []proxylessGRPCDestinationRuntime
 	}
 }
 
-func runtimeEndpointsForService(endpointIndex *discoverymodel.EndpointIndex, svc *discoverymodel.Service, port int, selector configlabels.Instance) []proxylessGRPCEndpointRuntimeConfig {
+func runtimeEndpointsForService(endpointIndex *discoverymodel.EndpointIndex, svc *discoverymodel.Service, port int, selector configlabels.Instance) []inherentGRPCEndpointRuntimeConfig {
 	if endpointIndex == nil || svc == nil {
 		return nil
 	}
@@ -856,7 +856,7 @@ func runtimeEndpointsForService(endpointIndex *discoverymodel.EndpointIndex, svc
 	}
 	byPort := shards.CopyEndpoints(portMap, sets.New(port))
 	eps := byPort[port]
-	out := make([]proxylessGRPCEndpointRuntimeConfig, 0, len(eps))
+	out := make([]inherentGRPCEndpointRuntimeConfig, 0, len(eps))
 	for _, ep := range eps {
 		if ep == nil || ep.FirstAddressOrNil() == "" {
 			continue
@@ -864,7 +864,7 @@ func runtimeEndpointsForService(endpointIndex *discoverymodel.EndpointIndex, svc
 		if len(selector) > 0 && !selector.SubsetOf(ep.Labels) {
 			continue
 		}
-		out = append(out, proxylessGRPCEndpointRuntimeConfig{
+		out = append(out, inherentGRPCEndpointRuntimeConfig{
 			Address:        ep.FirstAddressOrNil(),
 			Port:           ep.EndpointPort,
 			Labels:         copyStringMap(ep.Labels),
@@ -877,7 +877,7 @@ func runtimeEndpointsForService(endpointIndex *discoverymodel.EndpointIndex, svc
 	return out
 }
 
-func sortRuntimeEndpoints(endpoints []proxylessGRPCEndpointRuntimeConfig) {
+func sortRuntimeEndpoints(endpoints []inherentGRPCEndpointRuntimeConfig) {
 	sort.Slice(endpoints, func(i, j int) bool {
 		if endpoints[i].Address != endpoints[j].Address {
 			return endpoints[i].Address < endpoints[j].Address
@@ -915,7 +915,7 @@ func healthStatusString(status discoverymodel.HealthStatus) string {
 	}
 }
 
-func (c *proxylessGRPCWorkloadController) issueWorkloadCertificate(pod *corev1.Pod) ([]byte, []byte, []byte, time.Time, error) {
+func (c *inherentGRPCWorkloadController) issueWorkloadCertificate(pod *corev1.Pod) ([]byte, []byte, []byte, time.Time, error) {
 	authority := c.activeAuthority()
 	if authority == nil {
 		return nil, nil, nil, time.Time{}, fmt.Errorf("workload certificate authority is not initialized")
@@ -967,14 +967,14 @@ func (c *proxylessGRPCWorkloadController) issueWorkloadCertificate(pod *corev1.P
 	return certChain, keyPEM, rootCert, expireAt, nil
 }
 
-func (c *proxylessGRPCWorkloadController) activeAuthority() caserver.CertificateAuthority {
+func (c *inherentGRPCWorkloadController) activeAuthority() caserver.CertificateAuthority {
 	if c.server.RA != nil {
 		return c.server.RA
 	}
 	return c.server.CA
 }
 
-func (c *proxylessGRPCWorkloadController) activeRootCert() []byte {
+func (c *inherentGRPCWorkloadController) activeRootCert() []byte {
 	authority := c.activeAuthority()
 	if authority == nil || authority.GetCAKeyCertBundle() == nil {
 		return nil
@@ -996,47 +996,47 @@ func concatPEM(certs []string) []byte {
 	return []byte(b.String())
 }
 
-func shouldManageProxylessGRPCPod(pod *corev1.Pod) bool {
+func shouldManageInherentGRPCPod(pod *corev1.Pod) bool {
 	if pod == nil {
 		return false
 	}
-	templates := pod.Annotations[inject.ProxylessInjectTemplatesAnnoName]
+	templates := pod.Annotations[inject.InherentInjectTemplatesAnnoName]
 	for _, templateName := range strings.Split(templates, ",") {
-		if strings.TrimSpace(templateName) == inject.ProxylessGRPCTemplateName {
+		if strings.TrimSpace(templateName) == inject.InherentGRPCTemplateName {
 			return true
 		}
 	}
 	for _, container := range pod.Spec.Containers {
 		for _, envVar := range container.Env {
-			if envVar.Name == "GRPC_XDS_BOOTSTRAP" && envVar.Value == inject.ProxylessGRPCBootstrapPath {
+			if envVar.Name == "GRPC_XDS_BOOTSTRAP" && envVar.Value == inject.InherentGRPCBootstrapPath {
 				return true
 			}
-			if envVar.Name == inject.ProxylessGRPCConfigEnvName && envVar.Value == inject.ProxylessGRPCConfigPath {
+			if envVar.Name == inject.InherentGRPCConfigEnvName && envVar.Value == inject.InherentGRPCConfigPath {
 				return true
 			}
 		}
 	}
 	for _, volume := range pod.Spec.Volumes {
-		if volume.Name == inject.ProxylessXDSVolumeName && volume.Secret != nil {
+		if volume.Name == inject.InherentXDSVolumeName && volume.Secret != nil {
 			return true
 		}
 	}
 	return false
 }
 
-func (c *proxylessGRPCWorkloadController) deleteSecret(key types.NamespacedName) error {
+func (c *inherentGRPCWorkloadController) deleteSecret(key types.NamespacedName) error {
 	err := c.client.Kube().CoreV1().Secrets(key.Namespace).Delete(context.Background(),
-		inject.ProxylessGRPCSecretName(key.Name), metav1.DeleteOptions{})
+		inject.InherentGRPCSecretName(key.Name), metav1.DeleteOptions{})
 	return controllers.IgnoreNotFound(err)
 }
 
-func (c *proxylessGRPCWorkloadController) deleteSecretForPod(pod *corev1.Pod) error {
+func (c *inherentGRPCWorkloadController) deleteSecretForPod(pod *corev1.Pod) error {
 	err := c.client.Kube().CoreV1().Secrets(pod.Namespace).Delete(context.Background(),
-		inject.ProxylessGRPCSecretNameForMeta(pod.ObjectMeta), metav1.DeleteOptions{})
+		inject.InherentGRPCSecretNameForMeta(pod.ObjectMeta), metav1.DeleteOptions{})
 	return controllers.IgnoreNotFound(err)
 }
 
-func (c *proxylessGRPCWorkloadController) scheduleRotation(key types.NamespacedName, expireAt time.Time) {
+func (c *inherentGRPCWorkloadController) scheduleRotation(key types.NamespacedName, expireAt time.Time) {
 	now := time.Now()
 	rotateAt := now.Add(workloadRotationDelay(now, expireAt))
 	c.rotationMu.Lock()
@@ -1048,7 +1048,7 @@ func (c *proxylessGRPCWorkloadController) scheduleRotation(key types.NamespacedN
 	}
 }
 
-func (c *proxylessGRPCWorkloadController) clearRotation(key types.NamespacedName) {
+func (c *inherentGRPCWorkloadController) clearRotation(key types.NamespacedName) {
 	c.rotationMu.Lock()
 	defer c.rotationMu.Unlock()
 	oldRotateAt, hadOld := c.rotations[key]
@@ -1058,7 +1058,7 @@ func (c *proxylessGRPCWorkloadController) clearRotation(key types.NamespacedName
 	}
 }
 
-func (c *proxylessGRPCWorkloadController) stopAllTimers() {
+func (c *inherentGRPCWorkloadController) stopAllTimers() {
 	c.rotationMu.Lock()
 	defer c.rotationMu.Unlock()
 	if c.rotationTimer != nil {
@@ -1071,7 +1071,7 @@ func (c *proxylessGRPCWorkloadController) stopAllTimers() {
 	}
 }
 
-func (c *proxylessGRPCWorkloadController) resetRotationTimerLocked(now time.Time) {
+func (c *inherentGRPCWorkloadController) resetRotationTimerLocked(now time.Time) {
 	if c.rotationTimer != nil {
 		c.rotationTimer.Stop()
 		c.rotationTimer = nil
@@ -1089,7 +1089,7 @@ func (c *proxylessGRPCWorkloadController) resetRotationTimerLocked(now time.Time
 	c.rotationTimer = time.AfterFunc(delay, c.flushDueRotations)
 }
 
-func (c *proxylessGRPCWorkloadController) flushDueRotations() {
+func (c *inherentGRPCWorkloadController) flushDueRotations() {
 	now := time.Now()
 	due := make([]types.NamespacedName, 0)
 	c.rotationMu.Lock()

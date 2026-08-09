@@ -14,11 +14,9 @@
 # limitations under the License.
 
 {{- $defaults := .Values._internal_default_values_not_set | default dict }}
-{{- $defaultGlobal := $defaults.global | default dict }}
-{{- $defaultMulticluster := $defaultGlobal.multicluster | default dict }}
+{{- $defaultMulticluster := $defaults.multicluster | default dict }}
 {{- $defaultEastWestGateway := $defaultMulticluster.eastWestGateway | default dict }}
-{{- $global := .Values.global | default dict }}
-{{- $multicluster := $global.multicluster | default dict }}
+{{- $multicluster := .Values.multicluster | default dict }}
 {{- $eastWestGateway := $multicluster.eastWestGateway | default dict }}
 {{- $eastWestGatewayEnabled := coalesce $eastWestGateway.enabled $defaultEastWestGateway.enabled false }}
 {{- if $eastWestGatewayEnabled }}
