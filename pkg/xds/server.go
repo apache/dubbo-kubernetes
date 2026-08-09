@@ -348,9 +348,8 @@ func ShouldRespond(w Watcher, id string, request *discovery.DiscoveryRequest) (b
 	// previousInfo.NonceSent can be empty if we previously had shouldRespond=true but didn't send any resources.
 	if request.ResponseNonce != previousInfo.NonceSent {
 		newResources := sets.New(request.ResourceNames...)
-		// Special-case proxyless gRPC: xDS clients may send a "stale" nonce when they change
-		// subscriptions (e.g., after VirtualService introduces subset clusters). Treat this
-		// as a resource change rather than an ACK so the new clusters get a response.
+		// Proxyless gRPC clients may send a stale nonce while changing subscriptions.
+		// Treat this as a resource change rather than an ACK.
 		previousResourcesCopy := previousInfo.ResourceNames.Copy()
 		if !newResources.Equals(previousResourcesCopy) && len(newResources) > 0 {
 			Log.Debugf("%s: REQ %s nonce mismatch (got %s, sent %s) but resources changed -> responding",

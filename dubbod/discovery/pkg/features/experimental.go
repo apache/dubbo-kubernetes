@@ -24,9 +24,6 @@ var (
 	EnableLeaderElection = env.Register("ENABLE_LEADER_ELECTION", true,
 		"If enabled (default), starts a leader election client and gains leadership before executing controllers. "+
 			"If false, it assumes that only one instance of dubbod is running and skips leader election.").Get()
-	EnableEnhancedDestinationRuleMerge = env.Register("ENABLE_ENHANCED_DESTINATIONRULE_MERGE", true,
-		"If enabled, Dubbo merges Gateway API-derived destination rules considering their exportTo fields,"+
-			" they will be kept as independent rules if the exportTos are not equal.").Get()
 	EnableGatewayAPI = env.Register("DUBBO_ENABLE_GATEWAY_API", true,
 		"If this is set to true, support for Kubernetes gateway-api (github.com/kubernetes-sigs/gateway-api) will "+
 			" be enabled. In addition to this being enabled, the gateway-api CRDs need to be installed.").Get()

@@ -29,7 +29,6 @@ import (
 	discoverymodel "github.com/apache/dubbo-kubernetes/dubbod/discovery/pkg/model"
 	pkgbootstrap "github.com/apache/dubbo-kubernetes/pkg/bootstrap"
 	"github.com/apache/dubbo-kubernetes/pkg/config/constants"
-	"github.com/apache/dubbo-kubernetes/pkg/config/host"
 	configlabels "github.com/apache/dubbo-kubernetes/pkg/config/labels"
 	meshconfig "github.com/apache/dubbo-kubernetes/pkg/config/mesh"
 	"github.com/apache/dubbo-kubernetes/pkg/config/schema/kind"
@@ -49,7 +48,6 @@ import (
 	pkiutil "github.com/apache/dubbo-kubernetes/dubbod/security/pkg/pki/util"
 	caserver "github.com/apache/dubbo-kubernetes/dubbod/security/pkg/server/ca"
 	meshv1alpha1 "github.com/kdubbo/api/mesh/v1alpha1"
-	networking "github.com/kdubbo/api/networking/v1alpha3"
 	"google.golang.org/protobuf/proto"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -788,130 +786,16 @@ func runtimeFaultInjection(push *discoverymodel.PushContext, namespace, name, po
 	return fault
 }
 
-func buildRuntimeRouteConfig(push *discoverymodel.PushContext, endpointIndex *discoverymodel.EndpointIndex, svc *discoverymodel.Service, port int) proxylessGRPCRouteRuntimeConfig {
-	cfg := proxylessGRPCRouteRuntimeConfig{
+func buildRuntimeRouteConfig(_ *discoverymodel.PushContext, endpointIndex *discoverymodel.EndpointIndex, svc *discoverymodel.Service, port int) proxylessGRPCRouteRuntimeConfig {
+	return proxylessGRPCRouteRuntimeConfig{
 		Host: string(svc.Hostname),
 		Port: port,
-	}
-	vs := push.VirtualServiceForHost(svc.Hostname)
-	if vs == nil || len(vs.Http) == 0 {
-		tlsMode := runtimeDestinationTLSMode(push, svc.Attributes.Namespace, svc.Hostname, "")
-		cfg.Destinations = []proxylessGRPCDestinationRuntimeConfig{{
+		Destinations: []proxylessGRPCDestinationRuntimeConfig{{
 			Host:      string(svc.Hostname),
 			Weight:    100,
-			TLSMode:   tlsMode,
-			Endpoints: runtimeRouteEndpointsForService(endpointIndex, svc, port, nil, tlsMode),
-		}}
-		return cfg
+			Endpoints: runtimeEndpointsForService(endpointIndex, svc, port, nil),
+		}},
 	}
-
-	for _, httpRoute := range vs.Http {
-		if httpRoute == nil {
-			continue
-		}
-		for _, weighted := range httpRoute.Route {
-			if weighted == nil {
-				continue
-			}
-			targetHost := string(svc.Hostname)
-			subset := ""
-			if weighted.Destination != nil {
-				if weighted.Destination.Host != "" {
-					targetHost = weighted.Destination.Host
-				}
-				subset = weighted.Destination.Subset
-			}
-			targetSvc := push.ServiceForHostname(nil, host.Name(targetHost))
-			if targetSvc == nil {
-				targetSvc = svc
-				targetHost = string(svc.Hostname)
-			}
-			selector, subsetFound := runtimeSubsetSelector(push, targetSvc.Attributes.Namespace, targetSvc.Hostname, subset)
-			var endpoints []proxylessGRPCEndpointRuntimeConfig
-			if subsetFound {
-				endpoints = runtimeEndpointsForService(endpointIndex, targetSvc, port, selector)
-			}
-			tlsMode := runtimeDestinationTLSMode(push, targetSvc.Attributes.Namespace, targetSvc.Hostname, subset)
-			cfg.Destinations = append(cfg.Destinations, proxylessGRPCDestinationRuntimeConfig{
-				Host:      targetHost,
-				Subset:    subset,
-				Weight:    int(weighted.Weight),
-				TLSMode:   tlsMode,
-				Endpoints: rewriteRuntimeEndpointPortsForTLS(endpoints, tlsMode),
-			})
-		}
-	}
-	if len(cfg.Destinations) == 0 {
-		tlsMode := runtimeDestinationTLSMode(push, svc.Attributes.Namespace, svc.Hostname, "")
-		cfg.Destinations = []proxylessGRPCDestinationRuntimeConfig{{
-			Host:      string(svc.Hostname),
-			Weight:    100,
-			TLSMode:   tlsMode,
-			Endpoints: runtimeRouteEndpointsForService(endpointIndex, svc, port, nil, tlsMode),
-		}}
-	}
-	normalizeRuntimeRouteWeights(cfg.Destinations)
-	return cfg
-}
-
-func runtimeRouteEndpointsForService(endpointIndex *discoverymodel.EndpointIndex, svc *discoverymodel.Service, port int, selector configlabels.Instance, tlsMode string) []proxylessGRPCEndpointRuntimeConfig {
-	return rewriteRuntimeEndpointPortsForTLS(runtimeEndpointsForService(endpointIndex, svc, port, selector), tlsMode)
-}
-
-func rewriteRuntimeEndpointPortsForTLS(endpoints []proxylessGRPCEndpointRuntimeConfig, tlsMode string) []proxylessGRPCEndpointRuntimeConfig {
-	if tlsMode != "DUBBO_MUTUAL" {
-		return endpoints
-	}
-	out := make([]proxylessGRPCEndpointRuntimeConfig, len(endpoints))
-	copy(out, endpoints)
-	for i := range out {
-		out[i].Port = inject.ProxylessGRPCInboundPort
-	}
-	return out
-}
-
-func runtimeSubsetSelector(push *discoverymodel.PushContext, namespace string, hostname host.Name, subset string) (configlabels.Instance, bool) {
-	if subset == "" {
-		return nil, true
-	}
-	rule := push.DestinationRuleForService(namespace, hostname)
-	if rule == nil {
-		return nil, false
-	}
-	for _, ss := range rule.Subsets {
-		if ss.Name == subset {
-			return configlabels.Instance(ss.Labels), true
-		}
-	}
-	return nil, false
-}
-
-func runtimeDestinationTLSMode(push *discoverymodel.PushContext, namespace string, hostname host.Name, subset string) string {
-	if push == nil {
-		return ""
-	}
-	rule := push.DestinationRuleForService(namespace, hostname)
-	if rule == nil {
-		return ""
-	}
-	if subset != "" {
-		for _, ss := range rule.Subsets {
-			if ss.Name == subset {
-				if ss.TrafficPolicy != nil {
-					return runtimeTrafficPolicyTLSMode(ss.TrafficPolicy)
-				}
-				break
-			}
-		}
-	}
-	return runtimeTrafficPolicyTLSMode(rule.TrafficPolicy)
-}
-
-func runtimeTrafficPolicyTLSMode(policy *networking.TrafficPolicy) string {
-	if policy == nil || policy.Tls == nil {
-		return ""
-	}
-	return policy.Tls.Mode.String()
 }
 
 func runtimeInboundMTLSMode(push *discoverymodel.PushContext, namespace string, port int) string {

@@ -42,7 +42,7 @@ func TestActivationPinsBackendAndActivatorSANsInOneCDSContext(t *testing.T) {
 		push:     push,
 		hostname: hostName,
 		svc:      service,
-	}).buildUpstreamTLSContext(&cluster.Cluster{Name: "outbound|8080||" + string(hostName)}, nil)
+	}).buildUpstreamTLSContext(&cluster.Cluster{Name: "outbound|8080||" + string(hostName)})
 	got := context.GetCommonTlsContext().
 		GetCombinedValidationContext().
 		GetDefaultValidationContext().

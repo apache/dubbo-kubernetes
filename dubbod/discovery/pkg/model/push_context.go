@@ -23,7 +23,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/apache/dubbo-kubernetes/pkg/config/labels"
 	"github.com/apache/dubbo-kubernetes/pkg/config/schema/gvk"
 	networking "github.com/kdubbo/api/networking/v1alpha3"
 	sigsk8siogatewayapiapisv1 "sigs.k8s.io/gateway-api/apis/v1"
@@ -41,7 +40,6 @@ import (
 	meshv1alpha1 "github.com/kdubbo/api/mesh/v1alpha1"
 	"go.uber.org/atomic"
 	"google.golang.org/protobuf/types/known/wrapperspb"
-	"k8s.io/apimachinery/pkg/types"
 )
 
 type TriggerReason string
@@ -73,13 +71,11 @@ type PushContext struct {
 	clusterLocalHosts      ClusterLocalHosts
 	exportToDefaults       exportToDefaults
 	ServiceIndex           serviceIndex
-	virtualServiceIndex    virtualServiceIndex
 	httpRouteIndex         httpRouteIndex
 	dxgateServiceIndex     dxgateServiceIndex
 	backendTLSPolicyIndex  backendTLSPolicyIndex
 	faultInjectionIndex    faultInjectionPolicyIndex
 	serviceActivationIndex serviceActivationPolicyIndex
-	destinationRuleIndex   destinationRuleIndex
 	serviceAccounts        map[serviceAccountKey][]string
 	AuthenticationPolicies *AuthenticationPolicies
 	PushVersion            string
@@ -141,24 +137,8 @@ type ConfigKey struct {
 	Namespace string
 }
 
-type ConsolidatedSubRule struct {
-	exportTo sets.Set[visibility.Instance]
-	rule     *config.Config
-	from     []types.NamespacedName
-}
-
 type exportToDefaults struct {
-	service         sets.Set[visibility.Instance]
-	virtualService  sets.Set[visibility.Instance]
-	destinationRule sets.Set[visibility.Instance]
-}
-
-type virtualServiceIndex struct {
-	// Map of VS hostname -> referenced hostnames
-	referencedDestinations map[string]sets.String
-
-	// hostToRoutes keeps the resolved VirtualServices keyed by host
-	hostToRoutes map[host.Name][]config.Config
+	service sets.Set[visibility.Instance]
 }
 
 type httpRouteIndex struct {
@@ -184,28 +164,16 @@ type serviceActivationPolicyIndex struct {
 	services map[string][]string
 }
 
-type destinationRuleIndex struct {
-	namespaceLocal      map[string]*consolidatedSubRules
-	exportedByNamespace map[string]*consolidatedSubRules
-	rootNamespaceLocal  *consolidatedSubRules
-}
-
-type consolidatedSubRules struct {
-	specificSubRules map[host.Name][]*ConsolidatedSubRule
-}
-
 func NewPushContext() *PushContext {
 	return &PushContext{
 		ServiceIndex:          newServiceIndex(),
-		virtualServiceIndex:   newVirtualServiceIndex(),
 		dxgateServiceIndex:    dxgateServiceIndex{byNamespace: map[string]map[string]config.Config{}},
 		backendTLSPolicyIndex: backendTLSPolicyIndex{serviceTLS: map[string]BackendTLSSettings{}},
 		serviceActivationIndex: serviceActivationPolicyIndex{
 			services: map[string][]string{},
 		},
-		destinationRuleIndex: newDestinationRuleIndex(),
-		serviceAccounts:      map[serviceAccountKey][]string{},
-		ProxyStatus:          map[string]map[string]ProxyPushStatus{},
+		serviceAccounts: map[serviceAccountKey][]string{},
+		ProxyStatus:     map[string]map[string]ProxyPushStatus{},
 	}
 }
 
@@ -216,21 +184,6 @@ func newServiceIndex() serviceIndex {
 		exportedToNamespace:  map[string][]*Service{},
 		HostnameAndNamespace: map[host.Name]map[string]*Service{},
 		instancesByPort:      map[string]map[int][]*DubboEndpoint{},
-	}
-}
-
-func newVirtualServiceIndex() virtualServiceIndex {
-	out := virtualServiceIndex{
-		referencedDestinations: map[string]sets.String{},
-		hostToRoutes:           map[host.Name][]config.Config{},
-	}
-	return out
-}
-
-func newDestinationRuleIndex() destinationRuleIndex {
-	return destinationRuleIndex{
-		namespaceLocal:      map[string]*consolidatedSubRules{},
-		exportedByNamespace: map[string]*consolidatedSubRules{},
 	}
 }
 
@@ -421,16 +374,6 @@ func (pr *PushRequest) PushReason() string {
 }
 
 func (ps *PushContext) initDefaultExportMaps() {
-	ps.exportToDefaults.destinationRule = sets.New[visibility.Instance]()
-	if ps.Mesh.DefaultDestinationRuleExportTo != nil {
-		for _, e := range ps.Mesh.DefaultDestinationRuleExportTo {
-			ps.exportToDefaults.destinationRule.Insert(visibility.Instance(e))
-		}
-	} else {
-		// default to *
-		ps.exportToDefaults.destinationRule.Insert(visibility.Public)
-	}
-
 	ps.exportToDefaults.service = sets.New[visibility.Instance]()
 	if ps.Mesh.DefaultServiceExportTo != nil {
 		for _, e := range ps.Mesh.DefaultServiceExportTo {
@@ -440,14 +383,6 @@ func (ps *PushContext) initDefaultExportMaps() {
 		ps.exportToDefaults.service.Insert(visibility.Public)
 	}
 
-	ps.exportToDefaults.virtualService = sets.New[visibility.Instance]()
-	if ps.Mesh.DefaultVirtualServiceExportTo != nil {
-		for _, e := range ps.Mesh.DefaultVirtualServiceExportTo {
-			ps.exportToDefaults.virtualService.Insert(visibility.Instance(e))
-		}
-	} else {
-		ps.exportToDefaults.virtualService.Insert(visibility.Public)
-	}
 }
 
 func (ps *PushContext) InitContext(env *Environment, oldPushContext *PushContext, pushReq *PushRequest) {
@@ -1263,151 +1198,6 @@ func (ps *PushContext) initServiceAccounts(env *Environment, services []*Service
 		}
 		ps.serviceAccounts[key] = sa
 	}
-}
-
-// VirtualServiceForHost returns the first VirtualService that matches the given host.
-func (ps *PushContext) VirtualServiceForHost(hostname host.Name) *networking.VirtualService {
-	routes := ps.virtualServiceIndex.hostToRoutes[hostname]
-	if len(routes) == 0 {
-		log.Debugf("no VirtualService found for hostname %s", hostname)
-		return nil
-	}
-	if vs, ok := routes[0].Spec.(*networking.VirtualService); ok {
-		log.Infof("found VirtualService %s/%s for hostname %s with %d HTTP routes",
-			routes[0].Namespace, routes[0].Name, hostname, len(vs.Http))
-		return vs
-	}
-	log.Warnf("VirtualService %s/%s for hostname %s is not a VirtualService",
-		routes[0].Namespace, routes[0].Name, hostname)
-	return nil
-}
-
-// DestinationRuleForService returns the first DestinationRule applicable to the service hostname/namespace.
-func (ps *PushContext) DestinationRuleForService(namespace string, hostname host.Name) *networking.DestinationRule {
-	log.Debugf("looking for DestinationRule for %s/%s", namespace, hostname)
-
-	// Check namespace-local rules first
-	if nsRules := ps.destinationRuleIndex.namespaceLocal[namespace]; nsRules != nil {
-		log.Debugf("checking namespace-local rules for %s (found %d specific rules)", namespace, len(nsRules.specificSubRules))
-		if dr := firstDestinationRule(nsRules, hostname); dr != nil {
-			hasTLS := dr.TrafficPolicy != nil && dr.TrafficPolicy.Tls != nil
-			tlsMode := "none"
-			if hasTLS {
-				tlsMode = dr.TrafficPolicy.Tls.Mode.String()
-			}
-			log.Debugf("found DestinationRule in namespace-local index for %s/%s with %d subsets (has TrafficPolicy: %v, has TLS: %v, TLS mode: %s)",
-				namespace, hostname, len(dr.Subsets), dr.TrafficPolicy != nil, hasTLS, tlsMode)
-			return dr
-		}
-	} else {
-		log.Debugf("no namespace-local rules for namespace %s", namespace)
-	}
-
-	// Check exported rules
-	log.Debugf("checking exported rules (found %d exported namespaces)", len(ps.destinationRuleIndex.exportedByNamespace))
-	for ns, exported := range ps.destinationRuleIndex.exportedByNamespace {
-		if dr := firstDestinationRule(exported, hostname); dr != nil {
-			hasTLS := dr.TrafficPolicy != nil && dr.TrafficPolicy.Tls != nil
-			tlsMode := "none"
-			if hasTLS {
-				tlsMode = dr.TrafficPolicy.Tls.Mode.String()
-			}
-			log.Debugf("found DestinationRule in exported rules from namespace %s for %s/%s with %d subsets (has TrafficPolicy: %v, has TLS: %v, TLS mode: %s)",
-				ns, namespace, hostname, len(dr.Subsets), dr.TrafficPolicy != nil, hasTLS, tlsMode)
-			return dr
-		}
-	}
-
-	// Finally, check root namespace scoped rules
-	if rootRules := ps.destinationRuleIndex.rootNamespaceLocal; rootRules != nil {
-		log.Debugf("checking root namespace rules (found %d specific rules)", len(rootRules.specificSubRules))
-		if dr := firstDestinationRule(rootRules, hostname); dr != nil {
-			hasTLS := dr.TrafficPolicy != nil && dr.TrafficPolicy.Tls != nil
-			tlsMode := "none"
-			if hasTLS {
-				tlsMode = dr.TrafficPolicy.Tls.Mode.String()
-			}
-			log.Debugf("found DestinationRule in root namespace for %s/%s with %d subsets (has TrafficPolicy: %v, has TLS: %v, TLS mode: %s)",
-				namespace, hostname, len(dr.Subsets), dr.TrafficPolicy != nil, hasTLS, tlsMode)
-			return dr
-		}
-	}
-
-	log.Debugf("no DestinationRule found for %s/%s", namespace, hostname)
-	return nil
-}
-
-// SubsetLabelsForHost returns the label selector for a subset defined in DestinationRule.
-func (ps *PushContext) SubsetLabelsForHost(namespace string, hostname host.Name, subset string) labels.Instance {
-	if subset == "" {
-		return nil
-	}
-	rule := ps.DestinationRuleForService(namespace, hostname)
-	if rule == nil {
-		return nil
-	}
-	for _, ss := range rule.Subsets {
-		if ss.Name == subset {
-			return labels.Instance(ss.Labels)
-		}
-	}
-	return nil
-}
-
-func firstDestinationRule(csr *consolidatedSubRules, hostname host.Name) *networking.DestinationRule {
-	if csr == nil {
-		log.Debugf("consolidatedSubRules is nil for hostname %s", hostname)
-		return nil
-	}
-	if rules := csr.specificSubRules[hostname]; len(rules) > 0 {
-		log.Debugf("found %d rules for hostname %s", len(rules), hostname)
-		// The first rule should contain the merged result if merge was successful.
-		// However, if merge failed (e.g., EnableEnhancedDestinationRuleMerge is disabled),
-		// we need to check all rules and prefer the one with TLS configuration.
-		// we return the one that has TLS if available, or the first one otherwise.
-		var bestRule *networking.DestinationRule
-		var bestRuleHasTLS bool
-		for i, rule := range rules {
-			if dr, ok := rule.rule.Spec.(*networking.DestinationRule); ok {
-				hasTLS := dr.TrafficPolicy != nil && dr.TrafficPolicy.Tls != nil
-				if hasTLS {
-					tlsModeStr := dr.TrafficPolicy.Tls.Mode.String()
-					hasTLS = (tlsModeStr == "DUBBO_MUTUAL")
-				}
-				if i == 0 {
-					// Always use first rule as fallback
-					bestRule = dr
-					bestRuleHasTLS = hasTLS
-				} else if hasTLS && !bestRuleHasTLS {
-					// Prefer rule with TLS over rule without TLS
-					log.Debugf("found rule %d with TLS for hostname %s, preferring it over rule 0", i, hostname)
-					bestRule = dr
-					bestRuleHasTLS = hasTLS
-				}
-			}
-		}
-		if bestRule != nil {
-			tlsMode := "none"
-			if bestRuleHasTLS {
-				tlsMode = bestRule.TrafficPolicy.Tls.Mode.String()
-			}
-			log.Debugf("returning DestinationRule for hostname %s (has TrafficPolicy: %v, has TLS: %v, TLS mode: %s, has %d subsets)",
-				hostname, bestRule.TrafficPolicy != nil, bestRuleHasTLS, tlsMode, len(bestRule.Subsets))
-			return bestRule
-		} else {
-			log.Warnf("failed to cast any rule to DestinationRule for hostname %s", hostname)
-		}
-	} else {
-		log.Debugf("no specific rules found for hostname %s (available hostnames: %v)", hostname, func() []string {
-			hosts := make([]string, 0, len(csr.specificSubRules))
-			for h := range csr.specificSubRules {
-				hosts = append(hosts, string(h))
-			}
-			return hosts
-		}())
-	}
-	// TODO: support wildcard hosts
-	return nil
 }
 
 func (ps *PushContext) StatusJSON() ([]byte, error) {

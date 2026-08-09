@@ -26,12 +26,10 @@ import (
 	"github.com/apache/dubbo-kubernetes/dubbod/discovery/pkg/networking/util"
 	"github.com/apache/dubbo-kubernetes/pkg/cluster"
 	"github.com/apache/dubbo-kubernetes/pkg/config/host"
-	"github.com/apache/dubbo-kubernetes/pkg/config/labels"
 	"github.com/apache/dubbo-kubernetes/pkg/kube/inject"
 	"github.com/apache/dubbo-kubernetes/pkg/kube/multicluster"
 	dubbolog "github.com/apache/dubbo-kubernetes/pkg/log"
 	"github.com/cespare/xxhash/v2"
-	networking "github.com/kdubbo/api/networking/v1alpha3"
 	// core "github.com/kdubbo/xds-api/core/v1"
 	core "github.com/kdubbo/xds-api/core/v1"
 	// endpoint "github.com/kdubbo/xds-api/endpoint/v1"
@@ -49,7 +47,6 @@ type EndpointBuilder struct {
 	push        *model.PushContext
 	hostname    host.Name
 	port        int
-	subsetName  string
 	service     *model.Service
 }
 
@@ -57,7 +54,7 @@ var _ model.XdsCacheEntry = &EndpointBuilder{}
 
 // NewEndpointBuilder creates a new EndpointBuilder
 func NewEndpointBuilder(clusterName string, proxy *model.Proxy, push *model.PushContext) *EndpointBuilder {
-	_, subsetName, hostname, port := model.ParseSubsetKey(clusterName)
+	_, _, hostname, port := model.ParseSubsetKey(clusterName)
 	if hostname == "" || port == 0 {
 		return nil
 	}
@@ -70,7 +67,6 @@ func NewEndpointBuilder(clusterName string, proxy *model.Proxy, push *model.Push
 		push:        push,
 		hostname:    hostname,
 		port:        port,
-		subsetName:  subsetName,
 		service:     svc,
 	}
 }
@@ -247,11 +243,6 @@ func (b *EndpointBuilder) BuildClusterLoadAssignmentWithGateways(endpointIndex *
 				}
 			}
 
-			// Filter by subset labels if subset is specified
-			if b.subsetName != "" && !b.matchesSubset(ep.Labels) {
-				continue
-			}
-
 			lbEp := b.buildLbEndpointForCluster(ep, shard.Cluster, gateways)
 			if lbEp == nil {
 				buildFailedCount++
@@ -345,21 +336,6 @@ func (b *EndpointBuilder) servicePort(port int) *model.Port {
 	return svcPort
 }
 
-func (b *EndpointBuilder) matchesSubset(epLabels labels.Instance) bool {
-	if b.subsetName == "" {
-		return true
-	}
-	if b.service == nil || b.push == nil {
-		return true
-	}
-	selector := b.push.SubsetLabelsForHost(b.service.Attributes.Namespace, b.hostname, b.subsetName)
-	if len(selector) == 0 {
-		// No subset labels defined, treat as match-all
-		return true
-	}
-	return selector.SubsetOf(epLabels)
-}
-
 func (b *EndpointBuilder) buildLbEndpointForCluster(ep *model.DubboEndpoint, endpointCluster cluster.ID, gateways map[cluster.ID]multicluster.EastWestGateway) *endpoint.LbEndpoint {
 	if len(ep.Addresses) == 0 {
 		return nil
@@ -439,35 +415,13 @@ func (b *EndpointBuilder) endpointPort(ep *model.DubboEndpoint) uint32 {
 }
 
 func (b *EndpointBuilder) useGRPCInboundEndpointPort() bool {
-	if b == nil || b.proxy == nil || !b.proxy.IsProxylessGrpc() || b.push == nil || b.service == nil {
+	if b == nil || b.proxy == nil || !b.proxy.IsProxylessGrpc() || b.push == nil ||
+		b.push.AuthenticationPolicies == nil || b.service == nil {
 		return false
 	}
-	return b.destinationUsesDUBBOMutual()
-}
-
-func (b *EndpointBuilder) destinationUsesDUBBOMutual() bool {
-	rule := b.push.DestinationRuleForService(b.service.Attributes.Namespace, b.hostname)
-	if rule == nil && b.service.Hostname != "" && b.service.Hostname != b.hostname {
-		rule = b.push.DestinationRuleForService(b.service.Attributes.Namespace, b.service.Hostname)
-	}
-	if rule == nil {
-		return false
-	}
-	if b.subsetName != "" {
-		for _, subset := range rule.Subsets {
-			if subset.Name == b.subsetName && subset.TrafficPolicy != nil {
-				return trafficPolicyUsesDUBBOMutual(subset.TrafficPolicy)
-			}
-		}
-	}
-	return trafficPolicyUsesDUBBOMutual(rule.TrafficPolicy)
-}
-
-func trafficPolicyUsesDUBBOMutual(policy *networking.TrafficPolicy) bool {
-	if policy == nil || policy.Tls == nil {
-		return false
-	}
-	return policy.Tls.Mode == networking.ClientTLSSettings_DUBBO_MUTUAL || policy.Tls.Mode.String() == "DUBBO_MUTUAL"
+	return b.push.AuthenticationPolicies.EffectiveMutualTLSMode(
+		b.service.Attributes.Namespace, nil, uint32(b.port),
+	) == model.MTLSStrict
 }
 
 func buildEmptyClusterLoadAssignment(clusterName string) *endpoint.ClusterLoadAssignment {
