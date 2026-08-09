@@ -691,8 +691,8 @@ func TestKubeGatewayTemplateRendersDxgateResources(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(rendered) != 4 {
-		t.Fatalf("expected 4 rendered resources, got %d", len(rendered))
+	if len(rendered) != 6 {
+		t.Fatalf("expected 6 rendered resources, got %d", len(rendered))
 	}
 	for i, doc := range rendered {
 		var obj map[string]any
@@ -706,25 +706,30 @@ func TestKubeGatewayTemplateRendersDxgateResources(t *testing.T) {
 	if !strings.Contains(rendered[0], "bootstrap.json") || !strings.Contains(rendered[0], `"xds_address": "http://dubbod.dubbo-system.svc:26010"`) {
 		t.Fatalf("configmap did not render dxgate bootstrap:\n%s", rendered[0])
 	}
-	if !strings.Contains(rendered[2], "image: kdubbo/dxgate:test") {
-		t.Fatalf("deployment did not render dxgate image:\n%s", rendered[2])
+	if !strings.Contains(rendered[1], "automountServiceAccountToken: true") ||
+		!strings.Contains(rendered[2], "resources: [\"secrets\"]") ||
+		!strings.Contains(rendered[3], "kind: RoleBinding") {
+		t.Fatalf("credential Secret RBAC not rendered:\n%s", strings.Join(rendered[1:4], "\n---\n"))
 	}
-	if !strings.Contains(rendered[2], "DXGATE_BOOTSTRAP") || strings.Contains(rendered[2], "DXGATE_STATIC_CONFIG") {
-		t.Fatalf("deployment did not switch from static config to bootstrap:\n%s", rendered[2])
+	if !strings.Contains(rendered[4], "image: kdubbo/dxgate:test") {
+		t.Fatalf("deployment did not render dxgate image:\n%s", rendered[4])
 	}
-	if !strings.Contains(rendered[2], `proxyless.dubbo.apache.org/inject: "true"`) {
-		t.Fatalf("deployment pod template did not enable proxyless injection for dxgate mTLS certs:\n%s", rendered[2])
+	if !strings.Contains(rendered[4], "DXGATE_BOOTSTRAP") || strings.Contains(rendered[4], "DXGATE_STATIC_CONFIG") {
+		t.Fatalf("deployment did not switch from static config to bootstrap:\n%s", rendered[4])
 	}
-	if !strings.Contains(rendered[2], "inject.dubbo.apache.org/templates: grpc-engine") {
-		t.Fatalf("deployment pod template did not request grpc-engine injection:\n%s", rendered[2])
+	if !strings.Contains(rendered[4], `proxyless.dubbo.apache.org/inject: "true"`) {
+		t.Fatalf("deployment pod template did not enable proxyless injection for dxgate mTLS certs:\n%s", rendered[4])
 	}
-	if !strings.Contains(rendered[2], `prometheus.io/scrape: "true"`) ||
-		!strings.Contains(rendered[2], "prometheus.io/path: /metrics") ||
-		!strings.Contains(rendered[2], `prometheus.io/port: "26021"`) {
-		t.Fatalf("deployment pod template did not render prometheus scrape annotations:\n%s", rendered[2])
+	if !strings.Contains(rendered[4], "inject.dubbo.apache.org/templates: grpc-engine") {
+		t.Fatalf("deployment pod template did not request grpc-engine injection:\n%s", rendered[4])
 	}
-	if strings.Contains(rendered[2], "DXGATE_OTEL_ENDPOINT") {
-		t.Fatalf("deployment rendered OTEL endpoint without annotation:\n%s", rendered[2])
+	if !strings.Contains(rendered[4], `prometheus.io/scrape: "true"`) ||
+		!strings.Contains(rendered[4], "prometheus.io/path: /metrics") ||
+		!strings.Contains(rendered[4], `prometheus.io/port: "26021"`) {
+		t.Fatalf("deployment pod template did not render prometheus scrape annotations:\n%s", rendered[4])
+	}
+	if strings.Contains(rendered[4], "DXGATE_OTEL_ENDPOINT") {
+		t.Fatalf("deployment rendered OTEL endpoint without annotation:\n%s", rendered[4])
 	}
 	for _, want := range []string{
 		"DXGATE_GATEWAY_NAME",
@@ -737,21 +742,21 @@ func TestKubeGatewayTemplateRendersDxgateResources(t *testing.T) {
 		"DXGATE_ACCESS_LOG_FORMAT",
 		`value: "text"`,
 	} {
-		if !strings.Contains(rendered[2], want) {
-			t.Fatalf("deployment did not render observability env %q:\n%s", want, rendered[2])
+		if !strings.Contains(rendered[4], want) {
+			t.Fatalf("deployment did not render observability env %q:\n%s", want, rendered[4])
 		}
 	}
-	if !strings.Contains(rendered[2], "app.kubernetes.io/instance: public-dubbo") {
-		t.Fatalf("deployment did not render stable dxgate instance label:\n%s", rendered[2])
+	if !strings.Contains(rendered[4], "app.kubernetes.io/instance: public-dubbo") {
+		t.Fatalf("deployment did not render stable dxgate instance label:\n%s", rendered[4])
 	}
-	if !strings.Contains(rendered[3], "targetPort: 15080") {
-		t.Fatalf("service did not target grpc-inbound port:\n%s", rendered[3])
+	if !strings.Contains(rendered[5], "targetPort: 15080") {
+		t.Fatalf("service did not target grpc-inbound port:\n%s", rendered[5])
 	}
-	if !strings.Contains(rendered[3], `proxyless.dubbo.apache.org/inject: "false"`) {
-		t.Fatalf("service did not opt out of proxyless targetPort rewriting:\n%s", rendered[3])
+	if !strings.Contains(rendered[5], `proxyless.dubbo.apache.org/inject: "false"`) {
+		t.Fatalf("service did not opt out of proxyless targetPort rewriting:\n%s", rendered[5])
 	}
-	if !strings.Contains(rendered[3], "app.kubernetes.io/instance: public-dubbo") {
-		t.Fatalf("service did not render stable dxgate instance selector:\n%s", rendered[3])
+	if !strings.Contains(rendered[5], "app.kubernetes.io/instance: public-dubbo") {
+		t.Fatalf("service did not render stable dxgate instance selector:\n%s", rendered[5])
 	}
 
 	input.OtelEndpoint = "http://tracing.dubbo-system.svc:4317"
@@ -759,9 +764,9 @@ func TestKubeGatewayTemplateRendersDxgateResources(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !strings.Contains(rendered[2], "DXGATE_OTEL_ENDPOINT") ||
-		!strings.Contains(rendered[2], `value: "http://tracing.dubbo-system.svc:4317"`) {
-		t.Fatalf("deployment did not render dxgate OTEL endpoint:\n%s", rendered[2])
+	if !strings.Contains(rendered[4], "DXGATE_OTEL_ENDPOINT") ||
+		!strings.Contains(rendered[4], `value: "http://tracing.dubbo-system.svc:4317"`) {
+		t.Fatalf("deployment did not render dxgate OTEL endpoint:\n%s", rendered[4])
 	}
 }
 
@@ -803,8 +808,8 @@ func TestKubeGatewayTemplateRendersHighAvailabilityResources(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(rendered) != 5 {
-		t.Fatalf("rendered %d resources, want 5 including the disruption budget", len(rendered))
+	if len(rendered) != 7 {
+		t.Fatalf("rendered %d resources, want 7 including credential RBAC and disruption budget", len(rendered))
 	}
 	joined := strings.Join(rendered, "\n---\n")
 	for _, want := range []string{
@@ -825,8 +830,8 @@ func TestKubeGatewayTemplateRendersHighAvailabilityResources(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(rendered) != 4 {
-		t.Fatalf("rendered %d resources at one replica, want 4 without a disruption budget", len(rendered))
+	if len(rendered) != 6 {
+		t.Fatalf("rendered %d resources at one replica, want 6 without a disruption budget", len(rendered))
 	}
 	joined = strings.Join(rendered, "\n---\n")
 	if strings.Contains(joined, "kind: PodDisruptionBudget") {
@@ -934,7 +939,7 @@ func TestKubeGatewayTemplateRendersActivationEnv(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	deployment := rendered[2]
+	deployment := rendered[4]
 	if !strings.Contains(deployment, "DXGATE_ACTIVATION_CONTROL_PLANE") ||
 		!strings.Contains(deployment, "dubbod-activation-replicas.dubbo-system.svc.cluster.local:26030") {
 		t.Fatalf("deployment did not render the activation control plane:\n%s", deployment)
@@ -954,7 +959,7 @@ func TestKubeGatewayTemplateRendersActivationEnv(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if strings.Contains(off[2], "DXGATE_ACTIVATION") {
-		t.Fatalf("activation env leaked into a gateway with activation disabled:\n%s", off[2])
+	if strings.Contains(off[4], "DXGATE_ACTIVATION") {
+		t.Fatalf("activation env leaked into a gateway with activation disabled:\n%s", off[4])
 	}
 }

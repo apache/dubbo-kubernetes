@@ -1,0 +1,119 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: agent-mock
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: agent-mock
+  template:
+    metadata:
+      labels:
+        app: agent-mock
+    spec:
+      containers:
+        - name: http
+          image: kdubbo/agent-mock:latest
+          imagePullPolicy: IfNotPresent
+          env:
+            - {name: MOCK_MODE, value: http}
+            - {name: PORT, value: "8080"}
+          ports:
+            - {name: http, containerPort: 8080}
+        - name: openai
+          image: kdubbo/agent-mock:latest
+          imagePullPolicy: IfNotPresent
+          env:
+            - {name: MOCK_MODE, value: openai}
+            - {name: PORT, value: "8081"}
+          ports:
+            - {name: openai, containerPort: 8081}
+        - name: anthropic
+          image: kdubbo/agent-mock:latest
+          imagePullPolicy: IfNotPresent
+          env:
+            - {name: MOCK_MODE, value: anthropic}
+            - {name: PORT, value: "8082"}
+          ports:
+            - {name: anthropic, containerPort: 8082}
+        - name: mcp-search
+          image: kdubbo/agent-mock:latest
+          imagePullPolicy: IfNotPresent
+          env:
+            - {name: MOCK_MODE, value: mcp}
+            - {name: MOCK_NAME, value: search}
+            - {name: PORT, value: "8083"}
+          ports:
+            - {name: mcp-search, containerPort: 8083}
+        - name: mcp-calendar
+          image: kdubbo/agent-mock:latest
+          imagePullPolicy: IfNotPresent
+          env:
+            - {name: MOCK_MODE, value: mcp}
+            - {name: MOCK_NAME, value: calendar}
+            - {name: PORT, value: "8084"}
+          ports:
+            - {name: mcp-calendar, containerPort: 8084}
+        - name: a2a
+          image: kdubbo/agent-mock:latest
+          imagePullPolicy: IfNotPresent
+          env:
+            - {name: MOCK_MODE, value: a2a}
+            - {name: PORT, value: "8085"}
+          ports:
+            - {name: a2a, containerPort: 8085}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: mock-http
+spec:
+  selector: {app: agent-mock}
+  ports:
+    - {name: http, port: 8080, targetPort: http}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: mock-openai
+spec:
+  selector: {app: agent-mock}
+  ports:
+    - {name: http, port: 8081, targetPort: openai}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: mock-anthropic
+spec:
+  selector: {app: agent-mock}
+  ports:
+    - {name: http, port: 8082, targetPort: anthropic}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: mock-mcp-search
+spec:
+  selector: {app: agent-mock}
+  ports:
+    - {name: http, port: 8083, targetPort: mcp-search}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: mock-mcp-calendar
+spec:
+  selector: {app: agent-mock}
+  ports:
+    - {name: http, port: 8084, targetPort: mcp-calendar}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: mock-a2a
+spec:
+  selector: {app: agent-mock}
+  ports:
+    - {name: http, port: 8085, targetPort: a2a}

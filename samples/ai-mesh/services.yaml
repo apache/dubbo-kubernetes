@@ -1,0 +1,80 @@
+apiVersion: v1
+kind: Secret
+metadata:
+  name: agent-credentials
+type: Opaque
+stringData:
+  openai: mock-openai-key
+  anthropic: mock-anthropic-key
+  client: mock-client-key
+---
+apiVersion: networking.dubbo.apache.org/v1alpha3
+kind: DxgateService
+metadata:
+  name: openai
+spec:
+  ai:
+    endpoint: http://mock-openai:8081/v1
+    provider:
+      openai: {}
+      credential:
+        name: agent-credentials
+        key: openai
+    models: [gpt-mock]
+    routes:
+      /v1/chat/completions: COMPLETIONS
+  policies:
+    auth:
+      header: x-client-key
+      secretRef:
+        name: agent-credentials
+        key: client
+    timeout: 5s
+    retry:
+      attempts: 2
+      statusCodes: [502, 503, 504]
+---
+apiVersion: networking.dubbo.apache.org/v1alpha3
+kind: DxgateService
+metadata:
+  name: anthropic
+spec:
+  ai:
+    endpoint: http://mock-anthropic:8082
+    provider:
+      anthropic:
+        model: claude-mock
+      credential:
+        name: agent-credentials
+        key: anthropic
+    models: [claude-mock]
+    routes:
+      /v1/chat/completions: COMPLETIONS
+---
+apiVersion: networking.dubbo.apache.org/v1alpha3
+kind: DxgateService
+metadata:
+  name: tools
+spec:
+  mcp:
+    targets:
+      - name: search
+        static:
+          backendRef: {name: mock-mcp-search}
+          port: 8083
+        tools: [search]
+      - name: calendar
+        static:
+          backendRef: {name: mock-mcp-calendar}
+          port: 8084
+        tools: [calendar]
+---
+apiVersion: networking.dubbo.apache.org/v1alpha3
+kind: DxgateService
+metadata:
+  name: planner
+spec:
+  a2a:
+    backendRef: {name: mock-a2a}
+    port: 8085
+    agent: planner

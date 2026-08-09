@@ -17,6 +17,7 @@ package grpcgen
 
 import (
 	"reflect"
+	"strings"
 	"testing"
 	"time"
 
@@ -36,6 +37,26 @@ import (
 	"google.golang.org/protobuf/types/known/wrapperspb"
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 )
+
+func TestBuildRouteMatchesPreservesHTTPRouteORSemantics(t *testing.T) {
+	pathType := gatewayv1.PathMatchPathPrefix
+	users := "/users"
+	orders := "/orders"
+	matches := buildRouteMatchesFromHTTPRouteMatches([]gatewayv1.HTTPRouteMatch{
+		{Path: &gatewayv1.HTTPPathMatch{Type: &pathType, Value: &users}},
+		{Path: &gatewayv1.HTTPPathMatch{Type: &pathType, Value: &orders}},
+	})
+
+	if len(matches) != 2 {
+		t.Fatalf("matches = %d, want 2 independent xDS routes", len(matches))
+	}
+	if got := matches[0].GetPrefix(); got != users {
+		t.Fatalf("first prefix = %q, want %q", got, users)
+	}
+	if got := matches[1].GetPrefix(); got != orders {
+		t.Fatalf("second prefix = %q, want %q", got, orders)
+	}
+}
 
 func TestBuildHTTPRouteProxylessOutboundIgnoresGatewayAttachedHTTPRoute(t *testing.T) {
 	push := newRDSTestPushContext(t, []config.Config{
@@ -335,6 +356,108 @@ func TestGatewayInboundTargetPortIncludesActivationRoutes(t *testing.T) {
 	t.Fatalf("activation virtual host not found on Gateway targetPort: %v", rc.GetVirtualHosts())
 }
 
+func TestBuildAgentConfigCompilesDxgateServiceHTTPRoute(t *testing.T) {
+	routeConfig := newDxgateHTTPRouteConfig("anthropic", "app", "/anthropic", "/v1/chat/completions")
+	serviceConfig := config.Config{
+		Meta: config.Meta{
+			GroupVersionKind: gvk.DxgateService,
+			Name:             "anthropic",
+			Namespace:        "app",
+		},
+		Spec: &networking.DxgateService{
+			Service: &networking.DxgateService_Ai{Ai: &networking.AIService{
+				Provider: &networking.AIProvider{
+					Provider: &networking.AIProvider_Anthropic{Anthropic: &networking.AnthropicProvider{
+						Model: "claude-test",
+					}},
+					Credential: &networking.SecretKeyReference{Name: "anthropic", Key: "api-key"},
+				},
+				Models:   []string{"claude-test"},
+				Endpoint: "http://anthropic-mock.app.svc:8080",
+			}},
+			Policies: &networking.DxgateServicePolicies{
+				Timeout: durationpb.New(5 * time.Second),
+				Retry:   &networking.RetryPolicy{Attempts: 2, StatusCodes: []uint32{503}},
+			},
+		},
+	}
+	push := newRDSTestPushContext(t, []config.Config{routeConfig, serviceConfig}, nil)
+
+	got := buildAgentConfig(push, []config.Config{routeConfig})
+	if got == nil {
+		t.Fatal("AgentConfig = nil")
+	}
+	if len(got.GetProviders()) != 1 || got.GetProviders()[0].GetKind() != route.AgentProviderKind_ANTHROPIC {
+		t.Fatalf("providers = %v, want one Anthropic provider", got.GetProviders())
+	}
+	if credential := got.GetProviders()[0].GetCredential(); credential.GetNamespace() != "app" ||
+		credential.GetName() != "anthropic" || credential.GetKey() != "api-key" {
+		t.Fatalf("credential = %v", credential)
+	}
+	if len(got.GetBackends()) != 1 || got.GetBackends()[0].GetLlm() == nil {
+		t.Fatalf("backends = %v, want one LLM backend", got.GetBackends())
+	}
+	if len(got.GetAgentRoutes()) != 1 {
+		t.Fatalf("agent routes = %d, want 1", len(got.GetAgentRoutes()))
+	}
+	agentRoute := got.GetAgentRoutes()[0]
+	if agentRoute.GetProtocol() != route.AgentProtocol_LLM {
+		t.Fatalf("protocol = %v, want LLM", agentRoute.GetProtocol())
+	}
+	if got := agentRoute.GetMatches()[0].GetPath().GetPrefix(); got != "/anthropic" {
+		t.Fatalf("path prefix = %q, want /anthropic", got)
+	}
+	if got := agentRoute.GetRewrite().GetReplacePrefixMatch(); got != "/v1/chat/completions" {
+		t.Fatalf("rewrite prefix = %q, want /v1/chat/completions", got)
+	}
+	if got := got.GetPolicies()[0].GetRetry().GetAttempts(); got != 2 {
+		t.Fatalf("retry attempts = %d, want 2", got)
+	}
+}
+
+func TestBuildAgentConfigExpandsMCPFederationTargets(t *testing.T) {
+	routeConfig := newDxgateHTTPRouteConfig("company-tools", "app", "/mcp", "")
+	serviceConfig := config.Config{
+		Meta: config.Meta{
+			GroupVersionKind: gvk.DxgateService,
+			Name:             "company-tools",
+			Namespace:        "app",
+		},
+		Spec: &networking.DxgateService{
+			Service: &networking.DxgateService_Mcp{Mcp: &networking.MCPService{
+				Targets: []*networking.MCPTarget{
+					{
+						Name: "orders",
+						Static: &networking.StaticBackend{
+							BackendRef: &networking.BackendReference{Name: "orders-tools"},
+							Port:       8080,
+						},
+					},
+					{
+						Name: "tickets",
+						Static: &networking.StaticBackend{
+							BackendRef: &networking.BackendReference{Name: "tickets-tools"},
+							Port:       8081,
+						},
+					},
+				},
+			}},
+		},
+	}
+	push := newRDSTestPushContext(t, []config.Config{routeConfig, serviceConfig}, nil)
+
+	got := buildAgentConfig(push, []config.Config{routeConfig})
+	if got == nil || len(got.GetBackends()) != 2 {
+		t.Fatalf("backends = %v, want 2 MCP targets", got.GetBackends())
+	}
+	if len(got.GetAgentRoutes()) != 1 || len(got.GetAgentRoutes()[0].GetWeightedBackends()) != 2 {
+		t.Fatalf("agent routes = %v, want one federated route", got.GetAgentRoutes())
+	}
+	if endpoint := got.GetBackends()[0].GetMcp().GetEndpoint(); !strings.Contains(endpoint, ".app.svc.cluster.local:") {
+		t.Fatalf("MCP endpoint = %q, want in-cluster Service DNS", endpoint)
+	}
+}
+
 func newRDSTestPushContext(t *testing.T, configs []config.Config, services []*model.Service) *model.PushContext {
 	t.Helper()
 
@@ -356,6 +479,53 @@ func newRDSTestPushContext(t *testing.T, configs []config.Config, services []*mo
 	push := model.NewPushContext()
 	push.InitContext(env, nil, nil)
 	return push
+}
+
+func newDxgateHTTPRouteConfig(backendName, namespace, path, rewrite string) config.Config {
+	group := gatewayv1.Group(dxgateServiceGroup)
+	kind := gatewayv1.Kind(dxgateServiceKind)
+	pathType := gatewayv1.PathMatchPathPrefix
+	method := gatewayv1.HTTPMethodPost
+	weight := int32(100)
+	rule := gatewayv1.HTTPRouteRule{
+		Matches: []gatewayv1.HTTPRouteMatch{{
+			Path:   &gatewayv1.HTTPPathMatch{Type: &pathType, Value: &path},
+			Method: &method,
+		}},
+		BackendRefs: []gatewayv1.HTTPBackendRef{{
+			BackendRef: gatewayv1.BackendRef{
+				BackendObjectReference: gatewayv1.BackendObjectReference{
+					Group: &group,
+					Kind:  &kind,
+					Name:  gatewayv1.ObjectName(backendName),
+				},
+				Weight: &weight,
+			},
+		}},
+	}
+	if rewrite != "" {
+		modifier := gatewayv1.PrefixMatchHTTPPathModifier
+		rule.Filters = []gatewayv1.HTTPRouteFilter{{
+			Type: gatewayv1.HTTPRouteFilterURLRewrite,
+			URLRewrite: &gatewayv1.HTTPURLRewriteFilter{
+				Path: &gatewayv1.HTTPPathModifier{
+					Type:               modifier,
+					ReplacePrefixMatch: &rewrite,
+				},
+			},
+		}}
+	}
+	return config.Config{
+		Meta: config.Meta{
+			GroupVersionKind: gvk.HTTPRoute,
+			Name:             backendName,
+			Namespace:        namespace,
+			Domain:           "cluster.local",
+		},
+		Spec: &gatewayv1.HTTPRouteSpec{
+			Rules: []gatewayv1.HTTPRouteRule{rule},
+		},
+	}
 }
 
 func newWildcardHTTPRouteConfig(backendName, backendNamespace string, backendPort int32) config.Config {

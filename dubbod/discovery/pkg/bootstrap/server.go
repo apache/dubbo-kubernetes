@@ -500,31 +500,8 @@ func (s *Server) initRegistryEventHandlers() {
 		log.Infof("processing config change, schema identifier=%s, GVK=%v, name=%s/%s, event=%s",
 			schemaID, cfg.GroupVersionKind, cfg.Namespace, cfg.Name, event)
 
-		var configKind kind.Kind
-		switch schemaID {
-		case "AuthorizationPolicy":
-			configKind = kind.AuthorizationPolicy
-		case "PeerAuthentication":
-			configKind = kind.PeerAuthentication
-		case "RequestAuthentication":
-			configKind = kind.RequestAuthentication
-		case "ReferenceGrant":
-			configKind = kind.ReferenceGrant
-		case "GatewayClass":
-			configKind = kind.GatewayClass
-		case "KubernetesGateway":
-			configKind = kind.KubernetesGateway
-		case "HTTPRoute":
-			configKind = kind.HTTPRoute
-		case "BackendTLSPolicy":
-			configKind = kind.BackendTLSPolicy
-		case "CircuitBreakerPolicy":
-			configKind = kind.CircuitBreakerPolicy
-		case "FaultInjectionPolicy":
-			configKind = kind.FaultInjectionPolicy
-		case "ServiceActivationPolicy":
-			configKind = kind.ServiceActivationPolicy
-		default:
+		configKind, found := configKindForSchemaIdentifier(schemaID)
+		if !found {
 			log.Debugf("unknown schema identifier %s for %v, skipping", schemaID, cfg.GroupVersionKind)
 			return
 		}
@@ -557,6 +534,7 @@ func (s *Server) initRegistryEventHandlers() {
 			configKind == kind.ReferenceGrant ||
 			configKind == kind.CircuitBreakerPolicy ||
 			configKind == kind.FaultInjectionPolicy ||
+			configKind == kind.DxgateService ||
 			configKind == kind.ServiceActivationPolicy
 
 		// Trigger ConfigUpdate to push changes to all connected proxies
@@ -615,6 +593,37 @@ func (s *Server) initReadinessProbes() {
 	}
 	for name, probe := range probes {
 		s.addReadinessProbe(name, probe)
+	}
+}
+
+func configKindForSchemaIdentifier(schemaID string) (kind.Kind, bool) {
+	switch schemaID {
+	case "AuthorizationPolicy":
+		return kind.AuthorizationPolicy, true
+	case "PeerAuthentication":
+		return kind.PeerAuthentication, true
+	case "RequestAuthentication":
+		return kind.RequestAuthentication, true
+	case "ReferenceGrant":
+		return kind.ReferenceGrant, true
+	case "GatewayClass":
+		return kind.GatewayClass, true
+	case "KubernetesGateway":
+		return kind.KubernetesGateway, true
+	case "HTTPRoute":
+		return kind.HTTPRoute, true
+	case "BackendTLSPolicy":
+		return kind.BackendTLSPolicy, true
+	case "CircuitBreakerPolicy":
+		return kind.CircuitBreakerPolicy, true
+	case "FaultInjectionPolicy":
+		return kind.FaultInjectionPolicy, true
+	case "DxgateService":
+		return kind.DxgateService, true
+	case "ServiceActivationPolicy":
+		return kind.ServiceActivationPolicy, true
+	default:
+		return 0, false
 	}
 }
 

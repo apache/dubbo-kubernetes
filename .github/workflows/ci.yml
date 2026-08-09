@@ -251,7 +251,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           repository: kdubbo/dxgate
-          ref: d683797f44c9ba4c6e1eb6cdb2da21460b00cbfd
+          ref: c8e423501f103c7faa08a0cee7a43680a5054138
           path: .e2e/dxgate
 
       - name: Build dxgate activation image
@@ -266,6 +266,7 @@ jobs:
       - name: Run real KEDA activation
         env:
           ACTIVATION_E2E: '1'
+          AI_MESH_E2E: '1'
           CLUSTER_NAME: dubbo-activation-ga
           DXGATE_IMAGE: kdubbo/dxgate:ga-e2e
           IMAGE: kdubbo/dubbod:activation-ga-e2e

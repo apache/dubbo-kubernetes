@@ -13,6 +13,7 @@ const (
 	DNSName
 	DaemonSet
 	Deployment
+	DxgateService
 	EndpointSlice
 	Endpoints
 	FaultInjectionPolicy
@@ -61,6 +62,8 @@ func (k Kind) String() string {
 		return "DaemonSet"
 	case Deployment:
 		return "Deployment"
+	case DxgateService:
+		return "DxgateService"
 	case EndpointSlice:
 		return "EndpointSlice"
 	case Endpoints:
@@ -138,6 +141,8 @@ func FromString(s string) Kind {
 		return DaemonSet
 	case "Deployment":
 		return Deployment
+	case "DxgateService":
+		return DxgateService
 	case "EndpointSlice":
 		return EndpointSlice
 	case "Endpoints":

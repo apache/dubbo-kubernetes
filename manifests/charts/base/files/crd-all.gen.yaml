@@ -161,6 +161,371 @@ metadata:
     dubbo: networking
     heritage: Tiller
     release: dubbo
+  name: dxgateservices.networking.dubbo.apache.org
+spec:
+  group: networking.dubbo.apache.org
+  names:
+    categories:
+    - dubbo
+    - networking
+    kind: DxgateService
+    listKind: DxgateServiceList
+    plural: dxgateservices
+    shortNames:
+    - dxsvc
+    singular: dxgateservice
+  scope: Namespaced
+  versions:
+  - additionalPrinterColumns:
+    - description: CreationTimestamp is a timestamp representing the server time when
+        this object was created.
+      jsonPath: .metadata.creationTimestamp
+      name: Age
+      type: date
+    name: v1alpha3
+    schema:
+      openAPIV3Schema:
+        properties:
+          spec:
+            description: 'Mesh-native LLM, MCP, or A2A backend referenced by Gateway
+              API routes. See more details at: '
+            oneOf:
+            - not:
+                anyOf:
+                - required:
+                  - ai
+                - required:
+                  - mcp
+                - required:
+                  - a2a
+            - required:
+              - ai
+            - required:
+              - mcp
+            - required:
+              - a2a
+            properties:
+              a2a:
+                properties:
+                  agent:
+                    type: string
+                  backendRef:
+                    description: Prefer backend_ref for an in-cluster agent.
+                    properties:
+                      name:
+                        description: Kubernetes Service name.
+                        type: string
+                      namespace:
+                        description: Defaults to the DxgateService namespace.
+                        type: string
+                    required:
+                    - name
+                    type: object
+                  host:
+                    type: string
+                  path:
+                    type: string
+                  port:
+                    maximum: 4294967295
+                    minimum: 0
+                    type: integer
+                type: object
+              ai:
+                properties:
+                  endpoint:
+                    description: Optional backend URL.
+                    type: string
+                  modelRewrites:
+                    additionalProperties:
+                      type: string
+                    description: Client model alias to upstream model name.
+                    type: object
+                  models:
+                    description: Models accepted by this backend.
+                    items:
+                      type: string
+                    type: array
+                  provider:
+                    oneOf:
+                    - not:
+                        anyOf:
+                        - required:
+                          - openai
+                        - required:
+                          - anthropic
+                    - required:
+                      - openai
+                    - required:
+                      - anthropic
+                    properties:
+                      anthropic:
+                        properties:
+                          model:
+                            description: Default upstream model.
+                            type: string
+                        type: object
+                      credential:
+                        description: Provider API key.
+                        properties:
+                          key:
+                            type: string
+                          name:
+                            type: string
+                        required:
+                        - name
+                        - key
+                        type: object
+                      openai:
+                        type: object
+                      requestHeaders:
+                        items:
+                          properties:
+                            name:
+                              type: string
+                            value:
+                              type: string
+                          required:
+                          - name
+                          - value
+                          type: object
+                        type: array
+                    type: object
+                  routes:
+                    additionalProperties:
+                      description: |2-
+
+
+                        Valid Options: COMPLETIONS, RESPONSES, EMBEDDINGS, PASSTHROUGH
+                      enum:
+                      - AI_OPERATION_UNSPECIFIED
+                      - COMPLETIONS
+                      - RESPONSES
+                      - EMBEDDINGS
+                      - PASSTHROUGH
+                      type: string
+                    description: OpenAI-compatible operations explicitly enabled for
+                      this service.
+                    type: object
+                required:
+                - provider
+                type: object
+              mcp:
+                properties:
+                  targets:
+                    items:
+                      properties:
+                        name:
+                          type: string
+                        static:
+                          properties:
+                            backendRef:
+                              properties:
+                                name:
+                                  description: Kubernetes Service name.
+                                  type: string
+                                namespace:
+                                  description: Defaults to the DxgateService namespace.
+                                  type: string
+                              required:
+                              - name
+                              type: object
+                            path:
+                              type: string
+                            port:
+                              maximum: 4294967295
+                              minimum: 0
+                              type: integer
+                          required:
+                          - backendRef
+                          - port
+                          type: object
+                        tools:
+                          items:
+                            type: string
+                          type: array
+                      required:
+                      - name
+                      - static
+                      type: object
+                    type: array
+                required:
+                - targets
+                type: object
+              policies:
+                description: Policies applied to every HTTPRoute reference to this
+                  service.
+                properties:
+                  auth:
+                    description: Client authentication at the gateway.
+                    properties:
+                      header:
+                        type: string
+                      secretRef:
+                        properties:
+                          key:
+                            type: string
+                          name:
+                            type: string
+                        required:
+                        - name
+                        - key
+                        type: object
+                    required:
+                    - secretRef
+                    type: object
+                  maxBodyBytes:
+                    format: int64
+                    type: integer
+                  rateLimit:
+                    properties:
+                      header:
+                        type: string
+                      key:
+                        description: |2-
+
+
+                          Valid Options: ROUTE, BACKEND, HEADER
+                        enum:
+                        - RATE_LIMIT_KEY_UNSPECIFIED
+                        - ROUTE
+                        - BACKEND
+                        - HEADER
+                        type: string
+                      requests:
+                        maximum: 4294967295
+                        minimum: 0
+                        type: integer
+                      window:
+                        type: string
+                        x-kubernetes-validations:
+                        - message: must be a valid duration greater than 1ms
+                          rule: duration(self) >= duration('1ms')
+                    required:
+                    - requests
+                    - window
+                    type: object
+                  requestHeaders:
+                    properties:
+                      add:
+                        items:
+                          properties:
+                            name:
+                              type: string
+                            value:
+                              type: string
+                          required:
+                          - name
+                          - value
+                          type: object
+                        type: array
+                      remove:
+                        items:
+                          type: string
+                        type: array
+                    type: object
+                  responseHeaders:
+                    properties:
+                      add:
+                        items:
+                          properties:
+                            name:
+                              type: string
+                            value:
+                              type: string
+                          required:
+                          - name
+                          - value
+                          type: object
+                        type: array
+                      remove:
+                        items:
+                          type: string
+                        type: array
+                    type: object
+                  retry:
+                    properties:
+                      attempts:
+                        maximum: 4294967295
+                        minimum: 0
+                        type: integer
+                      statusCodes:
+                        items:
+                          maximum: 4294967295
+                          minimum: 0
+                          type: integer
+                        type: array
+                    type: object
+                  timeout:
+                    type: string
+                    x-kubernetes-validations:
+                    - message: must be a valid duration greater than 1ms
+                      rule: duration(self) >= duration('1ms')
+                  tokenLimit:
+                    properties:
+                      header:
+                        type: string
+                      key:
+                        description: |2-
+
+
+                          Valid Options: ROUTE, BACKEND, HEADER
+                        enum:
+                        - RATE_LIMIT_KEY_UNSPECIFIED
+                        - ROUTE
+                        - BACKEND
+                        - HEADER
+                        type: string
+                      tokens:
+                        minimum: 0
+                        type: integer
+                      window:
+                        type: string
+                        x-kubernetes-validations:
+                        - message: must be a valid duration greater than 1ms
+                          rule: duration(self) >= duration('1ms')
+                    required:
+                    - tokens
+                    - window
+                    type: object
+                type: object
+            type: object
+          status:
+            properties:
+              conditions:
+                items:
+                  properties:
+                    observedGeneration:
+                      anyOf:
+                      - type: integer
+                      - type: string
+                      x-kubernetes-int-or-string: true
+                    reason:
+                      type: string
+                    status:
+                      type: string
+                    type:
+                      type: string
+                  type: object
+                type: array
+            type: object
+            x-kubernetes-preserve-unknown-fields: true
+        type: object
+    served: true
+    storage: true
+    subresources:
+      status: {}
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    "helm.sh/resource-policy": keep
+  labels:
+    app: dubbo
+    chart: dubbo
+    dubbo: networking
+    heritage: Tiller
+    release: dubbo
   name: faultinjectionpolicies.networking.dubbo.apache.org
 spec:
   group: networking.dubbo.apache.org

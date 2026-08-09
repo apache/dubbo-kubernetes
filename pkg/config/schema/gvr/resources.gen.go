@@ -13,6 +13,7 @@ var (
 	CustomResourceDefinition       = schema.GroupVersionResource{Group: "apiextensions.k8s.io", Version: "v1", Resource: "customresourcedefinitions"}
 	DaemonSet                      = schema.GroupVersionResource{Group: "apps", Version: "v1", Resource: "daemonsets"}
 	Deployment                     = schema.GroupVersionResource{Group: "apps", Version: "v1", Resource: "deployments"}
+	DxgateService                  = schema.GroupVersionResource{Group: "networking.dubbo.apache.org", Version: "v1alpha3", Resource: "dxgateservices"}
 	EndpointSlice                  = schema.GroupVersionResource{Group: "discovery.k8s.io", Version: "v1", Resource: "endpointslices"}
 	Endpoints                      = schema.GroupVersionResource{Group: "", Version: "v1", Resource: "endpoints"}
 	FaultInjectionPolicy           = schema.GroupVersionResource{Group: "networking.dubbo.apache.org", Version: "v1alpha3", Resource: "faultinjectionpolicies"}
@@ -62,6 +63,8 @@ func IsClusterScoped(g schema.GroupVersionResource) bool {
 	case DaemonSet:
 		return false
 	case Deployment:
+		return false
+	case DxgateService:
 		return false
 	case EndpointSlice:
 		return false

@@ -20,6 +20,7 @@ import (
 	"fmt"
 	"math"
 	"net"
+	"net/url"
 	"strings"
 	"time"
 
@@ -262,6 +263,156 @@ var ValidateFaultInjectionPolicy = RegisterValidateFunc("ValidateFaultInjectionP
 		}
 		return v.Unwrap()
 	})
+
+// ValidateDxgateService checks that a mesh-native LLM, MCP, or A2A backend can
+// be compiled into one unambiguous data-plane configuration.
+var ValidateDxgateService = RegisterValidateFunc("ValidateDxgateService",
+	func(cfg config.Config) (Warning, error) {
+		spec, ok := cfg.Spec.(*networking.DxgateService)
+		if !ok {
+			return nil, fmt.Errorf("cannot cast to DxgateService")
+		}
+		v := Validation{}
+		switch {
+		case spec.GetAi() != nil:
+			ai := spec.GetAi()
+			if ai.GetProvider() == nil || ai.GetProvider().GetProvider() == nil {
+				v = appendValidation(v, fmt.Errorf("ai.provider must select openai or anthropic"))
+			}
+			if endpoint := ai.GetEndpoint(); endpoint != "" {
+				parsed, err := url.ParseRequestURI(endpoint)
+				if err != nil || (parsed.Scheme != "http" && parsed.Scheme != "https") || parsed.Host == "" {
+					v = appendValidation(v, fmt.Errorf("ai.endpoint %q must be an absolute HTTP(S) URL", endpoint))
+				}
+			}
+			for i, model := range ai.GetModels() {
+				if strings.TrimSpace(model) == "" {
+					v = appendValidation(v, fmt.Errorf("ai.models[%d] must not be empty", i))
+				}
+			}
+			for path := range ai.GetRoutes() {
+				if !strings.HasPrefix(path, "/") {
+					v = appendValidation(v, fmt.Errorf("ai.routes key %q must start with /", path))
+				}
+			}
+			if credential := ai.GetProvider().GetCredential(); credential != nil {
+				v = appendValidation(v, validateSecretKeyReference("ai.provider.credential", credential))
+			}
+		case spec.GetMcp() != nil:
+			targets := spec.GetMcp().GetTargets()
+			if len(targets) == 0 {
+				v = appendValidation(v, fmt.Errorf("mcp.targets must not be empty"))
+			}
+			names := make(map[string]struct{}, len(targets))
+			for i, target := range targets {
+				if target == nil {
+					v = appendValidation(v, fmt.Errorf("mcp.targets[%d] must not be null", i))
+					continue
+				}
+				if target.GetName() == "" {
+					v = appendValidation(v, fmt.Errorf("mcp.targets[%d].name must not be empty", i))
+				} else if _, found := names[target.GetName()]; found {
+					v = appendValidation(v, fmt.Errorf("mcp.targets[%d].name %q is duplicated", i, target.GetName()))
+				} else {
+					names[target.GetName()] = struct{}{}
+				}
+				static := target.GetStatic()
+				if static == nil {
+					v = appendValidation(v, fmt.Errorf("mcp.targets[%d].static must be set", i))
+					continue
+				}
+				v = appendValidation(v,
+					validateBackendReference(fmt.Sprintf("mcp.targets[%d].static.backendRef", i), static.GetBackendRef()),
+					validateDxgatePort(fmt.Sprintf("mcp.targets[%d].static.port", i), static.GetPort()),
+					validateOptionalPath(fmt.Sprintf("mcp.targets[%d].static.path", i), static.GetPath()),
+				)
+			}
+		case spec.GetA2A() != nil:
+			a2a := spec.GetA2A()
+			hasRef := a2a.GetBackendRef() != nil
+			hasHost := strings.TrimSpace(a2a.GetHost()) != ""
+			if hasRef == hasHost {
+				v = appendValidation(v, fmt.Errorf("a2a must set exactly one of backendRef or host"))
+			}
+			if hasRef {
+				v = appendValidation(v, validateBackendReference("a2a.backendRef", a2a.GetBackendRef()))
+			}
+			v = appendValidation(v,
+				validateDxgatePort("a2a.port", a2a.GetPort()),
+				validateOptionalPath("a2a.path", a2a.GetPath()),
+			)
+		default:
+			v = appendValidation(v, fmt.Errorf("exactly one of ai, mcp, or a2a must be set"))
+		}
+
+		if policies := spec.GetPolicies(); policies != nil {
+			if auth := policies.GetAuth(); auth != nil {
+				v = appendValidation(v, validateSecretKeyReference("policies.auth.secretRef", auth.GetSecretRef()))
+			}
+			if rate := policies.GetRateLimit(); rate != nil {
+				if rate.GetRequests() == 0 {
+					v = appendValidation(v, fmt.Errorf("policies.rateLimit.requests must be greater than zero"))
+				}
+				v = appendValidation(v, validatePositiveDuration("policies.rateLimit.window", rate.GetWindow()))
+			}
+			if tokens := policies.GetTokenLimit(); tokens != nil {
+				if tokens.GetTokens() == 0 {
+					v = appendValidation(v, fmt.Errorf("policies.tokenLimit.tokens must be greater than zero"))
+				}
+				v = appendValidation(v, validatePositiveDuration("policies.tokenLimit.window", tokens.GetWindow()))
+			}
+			v = appendValidation(v, validatePositiveDuration("policies.timeout", policies.GetTimeout()))
+			if retry := policies.GetRetry(); retry != nil {
+				if retry.GetAttempts() == 0 {
+					v = appendValidation(v, fmt.Errorf("policies.retry.attempts must be greater than zero"))
+				}
+				for i, status := range retry.GetStatusCodes() {
+					if status < 400 || status > 599 {
+						v = appendValidation(v, fmt.Errorf("policies.retry.statusCodes[%d] must be in range [400, 599], got %d", i, status))
+					}
+				}
+			}
+			if policies.GetMaxBodyBytes() < 0 {
+				v = appendValidation(v, fmt.Errorf("policies.maxBodyBytes must not be negative"))
+			}
+		}
+		return v.Unwrap()
+	})
+
+func validateSecretKeyReference(field string, ref *networking.SecretKeyReference) error {
+	if ref == nil {
+		return fmt.Errorf("%s must be set", field)
+	}
+	var errs error
+	if strings.TrimSpace(ref.GetName()) == "" {
+		errs = AppendErrors(errs, fmt.Errorf("%s.name must not be empty", field))
+	}
+	if strings.TrimSpace(ref.GetKey()) == "" {
+		errs = AppendErrors(errs, fmt.Errorf("%s.key must not be empty", field))
+	}
+	return errs
+}
+
+func validateBackendReference(field string, ref *networking.BackendReference) error {
+	if ref == nil || strings.TrimSpace(ref.GetName()) == "" {
+		return fmt.Errorf("%s.name must not be empty", field)
+	}
+	return nil
+}
+
+func validateDxgatePort(field string, port uint32) error {
+	if port == 0 || port > 65535 {
+		return fmt.Errorf("%s must be in range [1, 65535], got %d", field, port)
+	}
+	return nil
+}
+
+func validateOptionalPath(field, path string) error {
+	if path != "" && !strings.HasPrefix(path, "/") {
+		return fmt.Errorf("%s must start with /", field)
+	}
+	return nil
+}
 
 // ValidateServiceEntry checks that a ServiceEntry can be converted into services and endpoints.
 var ValidateServiceEntry = RegisterValidateFunc("ValidateServiceEntry", func(cfg config.Config) (Warning, error) {

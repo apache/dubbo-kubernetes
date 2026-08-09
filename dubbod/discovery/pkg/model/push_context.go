@@ -75,6 +75,7 @@ type PushContext struct {
 	ServiceIndex           serviceIndex
 	virtualServiceIndex    virtualServiceIndex
 	httpRouteIndex         httpRouteIndex
+	dxgateServiceIndex     dxgateServiceIndex
 	backendTLSPolicyIndex  backendTLSPolicyIndex
 	faultInjectionIndex    faultInjectionPolicyIndex
 	serviceActivationIndex serviceActivationPolicyIndex
@@ -165,6 +166,10 @@ type httpRouteIndex struct {
 	hostToRoutes map[host.Name][]config.Config
 }
 
+type dxgateServiceIndex struct {
+	byNamespace map[string]map[string]config.Config
+}
+
 type backendTLSPolicyIndex struct {
 	serviceTLS map[string]BackendTLSSettings
 }
@@ -193,6 +198,7 @@ func NewPushContext() *PushContext {
 	return &PushContext{
 		ServiceIndex:          newServiceIndex(),
 		virtualServiceIndex:   newVirtualServiceIndex(),
+		dxgateServiceIndex:    dxgateServiceIndex{byNamespace: map[string]map[string]config.Config{}},
 		backendTLSPolicyIndex: backendTLSPolicyIndex{serviceTLS: map[string]BackendTLSSettings{}},
 		serviceActivationIndex: serviceActivationPolicyIndex{
 			services: map[string][]string{},
@@ -628,6 +634,7 @@ func (ps *PushContext) createNewContext(env *Environment) {
 	// Initialize Kubernetes Gateway API resources if the controller is enabled.
 	ps.initKubernetesGateways(env)
 	ps.initHTTPRoutes(env)
+	ps.initDxgateServices(env)
 	ps.initBackendTLSPolicies(env)
 	ps.initFaultInjectionPolicies(env)
 	ps.initServiceActivationPolicies(env)
@@ -685,6 +692,13 @@ func (ps *PushContext) updateContext(env *Environment, oldPushContext *PushConte
 	} else {
 		log.Debugf("HTTPRoutes unchanged, reusing old HTTPRoute index")
 		ps.httpRouteIndex = oldPushContext.httpRouteIndex
+	}
+
+	dxgateServicesChanged := pushReq != nil && HasConfigsOfKind(pushReq.ConfigsUpdated, kind.DxgateService)
+	if dxgateServicesChanged {
+		ps.initDxgateServices(env)
+	} else {
+		ps.dxgateServiceIndex = oldPushContext.dxgateServiceIndex
 	}
 
 	backendTLSPoliciesChanged := pushReq != nil && HasConfigsOfKind(pushReq.ConfigsUpdated, kind.BackendTLSPolicy)
@@ -864,6 +878,31 @@ func (ps *PushContext) initHTTPRoutes(env *Environment) {
 			log.Infof("hostname %s has %d HTTPRoute(s)", hostname, len(routes))
 		}
 	}
+}
+
+func (ps *PushContext) initDxgateServices(env *Environment) {
+	services := sortConfigByCreationTime(env.List(gvk.DxgateService, NamespaceAll))
+	index := make(map[string]map[string]config.Config)
+	for _, service := range services {
+		if index[service.Namespace] == nil {
+			index[service.Namespace] = make(map[string]config.Config)
+		}
+		index[service.Namespace][service.Name] = service
+	}
+	ps.dxgateServiceIndex = dxgateServiceIndex{byNamespace: index}
+}
+
+// DxgateService resolves the mesh-native backend named by an HTTPRoute.
+func (ps *PushContext) DxgateService(namespace, name string) (config.Config, bool) {
+	if ps == nil {
+		return config.Config{}, false
+	}
+	services := ps.dxgateServiceIndex.byNamespace[namespace]
+	if services == nil {
+		return config.Config{}, false
+	}
+	service, found := services[name]
+	return service, found
 }
 
 // HTTPRouteForHost returns HTTPRoutes that match the given hostname.

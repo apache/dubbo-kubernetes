@@ -18,6 +18,7 @@ var (
 	CustomResourceDefinition       = config.GroupVersionKind{Group: "apiextensions.k8s.io", Version: "v1", Kind: "CustomResourceDefinition"}
 	DaemonSet                      = config.GroupVersionKind{Group: "apps", Version: "v1", Kind: "DaemonSet"}
 	Deployment                     = config.GroupVersionKind{Group: "apps", Version: "v1", Kind: "Deployment"}
+	DxgateService                  = config.GroupVersionKind{Group: "networking.dubbo.apache.org", Version: "v1alpha3", Kind: "DxgateService"}
 	EndpointSlice                  = config.GroupVersionKind{Group: "discovery.k8s.io", Version: "v1", Kind: "EndpointSlice"}
 	Endpoints                      = config.GroupVersionKind{Group: "", Version: "v1", Kind: "Endpoints"}
 	FaultInjectionPolicy           = config.GroupVersionKind{Group: "networking.dubbo.apache.org", Version: "v1alpha3", Kind: "FaultInjectionPolicy"}
@@ -69,6 +70,8 @@ func ToGVR(g config.GroupVersionKind) (schema.GroupVersionResource, bool) {
 		return gvr.DaemonSet, true
 	case Deployment:
 		return gvr.Deployment, true
+	case DxgateService:
+		return gvr.DxgateService, true
 	case EndpointSlice:
 		return gvr.EndpointSlice, true
 	case Endpoints:
@@ -150,6 +153,8 @@ func MustToKind(g config.GroupVersionKind) kind.Kind {
 		return kind.DaemonSet
 	case Deployment:
 		return kind.Deployment
+	case DxgateService:
+		return kind.DxgateService
 	case EndpointSlice:
 		return kind.EndpointSlice
 	case Endpoints:
@@ -234,6 +239,8 @@ func FromGVR(g schema.GroupVersionResource) (config.GroupVersionKind, bool) {
 		return DaemonSet, true
 	case gvr.Deployment:
 		return Deployment, true
+	case gvr.DxgateService:
+		return DxgateService, true
 	case gvr.EndpointSlice:
 		return EndpointSlice, true
 	case gvr.Endpoints:

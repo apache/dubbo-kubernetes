@@ -50,6 +50,11 @@ func create(c kube.Client, cfg config.Config, objMeta metav1.ObjectMeta) (metav1
 			ObjectMeta: objMeta,
 			Spec:       *(cfg.Spec.(*githubcomkdubboapinetworkingv1alpha3.CircuitBreakerPolicy)),
 		}, metav1.CreateOptions{})
+	case gvk.DxgateService:
+		return c.Dubbo().NetworkingV1alpha3().DxgateServices(cfg.Namespace).Create(context.TODO(), &apigithubcomapachedubbokubernetesapinetworkingv1alpha3.DxgateService{
+			ObjectMeta: objMeta,
+			Spec:       *(cfg.Spec.(*githubcomkdubboapinetworkingv1alpha3.DxgateService)),
+		}, metav1.CreateOptions{})
 	case gvk.FaultInjectionPolicy:
 		return c.Dubbo().NetworkingV1alpha3().FaultInjectionPolicies(cfg.Namespace).Create(context.TODO(), &apigithubcomapachedubbokubernetesapinetworkingv1alpha3.FaultInjectionPolicy{
 			ObjectMeta: objMeta,
@@ -127,6 +132,11 @@ func update(c kube.Client, cfg config.Config, objMeta metav1.ObjectMeta) (metav1
 			ObjectMeta: objMeta,
 			Spec:       *(cfg.Spec.(*githubcomkdubboapinetworkingv1alpha3.CircuitBreakerPolicy)),
 		}, metav1.UpdateOptions{})
+	case gvk.DxgateService:
+		return c.Dubbo().NetworkingV1alpha3().DxgateServices(cfg.Namespace).Update(context.TODO(), &apigithubcomapachedubbokubernetesapinetworkingv1alpha3.DxgateService{
+			ObjectMeta: objMeta,
+			Spec:       *(cfg.Spec.(*githubcomkdubboapinetworkingv1alpha3.DxgateService)),
+		}, metav1.UpdateOptions{})
 	case gvk.FaultInjectionPolicy:
 		return c.Dubbo().NetworkingV1alpha3().FaultInjectionPolicies(cfg.Namespace).Update(context.TODO(), &apigithubcomapachedubbokubernetesapinetworkingv1alpha3.FaultInjectionPolicy{
 			ObjectMeta: objMeta,
@@ -201,6 +211,11 @@ func updateStatus(c kube.Client, cfg config.Config, objMeta metav1.ObjectMeta) (
 		}, metav1.UpdateOptions{})
 	case gvk.CircuitBreakerPolicy:
 		return c.Dubbo().NetworkingV1alpha3().CircuitBreakerPolicies(cfg.Namespace).UpdateStatus(context.TODO(), &apigithubcomapachedubbokubernetesapinetworkingv1alpha3.CircuitBreakerPolicy{
+			ObjectMeta: objMeta,
+			Status:     *(cfg.Status.(*githubcomkdubboapimetav1alpha1.DubboStatus)),
+		}, metav1.UpdateOptions{})
+	case gvk.DxgateService:
+		return c.Dubbo().NetworkingV1alpha3().DxgateServices(cfg.Namespace).UpdateStatus(context.TODO(), &apigithubcomapachedubbokubernetesapinetworkingv1alpha3.DxgateService{
 			ObjectMeta: objMeta,
 			Status:     *(cfg.Status.(*githubcomkdubboapimetav1alpha1.DubboStatus)),
 		}, metav1.UpdateOptions{})
@@ -308,6 +323,21 @@ func patch(c kube.Client, orig config.Config, origMeta metav1.ObjectMeta, mod co
 			return nil, err
 		}
 		return c.Dubbo().NetworkingV1alpha3().CircuitBreakerPolicies(orig.Namespace).
+			Patch(context.TODO(), orig.Name, typ, patchBytes, metav1.PatchOptions{FieldManager: "pilot-discovery"})
+	case gvk.DxgateService:
+		oldRes := &apigithubcomapachedubbokubernetesapinetworkingv1alpha3.DxgateService{
+			ObjectMeta: origMeta,
+			Spec:       *(orig.Spec.(*githubcomkdubboapinetworkingv1alpha3.DxgateService)),
+		}
+		modRes := &apigithubcomapachedubbokubernetesapinetworkingv1alpha3.DxgateService{
+			ObjectMeta: modMeta,
+			Spec:       *(mod.Spec.(*githubcomkdubboapinetworkingv1alpha3.DxgateService)),
+		}
+		patchBytes, err := genPatchBytes(oldRes, modRes, typ)
+		if err != nil {
+			return nil, err
+		}
+		return c.Dubbo().NetworkingV1alpha3().DxgateServices(orig.Namespace).
 			Patch(context.TODO(), orig.Name, typ, patchBytes, metav1.PatchOptions{FieldManager: "pilot-discovery"})
 	case gvk.FaultInjectionPolicy:
 		oldRes := &apigithubcomapachedubbokubernetesapinetworkingv1alpha3.FaultInjectionPolicy{
@@ -491,6 +521,8 @@ func delete(c kube.Client, typ config.GroupVersionKind, name, namespace string, 
 		return c.GatewayAPI().GatewayV1().BackendTLSPolicies(namespace).Delete(context.TODO(), name, deleteOptions)
 	case gvk.CircuitBreakerPolicy:
 		return c.Dubbo().NetworkingV1alpha3().CircuitBreakerPolicies(namespace).Delete(context.TODO(), name, deleteOptions)
+	case gvk.DxgateService:
+		return c.Dubbo().NetworkingV1alpha3().DxgateServices(namespace).Delete(context.TODO(), name, deleteOptions)
 	case gvk.FaultInjectionPolicy:
 		return c.Dubbo().NetworkingV1alpha3().FaultInjectionPolicies(namespace).Delete(context.TODO(), name, deleteOptions)
 	case gvk.GatewayClass:
@@ -646,6 +678,25 @@ var translationMap = map[config.GroupVersionKind]func(r runtime.Object) config.C
 				Generation:        obj.Generation,
 			},
 			Spec: &obj.Spec,
+		}
+	},
+	gvk.DxgateService: func(r runtime.Object) config.Config {
+		obj := r.(*apigithubcomapachedubbokubernetesapinetworkingv1alpha3.DxgateService)
+		return config.Config{
+			Meta: config.Meta{
+				GroupVersionKind:  gvk.DxgateService,
+				Name:              obj.Name,
+				Namespace:         obj.Namespace,
+				Labels:            obj.Labels,
+				Annotations:       obj.Annotations,
+				ResourceVersion:   obj.ResourceVersion,
+				CreationTimestamp: obj.CreationTimestamp.Time,
+				OwnerReferences:   obj.OwnerReferences,
+				UID:               string(obj.UID),
+				Generation:        obj.Generation,
+			},
+			Spec:   &obj.Spec,
+			Status: &obj.Status,
 		}
 	},
 	gvk.EndpointSlice: func(r runtime.Object) config.Config {
