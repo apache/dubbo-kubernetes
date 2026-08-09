@@ -19,6 +19,7 @@ package version
 import (
 	"fmt"
 	"runtime"
+	"runtime/debug"
 	"strings"
 )
 
@@ -127,6 +128,41 @@ func shortCommit(c string) string {
 	return c[:7]
 }
 
+func commandVersion() string {
+	if buildVersion != "" && buildVersion != "unknown" {
+		return buildVersion
+	}
+	if gitTag != "" && gitTag != "unknown" {
+		return gitTag
+	}
+
+	info, ok := debug.ReadBuildInfo()
+	if !ok {
+		return "devel"
+	}
+	if info.Main.Version != "" && info.Main.Version != "(devel)" {
+		return strings.TrimPrefix(info.Main.Version, "v")
+	}
+
+	var revision string
+	modified := false
+	for _, setting := range info.Settings {
+		switch setting.Key {
+		case "vcs.revision":
+			revision = shortCommit(setting.Value)
+		case "vcs.modified":
+			modified = setting.Value == "true"
+		}
+	}
+	if revision == "" {
+		return "devel"
+	}
+	if modified {
+		revision += "-dirty"
+	}
+	return "devel+" + revision
+}
+
 func init() {
 	Build = BuildInfo{
 		Product:      Product,
@@ -143,7 +179,7 @@ func init() {
 	Info = Build
 
 	Cobra = BuildVersion{
-		Version:       buildVersion,
+		Version:       commandVersion(),
 		GitRevision:   buildGitRevision,
 		GolangVersion: runtime.Version(),
 		BuildStatus:   buildStatus,

@@ -40,7 +40,7 @@ IMAGE_TAG ?= debug
 IMAGE     ?= $(HUB)/dubbod:$(IMAGE_TAG)
 
 VERSION_PKG := github.com/apache/dubbo-kubernetes/pkg/version
-LDFLAGS     ?= -X $(VERSION_PKG).gitTag=$(GIT_VERSION)
+LDFLAGS     ?= -X $(VERSION_PKG).gitTag=$(GIT_VERSION) -X $(VERSION_PKG).buildVersion=$(GIT_VERSION)
 GO_BUILD     = CGO_ENABLED=0 GOOS=$(GOOS) GOARCH=$(GOARCH) go build -ldflags "$(LDFLAGS)"
 
 CHARTS := manifests/charts/base manifests/charts/dubbod

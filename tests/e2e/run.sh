@@ -227,14 +227,24 @@ helm upgrade --install dubbo-base "${ROOT}/manifests/charts/base" \
 install_dubbod() {
   local chart="$1"
   local image="$2"
-  # The CNI daemonset needs privileged host access; keep the smoke test to the
-  # control plane itself.
+  local -a chart_values
+  if [[ "${chart}" == "${ROOT}/manifests/charts/dubbod" ]]; then
+    chart_values=(
+      --set-string "image=${image}"
+      --set-string "gateway.image=${DXGATE_IMAGE}"
+    )
+  else
+    # The previous chart still exposes its legacy CNI configuration.
+    chart_values=(
+      --set "global.proxyless.cni.enabled=false"
+      --set-string "global.proxyless.cni.image=${image}"
+      --set-string "global.gateway.image=${DXGATE_IMAGE}"
+    )
+  fi
   helm upgrade --install dubbod "${chart}" \
     --kube-context "kind-${CLUSTER_NAME}" \
     -n "${SYSTEM_NS}" \
-    --set global.proxyless.cni.enabled=false \
-    --set-string global.proxyless.cni.image="${image}" \
-    --set-string global.gateway.image="${DXGATE_IMAGE}" \
+    "${chart_values[@]}" \
     --set replicaCount="${DUBBOD_REPLICAS}"
 }
 

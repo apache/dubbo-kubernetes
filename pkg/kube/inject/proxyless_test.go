@@ -291,18 +291,12 @@ func assertDrainReadinessProbe(t *testing.T, container *corev1.Container) {
 	}
 }
 
-func TestGetProxyImageFallsBackToSharedCNIImage(t *testing.T) {
+func TestGetProxyImageUsesTopLevelImage(t *testing.T) {
 	values := map[string]any{
-		"global": map[string]any{
-			"proxyless": map[string]any{
-				"cni": map[string]any{
-					"image": "kdubbo/dubbod:test",
-				},
-			},
-		},
+		"image": "kdubbo/dubbod:test",
 	}
 	if got := getProxyImage(values, "default"); got != "kdubbo/dubbod:test" {
-		t.Fatalf("getProxyImage() = %q, want shared CNI image", got)
+		t.Fatalf("getProxyImage() = %q, want top-level image", got)
 	}
 }
 

@@ -14,30 +14,7 @@
 # limitations under the License.
 
 {{- $defaults := .Values._internal_default_values_not_set | default dict }}
-{{- $defaultGlobal := $defaults.global | default dict }}
-{{- $defaultProxyless := $defaultGlobal.proxyless | default dict }}
-{{- $defaultCNI := $defaultProxyless.cni | default dict }}
-{{- $global := .Values.global | default dict }}
-{{- $proxyless := $global.proxyless | default dict }}
-{{- $cni := $proxyless.cni | default dict }}
-{{- $enabled := false }}
-{{- if hasKey $defaultCNI "enabled" }}
-{{- $enabled = $defaultCNI.enabled }}
-{{- end }}
-{{- if hasKey $cni "enabled" }}
-{{- $enabled = $cni.enabled }}
-{{- end }}
-{{- if $enabled }}
-{{- $image := coalesce $cni.image $defaultCNI.image (printf "ghcr.io/apache/dubbo-kubernetes/dubbod:%s" .Chart.AppVersion) }}
-{{- $binDir := coalesce $cni.binDir $defaultCNI.binDir "/opt/cni/bin" }}
-{{- $confDir := coalesce $cni.confDir $defaultCNI.confDir "/etc/cni/net.d" }}
-{{- $stateDir := coalesce $cni.stateDir $defaultCNI.stateDir "/var/run/dubbo-cni" }}
-{{- $grpcInboundPort := int (coalesce $cni.grpcInboundPort $defaultCNI.grpcInboundPort 15080) }}
-{{- $managedLabel := coalesce $cni.managedLabel $defaultCNI.managedLabel "proxyless.dubbo.apache.org/managed" }}
-{{- $managedLabelValue := coalesce $cni.managedLabelValue $defaultCNI.managedLabelValue "true" }}
-{{- $iptablesPath := coalesce $cni.iptablesPath $defaultCNI.iptablesPath "iptables" }}
-{{- $ipsetPath := coalesce $cni.ipsetPath $defaultCNI.ipsetPath "ipset" }}
-{{- $refreshInterval := coalesce $cni.refreshInterval $defaultCNI.refreshInterval "1m" }}
+{{- $image := coalesce .Values.image $defaults.image (printf "ghcr.io/apache/dubbo-kubernetes/dubbod:%s" .Chart.AppVersion) }}
 apiVersion: apps/v1
 kind: DaemonSet
 metadata:
@@ -73,30 +50,30 @@ spec:
           args:
             - install
             - --watch
-            - --bin-dir={{ $binDir }}
-            - --conf-dir={{ $confDir }}
-            - --state-dir={{ $stateDir }}
-            - --kubeconfig={{ printf "%s/dubbo-cni-kubeconfig" $confDir }}
-            - --token-file={{ printf "%s/token" $stateDir }}
-            - --ca-file={{ printf "%s/ca.crt" $stateDir }}
-            - --grpc-inbound-port={{ $grpcInboundPort }}
-            - --managed-label={{ $managedLabel }}
-            - --managed-label-value={{ $managedLabelValue }}
-            - --iptables-path={{ $iptablesPath }}
-            - --ipset-path={{ $ipsetPath }}
-            - --refresh-interval={{ $refreshInterval }}
+            - --bin-dir=/opt/cni/bin
+            - --conf-dir=/etc/cni/net.d
+            - --state-dir=/var/run/dubbo-cni
+            - --kubeconfig=/etc/cni/net.d/dubbo-cni-kubeconfig
+            - --token-file=/var/run/dubbo-cni/token
+            - --ca-file=/var/run/dubbo-cni/ca.crt
+            - --grpc-inbound-port=15080
+            - --managed-label=proxyless.dubbo.apache.org/managed
+            - --managed-label-value=true
+            - --iptables-path=iptables
+            - --ipset-path=ipset
+            - --refresh-interval=1m
           lifecycle:
             preStop:
               exec:
                 command:
                   - /usr/local/bin/dubbo-cni
                   - uninstall
-                  - --bin-dir={{ $binDir }}
-                  - --conf-dir={{ $confDir }}
-                  - --state-dir={{ $stateDir }}
-                  - --kubeconfig={{ printf "%s/dubbo-cni-kubeconfig" $confDir }}
-                  - --token-file={{ printf "%s/token" $stateDir }}
-                  - --ca-file={{ printf "%s/ca.crt" $stateDir }}
+                  - --bin-dir=/opt/cni/bin
+                  - --conf-dir=/etc/cni/net.d
+                  - --state-dir=/var/run/dubbo-cni
+                  - --kubeconfig=/etc/cni/net.d/dubbo-cni-kubeconfig
+                  - --token-file=/var/run/dubbo-cni/token
+                  - --ca-file=/var/run/dubbo-cni/ca.crt
           securityContext:
             runAsUser: 0
             runAsGroup: 0
@@ -106,22 +83,21 @@ spec:
                 - ALL
           volumeMounts:
             - name: cni-bin-dir
-              mountPath: {{ $binDir | quote }}
+              mountPath: /opt/cni/bin
             - name: cni-conf-dir
-              mountPath: {{ $confDir | quote }}
+              mountPath: /etc/cni/net.d
             - name: cni-state-dir
-              mountPath: {{ $stateDir | quote }}
+              mountPath: /var/run/dubbo-cni
       volumes:
         - name: cni-bin-dir
           hostPath:
-            path: {{ $binDir | quote }}
+            path: /opt/cni/bin
             type: DirectoryOrCreate
         - name: cni-conf-dir
           hostPath:
-            path: {{ $confDir | quote }}
+            path: /etc/cni/net.d
             type: DirectoryOrCreate
         - name: cni-state-dir
           hostPath:
-            path: {{ $stateDir | quote }}
+            path: /var/run/dubbo-cni
             type: DirectoryOrCreate
-{{- end }}

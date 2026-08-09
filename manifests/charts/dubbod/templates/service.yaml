@@ -14,17 +14,15 @@
 # limitations under the License.
 
 {{- $defaults := .Values._internal_default_values_not_set | default dict }}
-{{- $defaultGlobal := $defaults.global | default dict }}
-{{- $defaultManagement := $defaultGlobal.management | default dict }}
-{{- $defaultMulticluster := $defaultGlobal.multicluster | default dict }}
+{{- $defaultManagement := $defaults.management | default dict }}
+{{- $defaultMulticluster := $defaults.multicluster | default dict }}
 {{- $defaultRemoteAccess := $defaultMulticluster.remoteAccess | default dict }}
-{{- $global := .Values.global | default dict }}
-{{- $management := $global.management | default dict }}
-{{- $multicluster := $global.multicluster | default dict }}
+{{- $management := .Values.management | default dict }}
+{{- $multicluster := .Values.multicluster | default dict }}
 {{- $remoteAccess := $multicluster.remoteAccess | default dict }}
 {{- $managementPort := int (coalesce $management.port $defaultManagement.port 26080) }}
-{{- $defaultActivation := $defaultGlobal.activation | default dict }}
-{{- $activation := $global.activation | default dict }}
+{{- $defaultActivation := $defaults.activation | default dict }}
+{{- $activation := .Values.activation | default dict }}
 {{- /* coalesce skips zero, so an explicit 0 has to be read with hasKey or the off switch silently falls back to the default. */ -}}
 {{- $activationPort := int (coalesce $defaultActivation.port 26030) }}
 {{- if hasKey $activation "port" }}

@@ -23,61 +23,46 @@ _internal_default_values_not_set:
   # automatically. Set to 1 only for local development.
   replicaCount: 2
 
-  global:
-    proxy:
-      clusterDomain: "cluster.local"
+  # Shared image for dubbod, the injector, and the fixed CNI runtime. An empty
+  # value resolves to ghcr.io/apache/dubbo-kubernetes/dubbod:<Chart.appVersion>.
+  image: ""
 
-    proxyless:
-      cni:
-        enabled: true
-        # Shared control-plane/CNI image. An empty value resolves to
-        # ghcr.io/apache/dubbo-kubernetes/dubbod:<Chart.appVersion>.
-        image: ""
-        binDir: "/opt/cni/bin"
-        confDir: "/etc/cni/net.d"
-        stateDir: "/var/run/dubbo-cni"
-        grpcInboundPort: 15080
-        managedLabel: "proxyless.dubbo.apache.org/managed"
-        managedLabelValue: "true"
-        iptablesPath: "iptables"
-        ipsetPath: "ipset"
-        refreshInterval: "1m"
+  proxy:
+    clusterDomain: "cluster.local"
 
-    statusPort: 26020
+  statusPort: 26020
 
-    management:
-      port: 26080
+  management:
+    port: 26080
 
-    gateway:
-      # Image used by managed Gateway deployments. Keep it independently
-      # configurable from dubbod/CNI so a gateway can be rolled forward or
-      # back without replacing the control plane.
-      image: "kdubbo/dxgate:latest"
-      # Default replica count for every managed dxgate Deployment. An
-      # individual Gateway overrides it with the
-      # gateway.dubbo.apache.org/replicas annotation.
-      replicaCount: 2
+  gateway:
+    # Image used by managed Gateway deployments. Keep it independently
+    # configurable from dubbod/CNI so a gateway can be rolled independently.
+    image: "kdubbo/dxgate:latest"
+    # Individual Gateways can override this with the
+    # gateway.dubbo.apache.org/replicas annotation.
+    replicaCount: 2
 
-    activation:
-      # KEDA external scaler for on-demand activation. Set port to 0 to disable
-      # it; the rest of the control plane is unaffected either way.
-      port: 26030
+  activation:
+    # KEDA external scaler for on-demand activation. Set port to 0 to disable
+    # it; the rest of the control plane is unaffected either way.
+    port: 26030
 
-    configValidation: true
+  configValidation: true
 
-    multicluster:
-      remoteAccess:
-        enabled: false
-        serviceType: "LoadBalancer"
-        grpcPort: 26010
-        xdsPort: 26012
-        webhookPort: 443
-        certificateHosts: []
-      eastWestGateway:
-        enabled: false
-        serviceType: "LoadBalancer"
-        port: 15443
-        targetPort: 15080
-        nodePort: 0
-        gateways: []
-        xdsAddress: ""
+  multicluster:
+    remoteAccess:
+      enabled: false
+      serviceType: "LoadBalancer"
+      grpcPort: 26010
+      xdsPort: 26012
+      webhookPort: 443
+      certificateHosts: []
+    eastWestGateway:
+      enabled: false
+      serviceType: "LoadBalancer"
+      port: 15443
+      targetPort: 15080
+      nodePort: 0
+      gateways: []
+      xdsAddress: ""

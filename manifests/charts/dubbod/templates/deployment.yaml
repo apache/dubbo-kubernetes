@@ -14,37 +14,31 @@
 # limitations under the License.
 
 {{- $defaults := .Values._internal_default_values_not_set | default dict }}
-{{- $defaultGlobal := $defaults.global | default dict }}
-{{- $defaultProxyless := $defaultGlobal.proxyless | default dict }}
-{{- $defaultCNI := $defaultProxyless.cni | default dict }}
-{{- $defaultManagement := $defaultGlobal.management | default dict }}
-{{- $defaultMulticluster := $defaultGlobal.multicluster | default dict }}
+{{- $defaultManagement := $defaults.management | default dict }}
+{{- $defaultMulticluster := $defaults.multicluster | default dict }}
 {{- $defaultRemoteAccess := $defaultMulticluster.remoteAccess | default dict }}
 {{- $defaultEastWestGateway := $defaultMulticluster.eastWestGateway | default dict }}
-{{- $global := .Values.global | default dict }}
-{{- $proxyless := $global.proxyless | default dict }}
-{{- $cni := $proxyless.cni | default dict }}
-{{- $management := $global.management | default dict }}
-{{- $multicluster := $global.multicluster | default dict }}
+{{- $management := .Values.management | default dict }}
+{{- $multicluster := .Values.multicluster | default dict }}
 {{- $remoteAccess := $multicluster.remoteAccess | default dict }}
 {{- $eastWestGateway := $multicluster.eastWestGateway | default dict }}
 {{- $managementPort := int (coalesce $management.port $defaultManagement.port 26080) }}
-{{- $defaultActivation := $defaultGlobal.activation | default dict }}
-{{- $activation := $global.activation | default dict }}
+{{- $defaultActivation := $defaults.activation | default dict }}
+{{- $activation := .Values.activation | default dict }}
 {{- /* coalesce skips zero, so an explicit 0 has to be read with hasKey or the off switch silently falls back to the default. */ -}}
 {{- $activationPort := int (coalesce $defaultActivation.port 26030) }}
 {{- if hasKey $activation "port" }}
 {{- $activationPort = int $activation.port }}
 {{- end }}
 {{- $replicaCount := int (coalesce .Values.replicaCount $defaults.replicaCount 1) }}
-{{- $gateway := $global.gateway | default dict }}
-{{- $defaultGateway := $defaultGlobal.gateway | default dict }}
+{{- $gateway := .Values.gateway | default dict }}
+{{- $defaultGateway := $defaults.gateway | default dict }}
 {{- $gatewayImage := coalesce $gateway.image $defaultGateway.image "kdubbo/dxgate:latest" }}
 {{- $gatewayReplicas := int (coalesce $gateway.replicaCount $defaultGateway.replicaCount 2) }}
 {{- $remoteAccessCertificateHosts := $remoteAccess.certificateHosts | default $defaultRemoteAccess.certificateHosts | default (list) }}
 {{- $eastWestGateways := $eastWestGateway.gateways | default $defaultEastWestGateway.gateways | default (list) }}
 {{- $eastWestGatewayEntries := list }}
-{{- $image := coalesce $cni.image $defaultCNI.image (printf "ghcr.io/apache/dubbo-kubernetes/dubbod:%s" .Chart.AppVersion) }}
+{{- $image := coalesce .Values.image $defaults.image (printf "ghcr.io/apache/dubbo-kubernetes/dubbod:%s" .Chart.AppVersion) }}
 {{- $defaultEastWestGatewayPort := int (coalesce $eastWestGateway.port $defaultEastWestGateway.port 15443) }}
 {{- range $gateway := $eastWestGateways }}
 {{- $gatewayPort := int (coalesce $gateway.port $defaultEastWestGatewayPort) }}

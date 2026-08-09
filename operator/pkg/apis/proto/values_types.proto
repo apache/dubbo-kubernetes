@@ -41,34 +41,6 @@ message ProxyConfig {
   string clusterDomain = 1;
 }
 
-message ProxylessConfig {
-  MeshCNIConfig cni = 1;
-}
-
-message MeshCNIConfig {
-  bool enabled = 1;
-
-  string image = 2;
-
-  string binDir = 3;
-
-  string confDir = 4;
-
-  string stateDir = 5;
-
-  int64 grpcInboundPort = 6;
-
-  string managedLabel = 7;
-
-  string managedLabelValue = 8;
-
-  string iptablesPath = 9;
-
-  string ipsetPath = 10;
-
-  string refreshInterval = 11;
-}
-
 message GatewayConfig {
   // Default replica count for managed dxgate deployments. Individual Gateways
   // override it with the gateway.dubbo.apache.org/replicas annotation.
@@ -86,7 +58,7 @@ message GlobalConfig {
 
   MulticlusterConfig multicluster = 5;
 
-  ProxylessConfig proxyless = 6;
+  reserved 6;
 
   GatewayConfig gateway = 7;
 
@@ -151,6 +123,9 @@ message Values {
   // topology spread are added automatically above one. Wrapped so an explicit
   // 1 is distinguishable from an unset field.
   google.protobuf.Int32Value replicaCount = 3;
+
+  // Shared image for dubbod, the injector, and the fixed CNI runtime.
+  string image = 4;
 }
 
 // IntOrString is a type that can hold an int32 or a string.  When used in

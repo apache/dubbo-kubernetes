@@ -405,8 +405,8 @@ func TestGenerateManifestEastWestGatewayConfig(t *testing.T) {
 	}
 }
 
-func TestGenerateManifestProxylessCNIIsGlobalByDefault(t *testing.T) {
-	manifests, _, err := GenerateManifest(nil, nil, nil, nil)
+func TestGenerateManifestCNIUsesFixedConfiguration(t *testing.T) {
+	manifests, _, err := GenerateManifest(nil, []string{"values.image=kdubbo/dubbod:cni-test"}, nil, nil)
 	if err != nil {
 		t.Fatalf("GenerateManifest() error = %v", err)
 	}
@@ -414,27 +414,6 @@ func TestGenerateManifestProxylessCNIIsGlobalByDefault(t *testing.T) {
 		t.Fatal("dubbo-cni-node not rendered by default")
 	}
 
-	manifests, _, err = GenerateManifest(nil, []string{"values.global.proxyless.cni.enabled=false"}, nil, nil)
-	if err != nil {
-		t.Fatalf("GenerateManifest() with proxyless CNI disabled error = %v", err)
-	}
-	if hasManifest(manifests, "DaemonSet", "dubbo-cni-node") {
-		t.Fatal("dubbo-cni-node rendered while proxyless CNI is explicitly disabled")
-	}
-
-	manifests, _, err = GenerateManifest(nil, []string{
-		"values.global.proxyless.cni.enabled=true",
-		"values.global.proxyless.cni.image=kdubbo/dubbod:cni-test",
-		"values.global.proxyless.cni.binDir=/var/lib/cni/bin",
-		"values.global.proxyless.cni.confDir=/var/lib/cni/net.d",
-		"values.global.proxyless.cni.stateDir=/run/dubbo-cni",
-		"values.global.proxyless.cni.grpcInboundPort=16080",
-		"values.global.proxyless.cni.ipsetPath=/usr/sbin/ipset",
-		"values.global.proxyless.cni.refreshInterval=30s",
-	}, nil, nil)
-	if err != nil {
-		t.Fatalf("GenerateManifest() with proxyless CNI error = %v", err)
-	}
 	daemonSet := findManifest(t, manifests, "DaemonSet", "dubbo-cni-node")
 	containers, ok, err := unstructured.NestedSlice(daemonSet.Object, "spec", "template", "spec", "containers")
 	if err != nil || !ok || len(containers) == 0 {
@@ -450,12 +429,12 @@ func TestGenerateManifestProxylessCNIIsGlobalByDefault(t *testing.T) {
 		t.Fatalf("installer args missing: ok=%v err=%v", ok, err)
 	}
 	for _, want := range []string{
-		"--bin-dir=/var/lib/cni/bin",
-		"--conf-dir=/var/lib/cni/net.d",
-		"--state-dir=/run/dubbo-cni",
-		"--grpc-inbound-port=16080",
-		"--ipset-path=/usr/sbin/ipset",
-		"--refresh-interval=30s",
+		"--bin-dir=/opt/cni/bin",
+		"--conf-dir=/etc/cni/net.d",
+		"--state-dir=/var/run/dubbo-cni",
+		"--grpc-inbound-port=15080",
+		"--ipset-path=ipset",
+		"--refresh-interval=1m",
 	} {
 		if !containsString(args, want) {
 			t.Fatalf("installer args missing %q: %v", want, args)
@@ -465,10 +444,37 @@ func TestGenerateManifestProxylessCNIIsGlobalByDefault(t *testing.T) {
 	if err != nil || !ok {
 		t.Fatalf("daemonset volumes missing: ok=%v err=%v", ok, err)
 	}
-	for _, want := range []string{"/var/lib/cni/bin", "/var/lib/cni/net.d", "/run/dubbo-cni"} {
+	for _, want := range []string{"/opt/cni/bin", "/etc/cni/net.d", "/var/run/dubbo-cni"} {
 		if !hasHostPathVolume(volumes, want) {
 			t.Fatalf("daemonset missing hostPath volume %s", want)
 		}
+	}
+
+	deployment := findManifest(t, manifests, "Deployment", "dubbod")
+	deploymentContainers, ok, err := unstructured.NestedSlice(deployment.Object, "spec", "template", "spec", "containers")
+	if err != nil || !ok || len(deploymentContainers) == 0 {
+		t.Fatalf("deployment containers missing: ok=%v err=%v", ok, err)
+	}
+	deploymentImage, _, _ := unstructured.NestedString(deploymentContainers[0].(map[string]interface{}), "image")
+	if deploymentImage != "kdubbo/dubbod:cni-test" {
+		t.Fatalf("dubbod image = %q, want shared top-level image", deploymentImage)
+	}
+
+	valuesConfigMap := findManifest(t, manifests, "ConfigMap", "values")
+	mergedValues, _, _ := unstructured.NestedString(valuesConfigMap.Object, "data", "merged-values")
+	for _, removed := range []string{"global:", "proxyless:"} {
+		if strings.Contains(mergedValues, removed) {
+			t.Fatalf("merged values retained removed key %q:\n%s", removed, mergedValues)
+		}
+	}
+	if !strings.Contains(mergedValues, `image: "kdubbo/dubbod:cni-test"`) {
+		t.Fatalf("merged values missing top-level image:\n%s", mergedValues)
+	}
+
+	injectorConfigMap := findManifest(t, manifests, "ConfigMap", "dubbo-proxyless-injector")
+	injectorValues, _, _ := unstructured.NestedString(injectorConfigMap.Object, "data", "values")
+	if strings.Contains(injectorValues, "global:") || strings.Contains(injectorValues, "proxyless:") {
+		t.Fatalf("injector values retained removed nesting:\n%s", injectorValues)
 	}
 }
 
@@ -557,6 +563,26 @@ func TestGenerateManifestRejectsRemovedInstallSurface(t *testing.T) {
 		{
 			name: "removed proxy image value",
 			set:  "values.global.proxy.image=kdubbo/dubbod:test",
+		},
+		{
+			name: "removed proxyless value",
+			set:  "values.global.proxyless.cni.enabled=false",
+		},
+		{
+			name: "removed prometheus component",
+			set:  "components.prometheus.enabled=true",
+		},
+		{
+			name: "removed grafana component",
+			set:  "components.grafana.enabled=true",
+		},
+		{
+			name: "removed tracing component",
+			set:  "components.tracing.enabled=true",
+		},
+		{
+			name: "removed otel collector component",
+			set:  "components.otelCollector.enabled=true",
 		},
 	}
 
