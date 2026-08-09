@@ -234,10 +234,11 @@ install_dubbod() {
       --set-string "gateway.image=${DXGATE_IMAGE}"
     )
   else
-    # The previous chart still exposes its legacy CNI configuration.
+    # 0.4.3 predates Inherent. These values target its immutable legacy
+    # chart schema; renaming them leaves its CNI enabled during the upgrade.
     chart_values=(
-      --set "global.inherent.cni.enabled=false"
-      --set-string "global.inherent.cni.image=${image}"
+      --set "global.proxyless.cni.enabled=false"
+      --set-string "global.proxyless.cni.image=${image}"
       --set-string "global.gateway.image=${DXGATE_IMAGE}"
     )
   fi
