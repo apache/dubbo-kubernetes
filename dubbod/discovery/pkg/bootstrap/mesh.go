@@ -104,8 +104,6 @@ func compactMeshConfig(cfg *meshv1alpha1.MeshConfig) string {
 		formatStringField("root_namespace", cfg.GetRootNamespace()),
 		formatDurationField("dns_refresh_rate", cfg.GetDnsRefreshRate()),
 		formatStringSliceField("service_export_to", cfg.GetDefaultServiceExportTo()),
-		formatStringSliceField("virtual_service_export_to", cfg.GetDefaultVirtualServiceExportTo()),
-		formatStringSliceField("destination_rule_export_to", cfg.GetDefaultDestinationRuleExportTo()),
 	}
 
 	if defaultCfg := cfg.GetDefaultConfig(); defaultCfg != nil {

@@ -134,12 +134,10 @@ func DefaultMeshConfig() *meshv1alpha1.MeshConfig {
 		Certificates:       []*meshv1alpha1.Certificate{},
 		DefaultConfig:      proxyConfig,
 
-		RootNamespace:                  constants.DubboSystemNamespace,
-		ConnectTimeout:                 durationpb.New(10 * time.Second),
-		DefaultServiceExportTo:         []string{"*"},
-		DefaultVirtualServiceExportTo:  []string{"*"},
-		DefaultDestinationRuleExportTo: []string{"*"},
-		DnsRefreshRate:                 durationpb.New(60 * time.Second),
+		RootNamespace:          constants.DubboSystemNamespace,
+		ConnectTimeout:         durationpb.New(10 * time.Second),
+		DefaultServiceExportTo: []string{"*"},
+		DnsRefreshRate:         durationpb.New(60 * time.Second),
 	}
 }
 

@@ -204,9 +204,7 @@ func buildInboundListeners(node *model.Proxy, push *model.PushContext, names []s
 		log.Debugf(" listener %s, service=%s, isGatewayPod=%v, node.Type=%v, node.IsRouter()=%v",
 			name, si.Service.Attributes.Name, isGatewayPod, node.Type, node.IsRouter())
 
-		// - DestinationRule with DUBBO_MUTUAL only configures CLIENT-SIDE (outbound) mTLS
-		// - PeerAuthentication with STRICT configures SERVER-SIDE (inbound) mTLS
-		// Both are REQUIRED for mTLS to work. Server-side mTLS should ONLY be controlled by PeerAuthentication.
+		// PeerAuthentication is the single source of truth for inbound mTLS.
 		mode := push.InboundMTLSModeForProxy(node, uint32(listenPort))
 
 		// For proxyless gRPC inbound listeners, we need a FilterChain with HttpConnectionManager filter
