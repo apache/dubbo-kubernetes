@@ -66,6 +66,13 @@ fail() {
   echo "FAIL: $*" >&2
   echo "--- diagnostics: pods ---" >&2
   "${KUBECTL[@]}" get pods -A -o wide >&2 || true
+  # ContainerCreating failures have no container logs. Events and describe
+  # expose the kubelet/CNI/image error before cleanup deletes the cluster.
+  echo "--- diagnostics: events ---" >&2
+  "${KUBECTL[@]}" get events -A --sort-by=.lastTimestamp >&2 || true
+  echo "--- diagnostics: managed gateway pod descriptions ---" >&2
+  "${KUBECTL[@]}" -n "${APP_NS}" describe pods \
+    -l gateway.networking.k8s.io/gateway-name >&2 || true
   echo "--- diagnostics: dubbod logs ---" >&2
   "${KUBECTL[@]}" -n "${SYSTEM_NS}" logs deploy/dubbod --tail=100 >&2 || true
   echo "--- diagnostics: managed gateway logs ---" >&2
