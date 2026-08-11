@@ -50,12 +50,24 @@ func TestValidateAuthorizationPolicy(t *testing.T) {
 			wantErr: false,
 		},
 		{
-			name: "valid rule",
+			name: "valid JWT rule",
 			spec: &security.AuthorizationPolicy{
 				Action: security.AuthorizationPolicy_ALLOW,
 				Rules: []*security.Rule{{
 					From: []*security.From{{
 						Source: &security.Source{RequestPrincipals: []string{"issuer/subject"}},
+					}},
+				}},
+			},
+			wantErr: false,
+		},
+		{
+			name: "valid workload principal rule",
+			spec: &security.AuthorizationPolicy{
+				Action: security.AuthorizationPolicy_ALLOW,
+				Rules: []*security.Rule{{
+					From: []*security.From{{
+						Source: &security.Source{Principals: []string{"cluster.local/ns/default/sa/client"}},
 					}},
 				}},
 			},
@@ -83,6 +95,35 @@ func TestValidateAuthorizationPolicy(t *testing.T) {
 				Rules: []*security.Rule{{
 					From: []*security.From{{
 						Source: &security.Source{RequestPrincipals: []string{""}},
+					}},
+				}},
+			},
+			wantErr: true,
+		},
+		{
+			name: "mixed principal types",
+			spec: &security.AuthorizationPolicy{
+				Rules: []*security.Rule{{
+					From: []*security.From{{
+						Source: &security.Source{
+							Principals:        []string{"cluster.local/ns/default/sa/client"},
+							RequestPrincipals: []string{"issuer/subject"},
+						},
+					}},
+				}},
+			},
+			wantErr: true,
+		},
+		{
+			name: "workload principal with JWT claim",
+			spec: &security.AuthorizationPolicy{
+				Rules: []*security.Rule{{
+					From: []*security.From{{
+						Source: &security.Source{Principals: []string{"cluster.local/ns/default/sa/client"}},
+					}},
+					When: []*security.Condition{{
+						Key:    "request.auth.claims[groups]",
+						Values: []string{"orders"},
 					}},
 				}},
 			},

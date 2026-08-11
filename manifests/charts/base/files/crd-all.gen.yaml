@@ -1157,7 +1157,7 @@ metadata:
     dubbo: security
     heritage: Tiller
     release: dubbo
-  name: authorizationpolicys.security.dubbo.apache.org
+  name: authorizationpolicies.security.dubbo.apache.org
 spec:
   group: security.dubbo.apache.org
   names:
@@ -1166,7 +1166,7 @@ spec:
     - security
     kind: AuthorizationPolicy
     listKind: AuthorizationPolicyList
-    plural: authorizationpolicys
+    plural: authorizationpolicies
     shortNames:
     - ap
     singular: authorizationpolicy
@@ -1213,6 +1213,12 @@ spec:
                           source:
                             description: Source attributes.
                             properties:
+                              principals:
+                                description: Workload identities derived from a verified
+                                  mutual TLS certificate.
+                                items:
+                                  type: string
+                                type: array
                               requestPrincipals:
                                 description: Request identities derived from validated
                                   JWT issuer and subject.

@@ -293,6 +293,47 @@ func TestBuildRuntimeTrafficConfigCapturesInherentSecurity(t *testing.T) {
 	}
 }
 
+func TestBuildRuntimeTrafficConfigProjectsOnlyWorkloadPrincipalAuthorization(t *testing.T) {
+	svc := newInherentRuntimeTestService("provider", "grpc-app", "provider.grpc-app.svc.cluster.local", 17070)
+	workloadPolicy := config.Config{
+		Meta: config.Meta{
+			GroupVersionKind: gvk.AuthorizationPolicy,
+			Name:             "allow-workload",
+			Namespace:        "grpc-app",
+		},
+		Spec: &security.AuthorizationPolicy{
+			Action: security.AuthorizationPolicy_ALLOW,
+			Rules: []*security.Rule{{From: []*security.From{{Source: &security.Source{
+				Principals: []string{"cluster.local/ns/client/sa/caller"},
+			}}}}},
+		},
+	}
+	jwtPolicy := config.Config{
+		Meta: config.Meta{
+			GroupVersionKind: gvk.AuthorizationPolicy,
+			Name:             "allow-jwt",
+			Namespace:        "grpc-app",
+		},
+		Spec: &security.AuthorizationPolicy{
+			Action: security.AuthorizationPolicy_ALLOW,
+			Rules: []*security.Rule{{From: []*security.From{{Source: &security.Source{
+				RequestPrincipals: []string{"https://issuer.example/alice"},
+			}}}}},
+		},
+	}
+	push := newInherentRuntimeTestPushContext(t, []config.Config{workloadPolicy, jwtPolicy}, []*discoverymodel.Service{svc})
+
+	serviceConfig := buildRuntimeServiceConfig(push, nil, svc)
+	got := serviceConfig.Ports[0].AuthorizationPolicies
+	if len(got) != 1 || got[0].Name != "allow-workload" {
+		t.Fatalf("authorization policies = %+v, want only allow-workload", got)
+	}
+	principals := got[0].Rules[0].Sources[0].Principals
+	if len(principals) != 1 || principals[0] != "cluster.local/ns/client/sa/caller" {
+		t.Fatalf("principals = %v, want caller SPIFFE identity", principals)
+	}
+}
+
 func TestBuildRuntimeTrafficConfigCapturesPermissivePeerAuthentication(t *testing.T) {
 	hostname := host.Name("provider.grpc-app.svc.cluster.local")
 	svc := newInherentRuntimeTestService("provider", "grpc-app", string(hostname), 17070)

@@ -40,6 +40,14 @@ lint-helm: ## Lint and render the Helm charts.
 		helm lint $$chart || exit 1; \
 		helm template test-release $$chart >/dev/null || exit 1; \
 	done
+	@if grep -q 'authorizationpolicys.security.dubbo.apache.org' manifests/charts/base/files/crd-all.gen.yaml; then \
+		echo "AuthorizationPolicy CRD uses invalid plural authorizationpolicys"; \
+		exit 1; \
+	fi
+	@grep -q 'name: authorizationpolicies.security.dubbo.apache.org' manifests/charts/base/files/crd-all.gen.yaml || { \
+		echo "AuthorizationPolicy CRD plural must be authorizationpolicies"; \
+		exit 1; \
+	}
 
 .PHONY: fmt
 fmt: ## Format all Go sources with gofmt -s.
