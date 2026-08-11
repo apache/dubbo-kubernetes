@@ -23,6 +23,7 @@ import (
 	"github.com/apache/dubbo-kubernetes/pkg/config"
 	"github.com/apache/dubbo-kubernetes/pkg/config/host"
 	"github.com/apache/dubbo-kubernetes/pkg/config/schema/gvk"
+	mesh "github.com/kdubbo/api/mesh/v1alpha1"
 	networking "github.com/kdubbo/api/networking/v1alpha3"
 	security "github.com/kdubbo/api/security/v1alpha3"
 	cluster "github.com/kdubbo/xds-api/cluster/v1"
@@ -79,6 +80,7 @@ func TestStrictPeerAuthenticationEmitsActivationSANPinnedMTLSCluster(t *testing.
 			},
 		},
 	}, []*model.Service{service})
+	push.Mesh.MeshMtls = &mesh.MeshMTLS{MinProtocolVersion: mesh.MeshMTLS_TLSV1_3}
 
 	resources := (&GrpcConfigGenerator{}).BuildClusters(&model.Proxy{
 		ID:              "inherent~10.0.0.2~caller.app~app.svc.cluster.local",
@@ -105,6 +107,42 @@ func TestStrictPeerAuthenticationEmitsActivationSANPinnedMTLSCluster(t *testing.
 		GetMatchSubjectAltNames()
 	if !contains(got, backendSAN) || !contains(got, push.ActivationGatewaySANs("app")[0]) {
 		t.Fatalf("SAN pins = %v, want backend and Activator identities", got)
+	}
+	if got := tlsContext.GetCommonTlsContext().GetTlsParams().GetMinProtocolVersion(); got != tlsv1.TlsParameters_TLSV1_3 {
+		t.Fatalf("minimum TLS version = %v, want TLSV1_3", got)
+	}
+}
+
+func TestPermissivePeerAuthenticationEnablesAutomaticOutboundMTLS(t *testing.T) {
+	hostName := host.Name("payment.app.svc.cluster.local")
+	service := newRDSTestService("payment", "app", string(hostName), 8080)
+	push := newRDSTestPushContext(t, []config.Config{{
+		Meta: config.Meta{
+			GroupVersionKind: gvk.PeerAuthentication,
+			Name:             "migration",
+			Namespace:        "app",
+		},
+		Spec: &security.PeerAuthentication{
+			Mtls: &security.PeerAuthentication_MutualTLS{
+				Mode: security.PeerAuthentication_MutualTLS_PERMISSIVE,
+			},
+		},
+	}}, []*model.Service{service})
+
+	resources := (&GrpcConfigGenerator{}).BuildClusters(&model.Proxy{
+		ID:              "inherent~10.0.0.2~caller.app~app.svc.cluster.local",
+		Type:            model.Inherent,
+		ConfigNamespace: "app",
+	}, push, []string{"outbound|8080||" + string(hostName)})
+	if len(resources) != 1 {
+		t.Fatalf("resources = %d, want 1", len(resources))
+	}
+	generated := &cluster.Cluster{}
+	if err := resources[0].GetResource().UnmarshalTo(generated); err != nil {
+		t.Fatalf("unmarshal cluster: %v", err)
+	}
+	if generated.GetTransportSocket() == nil {
+		t.Fatal("PERMISSIVE PeerAuthentication did not produce automatic outbound mTLS")
 	}
 }
 

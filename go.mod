@@ -41,9 +41,9 @@ require (
 	github.com/grpc-ecosystem/go-grpc-prometheus v1.2.0
 	github.com/hashicorp/go-multierror v1.1.1
 	github.com/hashicorp/golang-lru/v2 v2.0.7
-	github.com/kdubbo/api v0.0.0-20260809042441-64b5ddb809d4
-	github.com/kdubbo/client-go v0.0.0-20260809042806-04a31db14165
-	github.com/kdubbo/xds-api v0.0.0-20260809042456-0d57cc43a21a
+	github.com/kdubbo/api v0.0.0-20260811033145-73089bc1b7aa
+	github.com/kdubbo/client-go v0.0.0-20260811033823-1a6af6fccfbe
+	github.com/kdubbo/xds-api v0.0.0-20260811034019-a96e09ac6650
 	github.com/prometheus/client_golang v1.23.2
 	github.com/prometheus/client_model v0.6.2
 	github.com/spf13/cobra v1.10.2

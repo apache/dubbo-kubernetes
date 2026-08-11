@@ -18,15 +18,19 @@ package grpcgen
 
 import (
 	"testing"
+	"time"
 
 	"github.com/apache/dubbo-kubernetes/dubbod/discovery/pkg/model"
 	"github.com/apache/dubbo-kubernetes/pkg/config"
 	"github.com/apache/dubbo-kubernetes/pkg/config/schema/gvk"
 	"github.com/apache/dubbo-kubernetes/pkg/wellknown"
+	mesh "github.com/kdubbo/api/mesh/v1alpha1"
 	security "github.com/kdubbo/api/security/v1alpha3"
 	typev1alpha3 "github.com/kdubbo/api/type/v1alpha3"
+	extauthzv1 "github.com/kdubbo/xds-api/extensions/filters/v1/http/ext_authz"
 	jwtv1 "github.com/kdubbo/xds-api/extensions/filters/v1/http/jwt_authn"
 	rbacv1 "github.com/kdubbo/xds-api/extensions/filters/v1/http/rbac"
+	"google.golang.org/protobuf/types/known/durationpb"
 )
 
 func TestBuildInboundHTTPFiltersAddsJWTAndAuthorizationBeforeRouter(t *testing.T) {
@@ -75,6 +79,16 @@ func TestBuildInboundHTTPFiltersAddsJWTAndAuthorizationBeforeRouter(t *testing.T
 	if got := jwtConfig.GetProviders()[0].GetJwksUri(); got != "https://secure.dubbo.apache.org/jwt/samples/jwks.json" {
 		t.Fatalf("jwksUri = %q, want local sample path", got)
 	}
+	provider := jwtConfig.GetProviders()[0]
+	if got := provider.GetFromCookies(); len(got) != 1 || got[0] != "session" {
+		t.Fatalf("fromCookies = %v, want [session]", got)
+	}
+	if !provider.GetForwardOriginalToken() || provider.GetOutputPayloadToHeader() != "x-jwt-payload" {
+		t.Fatalf("JWT forwarding fields = %+v", provider)
+	}
+	if got := provider.GetOutputClaimToHeaders(); len(got) != 1 || got[0].GetClaim() != "sub" || got[0].GetHeader() != "x-jwt-sub" {
+		t.Fatalf("claim headers = %v, want sub -> x-jwt-sub", got)
+	}
 
 	rbacConfig := &rbacv1.RBAC{}
 	if err := filters[1].GetTypedConfig().UnmarshalTo(rbacConfig); err != nil {
@@ -96,6 +110,12 @@ func TestBuildInboundHTTPFiltersAddsJWTAndAuthorizationBeforeRouter(t *testing.T
 	if got := rule.GetWhen()[0].GetValues()[0]; got != "group1" {
 		t.Fatalf("claim value = %q, want group1", got)
 	}
+	if got := rule.GetOperations()[0].GetMethods(); len(got) != 1 || got[0] != "GET" {
+		t.Fatalf("methods = %v, want [GET]", got)
+	}
+	if got := rule.GetSources()[0].GetRemoteIpBlocks(); len(got) != 1 || got[0] != "10.0.0.0/8" {
+		t.Fatalf("remote IP blocks = %v, want [10.0.0.0/8]", got)
+	}
 }
 
 func newRequestAuthenticationConfig() config.Config {
@@ -108,8 +128,15 @@ func newRequestAuthenticationConfig() config.Config {
 		Spec: &security.RequestAuthentication{
 			Selector: &typev1alpha3.WorkloadSelector{MatchLabels: map[string]string{"app": "httpbin"}},
 			JwtRules: []*security.JWTRule{{
-				Issuer:  "testing@secure.dubbo.apache.org",
-				JwksUri: "https://secure.dubbo.apache.org/jwt/samples/jwks.json",
+				Issuer:                "testing@secure.dubbo.apache.org",
+				JwksUri:               "https://secure.dubbo.apache.org/jwt/samples/jwks.json",
+				FromCookies:           []string{"session"},
+				ForwardOriginalToken:  true,
+				OutputPayloadToHeader: "x-jwt-payload",
+				OutputClaimToHeaders: []*security.ClaimToHeader{{
+					Claim:  "sub",
+					Header: "x-jwt-sub",
+				}},
 			}},
 		},
 	}
@@ -129,7 +156,11 @@ func newAuthorizationPolicyConfig() config.Config {
 				From: []*security.From{{
 					Source: &security.Source{
 						RequestPrincipals: []string{"testing@secure.dubbo.apache.org/testing@secure.dubbo.apache.org"},
+						RemoteIpBlocks:    []string{"10.0.0.0/8"},
 					},
+				}},
+				To: []*security.To{{
+					Operation: &security.Operation{Methods: []string{"GET"}, Paths: []string{"/headers*"}},
 				}},
 				When: []*security.Condition{{
 					Key:    "request.auth.claims[groups]",
@@ -137,6 +168,67 @@ func newAuthorizationPolicyConfig() config.Config {
 				}},
 			}},
 		},
+	}
+}
+
+func TestBuildAuthorizationFiltersCustomDryRunAndTrustDomainAlias(t *testing.T) {
+	custom := config.Config{
+		Meta: config.Meta{GroupVersionKind: gvk.AuthorizationPolicy, Name: "external-check", Namespace: "foo"},
+		Spec: &security.AuthorizationPolicy{
+			Action:   security.AuthorizationPolicy_CUSTOM,
+			Provider: &security.ExtensionProvider{Name: "opa"},
+			Rules: []*security.Rule{{
+				From: []*security.From{{Source: &security.Source{
+					Principals: []string{"spiffe://cluster.local/ns/foo/sa/client"},
+				}}},
+			}},
+		},
+	}
+	audit := config.Config{
+		Meta: config.Meta{GroupVersionKind: gvk.AuthorizationPolicy, Name: "audit-admin", Namespace: "foo"},
+		Spec: &security.AuthorizationPolicy{
+			Action: security.AuthorizationPolicy_AUDIT,
+			Rules:  []*security.Rule{{To: []*security.To{{Operation: &security.Operation{Paths: []string{"/admin*"}}}}}},
+		},
+	}
+	push := newRDSTestPushContext(t, nil, nil)
+	push.Mesh.TrustDomainAliases = []string{"old.local"}
+	push.Mesh.ExtensionProviders = []*mesh.MeshExtensionProvider{{
+		Name: "opa",
+		Provider: &mesh.MeshExtensionProvider_EnvoyExtAuthzHttp{
+			EnvoyExtAuthzHttp: &mesh.ExternalAuthorizationProvider{
+				Service:                      "opa.foo.svc.cluster.local",
+				Port:                         9191,
+				PathPrefix:                   "/check",
+				IncludeRequestHeadersInCheck: []string{"authorization"},
+				HeadersToUpstreamOnAllow:     []string{"x-user"},
+				Timeout:                      durationpb.New(2 * time.Second),
+				FailOpen:                     true,
+			},
+		},
+	}}
+
+	filters := buildAuthorizationFilters(push, []config.Config{audit, custom})
+	if len(filters) != 2 {
+		t.Fatalf("filters = %d, want audit + external authorization", len(filters))
+	}
+	auditConfig := &rbacv1.RBAC{}
+	if err := filters[0].GetTypedConfig().UnmarshalTo(auditConfig); err != nil {
+		t.Fatalf("unmarshal audit filter: %v", err)
+	}
+	if !auditConfig.GetShadow() || auditConfig.GetPolicyName() != "audit-admin" {
+		t.Fatalf("audit filter = %+v, want shadow audit-admin", auditConfig)
+	}
+	external := &extauthzv1.ExtAuthz{}
+	if err := filters[1].GetTypedConfig().UnmarshalTo(external); err != nil {
+		t.Fatalf("unmarshal external authorization filter: %v", err)
+	}
+	if external.GetService() != "opa.foo.svc.cluster.local" || external.GetPort() != 9191 || !external.GetFailOpen() {
+		t.Fatalf("external authorization = %+v", external)
+	}
+	principals := external.GetRules()[0].GetSources()[0].GetPrincipals()
+	if len(principals) != 2 || principals[1] != "spiffe://old.local/ns/foo/sa/client" {
+		t.Fatalf("expanded principals = %v, want cluster.local and old.local", principals)
 	}
 }
 
@@ -154,7 +246,7 @@ func TestBuildAuthorizationFiltersSplitsDenyAndAllow(t *testing.T) {
 	}
 	allow := newAuthorizationPolicyConfig()
 
-	filters := buildAuthorizationFilters([]config.Config{deny, allow})
+	filters := buildAuthorizationFilters(nil, []config.Config{deny, allow})
 	if len(filters) != 2 {
 		t.Fatalf("filters = %d, want deny + allow", len(filters))
 	}
@@ -189,7 +281,7 @@ func TestBuildAuthorizationFiltersEmptyAllowPolicyDeniesAll(t *testing.T) {
 		Meta: config.Meta{GroupVersionKind: gvk.AuthorizationPolicy, Name: "deny-all", Namespace: "foo"},
 		Spec: &security.AuthorizationPolicy{Action: security.AuthorizationPolicy_ALLOW},
 	}
-	filters := buildAuthorizationFilters([]config.Config{allow})
+	filters := buildAuthorizationFilters(nil, []config.Config{allow})
 	if len(filters) != 1 {
 		t.Fatalf("filters = %d, want 1", len(filters))
 	}

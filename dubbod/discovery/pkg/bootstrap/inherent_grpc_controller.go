@@ -22,6 +22,7 @@ import (
 	"fmt"
 	"reflect"
 	"sort"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -48,6 +49,7 @@ import (
 	pkiutil "github.com/apache/dubbo-kubernetes/dubbod/security/pkg/pki/util"
 	caserver "github.com/apache/dubbo-kubernetes/dubbod/security/pkg/server/ca"
 	meshv1alpha1 "github.com/kdubbo/api/mesh/v1alpha1"
+	securityv1alpha3 "github.com/kdubbo/api/security/v1alpha3"
 	"google.golang.org/protobuf/proto"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -407,10 +409,57 @@ type inherentGRPCServiceRuntimeConfig struct {
 }
 
 type inherentGRPCPortRuntimeConfig struct {
-	Name     string                          `json:"name,omitempty"`
-	Port     int                             `json:"port"`
-	MTLSMode string                          `json:"mtlsMode,omitempty"`
-	Fault    *inherentGRPCFaultRuntimeConfig `json:"fault,omitempty"`
+	Name                  string                                         `json:"name,omitempty"`
+	Port                  int                                            `json:"port"`
+	MTLSMode              string                                         `json:"mtlsMode,omitempty"`
+	MinimumTLSVersion     string                                         `json:"minimumTlsVersion,omitempty"`
+	AuthorizationPolicies []inherentGRPCAuthorizationPolicyRuntimeConfig `json:"authorizationPolicies,omitempty"`
+	Fault                 *inherentGRPCFaultRuntimeConfig                `json:"fault,omitempty"`
+}
+
+type inherentGRPCAuthorizationPolicyRuntimeConfig struct {
+	Name   string                                       `json:"name"`
+	Action string                                       `json:"action"`
+	DryRun bool                                         `json:"dryRun,omitempty"`
+	Rules  []inherentGRPCAuthorizationRuleRuntimeConfig `json:"rules,omitempty"`
+}
+
+type inherentGRPCAuthorizationRuleRuntimeConfig struct {
+	Sources    []inherentGRPCAuthorizationSourceRuntimeConfig    `json:"sources,omitempty"`
+	Operations []inherentGRPCAuthorizationOperationRuntimeConfig `json:"operations,omitempty"`
+	When       []inherentGRPCAuthorizationConditionRuntimeConfig `json:"when,omitempty"`
+}
+
+type inherentGRPCAuthorizationSourceRuntimeConfig struct {
+	Principals           []string `json:"principals,omitempty"`
+	NotPrincipals        []string `json:"notPrincipals,omitempty"`
+	RequestPrincipals    []string `json:"requestPrincipals,omitempty"`
+	NotRequestPrincipals []string `json:"notRequestPrincipals,omitempty"`
+	Namespaces           []string `json:"namespaces,omitempty"`
+	NotNamespaces        []string `json:"notNamespaces,omitempty"`
+	ServiceAccounts      []string `json:"serviceAccounts,omitempty"`
+	NotServiceAccounts   []string `json:"notServiceAccounts,omitempty"`
+	IPBlocks             []string `json:"ipBlocks,omitempty"`
+	NotIPBlocks          []string `json:"notIpBlocks,omitempty"`
+	RemoteIPBlocks       []string `json:"remoteIpBlocks,omitempty"`
+	NotRemoteIPBlocks    []string `json:"notRemoteIpBlocks,omitempty"`
+}
+
+type inherentGRPCAuthorizationOperationRuntimeConfig struct {
+	Hosts      []string `json:"hosts,omitempty"`
+	NotHosts   []string `json:"notHosts,omitempty"`
+	Ports      []string `json:"ports,omitempty"`
+	NotPorts   []string `json:"notPorts,omitempty"`
+	Methods    []string `json:"methods,omitempty"`
+	NotMethods []string `json:"notMethods,omitempty"`
+	Paths      []string `json:"paths,omitempty"`
+	NotPaths   []string `json:"notPaths,omitempty"`
+}
+
+type inherentGRPCAuthorizationConditionRuntimeConfig struct {
+	Key       string   `json:"key"`
+	Values    []string `json:"values,omitempty"`
+	NotValues []string `json:"notValues,omitempty"`
 }
 
 type inherentGRPCFaultRuntimeConfig struct {
@@ -751,15 +800,154 @@ func buildRuntimeServiceConfig(push *discoverymodel.PushContext, endpointIndex *
 			continue
 		}
 		cfg.Ports = append(cfg.Ports, inherentGRPCPortRuntimeConfig{
-			Name:     port.Name,
-			Port:     port.Port,
-			MTLSMode: runtimeInboundMTLSMode(push, svc.Attributes.Namespace, port.Port),
-			Fault:    runtimeFaultInjection(push, svc.Attributes.Namespace, svc.Attributes.Name, port.Name),
+			Name:                  port.Name,
+			Port:                  port.Port,
+			MTLSMode:              runtimeInboundMTLSMode(push, svc.Attributes.Namespace, port.Port),
+			MinimumTLSVersion:     runtimeMinimumTLSVersion(push),
+			AuthorizationPolicies: runtimeAuthorizationPolicies(push, svc, port.Port),
+			Fault:                 runtimeFaultInjection(push, svc.Attributes.Namespace, svc.Attributes.Name, port.Name),
 		})
 		cfg.Endpoints = append(cfg.Endpoints, runtimeEndpointsForService(endpointIndex, svc, port.Port, nil)...)
 	}
 	sortRuntimeEndpoints(cfg.Endpoints)
 	return cfg
+}
+
+func runtimeMinimumTLSVersion(push *discoverymodel.PushContext) string {
+	if push == nil || push.Mesh == nil || push.Mesh.GetMeshMtls() == nil {
+		return ""
+	}
+	switch push.Mesh.GetMeshMtls().GetMinProtocolVersion() {
+	case meshv1alpha1.MeshMTLS_TLSV1_2:
+		return "TLSV1_2"
+	case meshv1alpha1.MeshMTLS_TLSV1_3:
+		return "TLSV1_3"
+	default:
+		return ""
+	}
+}
+
+func runtimeAuthorizationPolicies(
+	push *discoverymodel.PushContext,
+	svc *discoverymodel.Service,
+	port int,
+) []inherentGRPCAuthorizationPolicyRuntimeConfig {
+	if push == nil || push.AuthenticationPolicies == nil || svc == nil {
+		return nil
+	}
+	workloadLabels := svc.Attributes.LabelSelectors
+	if len(workloadLabels) == 0 {
+		workloadLabels = svc.Attributes.Labels
+	}
+	configs := push.AuthenticationPolicies.AuthorizationPoliciesForWorkload(svc.Attributes.Namespace, workloadLabels)
+	out := make([]inherentGRPCAuthorizationPolicyRuntimeConfig, 0, len(configs))
+	for _, cfg := range configs {
+		spec, ok := cfg.Spec.(*securityv1alpha3.AuthorizationPolicy)
+		if !ok || spec == nil || spec.GetAction() == securityv1alpha3.AuthorizationPolicy_CUSTOM {
+			continue
+		}
+		action := spec.GetAction().String()
+		if spec.GetAction() == securityv1alpha3.AuthorizationPolicy_AUDIT {
+			action = securityv1alpha3.AuthorizationPolicy_ALLOW.String()
+		}
+		policy := inherentGRPCAuthorizationPolicyRuntimeConfig{
+			Name:   cfg.Name,
+			Action: action,
+			DryRun: spec.GetDryRun() || spec.GetAction() == securityv1alpha3.AuthorizationPolicy_AUDIT,
+		}
+		for _, rule := range spec.GetRules() {
+			policy.Rules = append(policy.Rules, runtimeAuthorizationRule(push, rule, port))
+		}
+		out = append(out, policy)
+	}
+	return out
+}
+
+func runtimeAuthorizationRule(
+	push *discoverymodel.PushContext,
+	rule *securityv1alpha3.Rule,
+	port int,
+) inherentGRPCAuthorizationRuleRuntimeConfig {
+	if rule == nil {
+		return inherentGRPCAuthorizationRuleRuntimeConfig{}
+	}
+	out := inherentGRPCAuthorizationRuleRuntimeConfig{}
+	for _, from := range rule.GetFrom() {
+		source := from.GetSource()
+		if source == nil {
+			out.Sources = append(out.Sources, inherentGRPCAuthorizationSourceRuntimeConfig{})
+			continue
+		}
+		out.Sources = append(out.Sources, inherentGRPCAuthorizationSourceRuntimeConfig{
+			Principals:           runtimeExpandTrustDomainPrincipals(push, source.GetPrincipals()),
+			NotPrincipals:        runtimeExpandTrustDomainPrincipals(push, source.GetNotPrincipals()),
+			RequestPrincipals:    append([]string(nil), source.GetRequestPrincipals()...),
+			NotRequestPrincipals: append([]string(nil), source.GetNotRequestPrincipals()...),
+			Namespaces:           append([]string(nil), source.GetNamespaces()...),
+			NotNamespaces:        append([]string(nil), source.GetNotNamespaces()...),
+			ServiceAccounts:      append([]string(nil), source.GetServiceAccounts()...),
+			NotServiceAccounts:   append([]string(nil), source.GetNotServiceAccounts()...),
+			IPBlocks:             append([]string(nil), source.GetIpBlocks()...),
+			NotIPBlocks:          append([]string(nil), source.GetNotIpBlocks()...),
+			RemoteIPBlocks:       append([]string(nil), source.GetRemoteIpBlocks()...),
+			NotRemoteIPBlocks:    append([]string(nil), source.GetNotRemoteIpBlocks()...),
+		})
+	}
+	for _, to := range rule.GetTo() {
+		operation := to.GetOperation()
+		if operation == nil {
+			out.Operations = append(out.Operations, inherentGRPCAuthorizationOperationRuntimeConfig{})
+			continue
+		}
+		out.Operations = append(out.Operations, inherentGRPCAuthorizationOperationRuntimeConfig{
+			Hosts:      append([]string(nil), operation.GetHosts()...),
+			NotHosts:   append([]string(nil), operation.GetNotHosts()...),
+			Ports:      append([]string(nil), operation.GetPorts()...),
+			NotPorts:   append([]string(nil), operation.GetNotPorts()...),
+			Methods:    append([]string(nil), operation.GetMethods()...),
+			NotMethods: append([]string(nil), operation.GetNotMethods()...),
+			Paths:      append([]string(nil), operation.GetPaths()...),
+			NotPaths:   append([]string(nil), operation.GetNotPaths()...),
+		})
+	}
+	if len(out.Operations) == 0 {
+		out.Operations = []inherentGRPCAuthorizationOperationRuntimeConfig{{Ports: []string{strconv.Itoa(port)}}}
+	}
+	for _, condition := range rule.GetWhen() {
+		if condition == nil {
+			continue
+		}
+		out.When = append(out.When, inherentGRPCAuthorizationConditionRuntimeConfig{
+			Key:       condition.GetKey(),
+			Values:    append([]string(nil), condition.GetValues()...),
+			NotValues: append([]string(nil), condition.GetNotValues()...),
+		})
+	}
+	return out
+}
+
+func runtimeExpandTrustDomainPrincipals(push *discoverymodel.PushContext, principals []string) []string {
+	if push == nil || push.Mesh == nil || len(push.Mesh.GetTrustDomainAliases()) == 0 {
+		return append([]string(nil), principals...)
+	}
+	out := sets.New[string]()
+	for _, principal := range principals {
+		out.Insert(principal)
+		marker := strings.Index(principal, "/ns/")
+		if marker <= 0 || strings.HasPrefix(principal, "*/") {
+			continue
+		}
+		prefix := ""
+		if strings.HasPrefix(principal, "spiffe://") {
+			prefix = "spiffe://"
+		}
+		for _, alias := range push.Mesh.GetTrustDomainAliases() {
+			if alias != "" {
+				out.Insert(prefix + alias + principal[marker:])
+			}
+		}
+	}
+	return sets.SortedList(out)
 }
 
 func runtimeFaultInjection(push *discoverymodel.PushContext, namespace, name, portName string) *inherentGRPCFaultRuntimeConfig {

@@ -28,6 +28,8 @@ const (
 	JWTAuthentication = "filters.http.jwt_authn"
 	// HTTPRoleBasedAccessControl enforces request authorization policies.
 	HTTPRoleBasedAccessControl = "filters.http.rbac"
+	// HTTPExternalAuthorization delegates request authorization to a configured service.
+	HTTPExternalAuthorization = "filters.http.ext_authz"
 	// HTTPRouter forwards the request after earlier HTTP filters have accepted it.
 	HTTPRouter = "filters.http.router"
 )

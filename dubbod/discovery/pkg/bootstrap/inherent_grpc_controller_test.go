@@ -36,6 +36,7 @@ import (
 	"github.com/apache/dubbo-kubernetes/pkg/kube/inject"
 	"github.com/apache/dubbo-kubernetes/pkg/kube/krt"
 	"github.com/apache/dubbo-kubernetes/pkg/util/sets"
+	meshapi "github.com/kdubbo/api/mesh/v1alpha1"
 	networking "github.com/kdubbo/api/networking/v1alpha3"
 	security "github.com/kdubbo/api/security/v1alpha3"
 	"google.golang.org/protobuf/types/known/durationpb"
@@ -273,7 +274,23 @@ func TestBuildRuntimeTrafficConfigCapturesInherentSecurity(t *testing.T) {
 	svc := newInherentRuntimeTestService("provider", "grpc-app", string(hostname), 17070)
 	push := newInherentRuntimeTestPushContext(t, []config.Config{
 		newInherentStrictPeerAuthenticationConfig("grpc-app-strict-mtls", "grpc-app"),
+		{
+			Meta: config.Meta{
+				GroupVersionKind: gvk.AuthorizationPolicy,
+				Name:             "deny-private",
+				Namespace:        "grpc-app",
+			},
+			Spec: &security.AuthorizationPolicy{
+				Action: security.AuthorizationPolicy_DENY,
+				DryRun: true,
+				Rules: []*security.Rule{{
+					From: []*security.From{{Source: &security.Source{IpBlocks: []string{"10.0.0.0/8"}}}},
+					To:   []*security.To{{Operation: &security.Operation{Ports: []string{"17070"}}}},
+				}},
+			},
+		},
 	}, []*discoverymodel.Service{svc})
+	push.Mesh.MeshMtls = &meshapi.MeshMTLS{MinProtocolVersion: meshapi.MeshMTLS_TLSV1_3}
 
 	serviceConfig := buildRuntimeServiceConfig(push, nil, svc)
 	if len(serviceConfig.Ports) != 1 {
@@ -281,6 +298,16 @@ func TestBuildRuntimeTrafficConfigCapturesInherentSecurity(t *testing.T) {
 	}
 	if got := serviceConfig.Ports[0].MTLSMode; got != "STRICT" {
 		t.Fatalf("mtlsMode = %q, want STRICT", got)
+	}
+	if got := serviceConfig.Ports[0].MinimumTLSVersion; got != "TLSV1_3" {
+		t.Fatalf("minimumTLSVersion = %q, want TLSV1_3", got)
+	}
+	policies := serviceConfig.Ports[0].AuthorizationPolicies
+	if len(policies) != 1 || policies[0].Action != "DENY" || !policies[0].DryRun {
+		t.Fatalf("authorization policies = %+v, want dry-run DENY", policies)
+	}
+	if got := policies[0].Rules[0].Sources[0].IPBlocks; len(got) != 1 || got[0] != "10.0.0.0/8" {
+		t.Fatalf("IP blocks = %v, want [10.0.0.0/8]", got)
 	}
 
 	routeConfig := buildRuntimeRouteConfig(push, nil, svc, 17070)

@@ -35,6 +35,25 @@
 {{- $defaultGateway := $defaults.gateway | default dict }}
 {{- $gatewayImage := coalesce $gateway.image $defaultGateway.image "kdubbo/dxgate:latest" }}
 {{- $gatewayReplicas := int (coalesce $gateway.replicaCount $defaultGateway.replicaCount 2) }}
+{{- $defaultSecurity := $defaults.security | default dict }}
+{{- $defaultCA := $defaultSecurity.ca | default dict }}
+{{- $defaultPluginCA := $defaultCA.plugin | default dict }}
+{{- $defaultKubernetesCA := $defaultCA.kubernetes | default dict }}
+{{- $security := .Values.security | default dict }}
+{{- $ca := $security.ca | default dict }}
+{{- $pluginCA := $ca.plugin | default dict }}
+{{- $kubernetesCA := $ca.kubernetes | default dict }}
+{{- $caProvider := coalesce $ca.provider $defaultCA.provider "builtin" }}
+{{- $pluginCASecretName := coalesce $pluginCA.secretName $defaultPluginCA.secretName "cacerts" }}
+{{- $kubernetesSignerName := coalesce $kubernetesCA.signerName $defaultKubernetesCA.signerName }}
+{{- $kubernetesSignerDomain := coalesce $kubernetesCA.signerDomain $defaultKubernetesCA.signerDomain }}
+{{- $kubernetesRootConfigMapName := coalesce $kubernetesCA.rootConfigMapName $defaultKubernetesCA.rootConfigMapName "dubbo-ca-root-cert" }}
+{{- if and (eq $caProvider "kubernetes") (not $kubernetesSignerName) }}
+{{- fail "security.ca.kubernetes.signerName is required when security.ca.provider=kubernetes" }}
+{{- end }}
+{{- if and (eq $caProvider "plugin") (not $pluginCASecretName) }}
+{{- fail "security.ca.plugin.secretName is required when security.ca.provider=plugin" }}
+{{- end }}
 {{- $remoteAccessCertificateHosts := $remoteAccess.certificateHosts | default $defaultRemoteAccess.certificateHosts | default (list) }}
 {{- $eastWestGateways := $eastWestGateway.gateways | default $defaultEastWestGateway.gateways | default (list) }}
 {{- $eastWestGatewayEntries := list }}
@@ -134,7 +153,25 @@ spec:
             - name: REVISION
               value: default
             - name: DUBBO_CERT_PROVIDER
+{{- if eq $caProvider "kubernetes" }}
+              value: {{ printf "k8s.io/%s" $kubernetesSignerName | quote }}
+{{- else }}
               value: dubbod
+{{- end }}
+{{- if eq $caProvider "plugin" }}
+            - name: ROOT_CA_DIR
+              value: /etc/cacerts
+{{- end }}
+{{- if eq $caProvider "kubernetes" }}
+            - name: EXTERNAL_CA
+              value: DUBBOD_RA_KUBERNETES_API
+            - name: K8S_SIGNER
+              value: {{ $kubernetesSignerName | quote }}
+{{- if $kubernetesSignerDomain }}
+            - name: CERT_SIGNER_DOMAIN
+              value: {{ $kubernetesSignerDomain | quote }}
+{{- end }}
+{{- end }}
             - name: DUBBO_DXGATE_IMAGE
               value: {{ $gatewayImage | quote }}
 {{- if gt (len $remoteAccessCertificateHosts) 0 }}
@@ -172,9 +209,30 @@ spec:
           - mountPath: /var/run/secrets/dubbod/ca
             name: dubbo-csr-ca-configmap
             readOnly: true
+{{- if eq $caProvider "plugin" }}
+          - mountPath: /etc/cacerts
+            name: plugin-ca
+            readOnly: true
+{{- end }}
+{{- if eq $caProvider "kubernetes" }}
+          - mountPath: /etc/external-ca-cert
+            name: kubernetes-ca-root
+            readOnly: true
+{{- end }}
       volumes:
       - configMap:
           defaultMode: 420
           name: dubbo-ca-root-cert
           optional: true
         name: dubbo-csr-ca-configmap
+{{- if eq $caProvider "plugin" }}
+      - name: plugin-ca
+        secret:
+          secretName: {{ $pluginCASecretName | quote }}
+{{- end }}
+{{- if eq $caProvider "kubernetes" }}
+      - name: kubernetes-ca-root
+        configMap:
+          name: {{ $kubernetesRootConfigMapName | quote }}
+          optional: false
+{{- end }}

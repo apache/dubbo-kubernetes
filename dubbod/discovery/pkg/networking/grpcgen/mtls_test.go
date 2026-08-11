@@ -22,6 +22,7 @@ import (
 	"github.com/apache/dubbo-kubernetes/pkg/config"
 	"github.com/apache/dubbo-kubernetes/pkg/config/schema/gvk"
 	"github.com/apache/dubbo-kubernetes/pkg/grpcxds"
+	mesh "github.com/kdubbo/api/mesh/v1alpha1"
 	security "github.com/kdubbo/api/security/v1alpha3"
 	tlsv1 "github.com/kdubbo/xds-api/extensions/transport_sockets/tls/v1"
 	listener "github.com/kdubbo/xds-api/listener/v1"
@@ -40,6 +41,7 @@ func TestPeerAuthenticationStrictBuildsDownstreamMTLSListener(t *testing.T) {
 	push := newRDSTestPushContext(t, []config.Config{
 		newStrictPeerAuthenticationConfig("app-strict-mtls", "app"),
 	}, []*model.Service{svc})
+	push.Mesh.MeshMtls = &mesh.MeshMTLS{MinProtocolVersion: mesh.MeshMTLS_TLSV1_3}
 
 	listenerName := grpcxds.ServerListenerNamePrefix + "0.0.0.0:80"
 	resources := (&GrpcConfigGenerator{}).BuildListeners(proxy, push, []string{listenerName})
@@ -60,6 +62,9 @@ func TestPeerAuthenticationStrictBuildsDownstreamMTLSListener(t *testing.T) {
 		t.Fatalf("RequireClientCertificate = %v, want true", tlsContext.GetRequireClientCertificate())
 	}
 	assertCommonTLSContext(t, tlsContext.GetCommonTlsContext())
+	if got := tlsContext.GetCommonTlsContext().GetTlsParams().GetMinProtocolVersion(); got != tlsv1.TlsParameters_TLSV1_3 {
+		t.Fatalf("minimum TLS version = %v, want TLSV1_3", got)
+	}
 }
 
 func TestPeerAuthenticationPermissiveBuildsPlaintextAndMTLSFilterChains(t *testing.T) {

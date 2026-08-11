@@ -22,6 +22,7 @@ import (
 	"github.com/apache/dubbo-kubernetes/pkg/config/schema/kind"
 	dubbolog "github.com/apache/dubbo-kubernetes/pkg/log"
 	"github.com/apache/dubbo-kubernetes/pkg/util/sets"
+	meshv1alpha1 "github.com/kdubbo/api/mesh/v1alpha1"
 	tlsv1 "github.com/kdubbo/xds-api/extensions/transport_sockets/tls/v1"
 )
 
@@ -143,4 +144,20 @@ func buildCommonTLSContext(sans []string) *tlsv1.CommonTlsContext {
 			},
 		},
 	}
+}
+
+func applyMeshMinimumTLSVersion(common *tlsv1.CommonTlsContext, mesh *meshv1alpha1.MeshConfig) {
+	if common == nil || mesh == nil || mesh.GetMeshMtls() == nil {
+		return
+	}
+	var minimum tlsv1.TlsParameters_TlsProtocol
+	switch mesh.GetMeshMtls().GetMinProtocolVersion() {
+	case meshv1alpha1.MeshMTLS_TLSV1_2:
+		minimum = tlsv1.TlsParameters_TLSV1_2
+	case meshv1alpha1.MeshMTLS_TLSV1_3:
+		minimum = tlsv1.TlsParameters_TLSV1_3
+	default:
+		return
+	}
+	common.TlsParams = &tlsv1.TlsParameters{MinProtocolVersion: minimum}
 }

@@ -1197,11 +1197,24 @@ spec:
                 description: |-
                   The action to take if a request matches the rules.
 
-                  Valid Options: ALLOW, DENY
+                  Valid Options: ALLOW, DENY, AUDIT, CUSTOM
                 enum:
                 - ALLOW
                 - DENY
+                - AUDIT
+                - CUSTOM
                 type: string
+              dryRun:
+                description: Evaluate and report this policy without enforcing its
+                  result.
+                type: boolean
+              provider:
+                description: External authorization provider used by CUSTOM policies.
+                properties:
+                  name:
+                    description: Name of the configured external authorization provider.
+                    type: string
+                type: object
               rules:
                 description: Authorization rules.
                 items:
@@ -1213,9 +1226,123 @@ spec:
                           source:
                             description: Source attributes.
                             properties:
+                              ipBlocks:
+                                description: Source IP blocks observed on the immediate
+                                  downstream connection.
+                                items:
+                                  type: string
+                                type: array
+                              namespaces:
+                                description: Source workload namespaces.
+                                items:
+                                  type: string
+                                type: array
+                              notIpBlocks:
+                                description: Immediate source IP blocks excluded from
+                                  this source.
+                                items:
+                                  type: string
+                                type: array
+                              notNamespaces:
+                                description: Source workload namespaces excluded from
+                                  this source.
+                                items:
+                                  type: string
+                                type: array
+                              notPrincipals:
+                                description: Peer identities excluded from this source.
+                                items:
+                                  type: string
+                                type: array
+                              notRemoteIpBlocks:
+                                description: Original client IP blocks excluded from
+                                  this source.
+                                items:
+                                  type: string
+                                type: array
+                              notRequestPrincipals:
+                                description: JWT request identities excluded from
+                                  this source.
+                                items:
+                                  type: string
+                                type: array
+                              notServiceAccounts:
+                                description: Source workload service accounts excluded
+                                  from this source.
+                                items:
+                                  type: string
+                                type: array
+                              principals:
+                                description: Peer identities derived from mutual TLS.
+                                items:
+                                  type: string
+                                type: array
+                              remoteIpBlocks:
+                                description: Original client IP blocks derived from
+                                  trusted proxy headers.
+                                items:
+                                  type: string
+                                type: array
                               requestPrincipals:
                                 description: Request identities derived from validated
                                   JWT issuer and subject.
+                                items:
+                                  type: string
+                                type: array
+                              serviceAccounts:
+                                description: Source workload service accounts in namespace/service-account
+                                  form.
+                                items:
+                                  type: string
+                                type: array
+                            type: object
+                        type: object
+                      type: array
+                    to:
+                      description: Request operations.
+                      items:
+                        properties:
+                          operation:
+                            description: Operation attributes.
+                            properties:
+                              hosts:
+                                description: HTTP hosts.
+                                items:
+                                  type: string
+                                type: array
+                              methods:
+                                description: HTTP methods.
+                                items:
+                                  type: string
+                                type: array
+                              notHosts:
+                                description: HTTP hosts excluded from this operation.
+                                items:
+                                  type: string
+                                type: array
+                              notMethods:
+                                description: HTTP methods excluded from this operation.
+                                items:
+                                  type: string
+                                type: array
+                              notPaths:
+                                description: HTTP paths excluded from this operation.
+                                items:
+                                  type: string
+                                type: array
+                              notPorts:
+                                description: Destination ports excluded from this
+                                  operation.
+                                items:
+                                  type: string
+                                type: array
+                              paths:
+                                description: HTTP paths.
+                                items:
+                                  type: string
+                                type: array
+                              ports:
+                                description: Destination ports.
                                 items:
                                   type: string
                                 type: array
@@ -1478,6 +1605,14 @@ spec:
                       items:
                         type: string
                       type: array
+                    forwardOriginalToken:
+                      description: Preserve the original token for the upstream workload.
+                      type: boolean
+                    fromCookies:
+                      description: JWT locations in cookies.
+                      items:
+                        type: string
+                      type: array
                     fromHeaders:
                       description: JWT locations in request headers.
                       items:
@@ -1503,6 +1638,22 @@ spec:
                       type: string
                     jwksUri:
                       description: URL of the JSON Web Key Set used to validate tokens.
+                      type: string
+                    outputClaimToHeaders:
+                      description: Copy selected validated claims to HTTP headers.
+                      items:
+                        properties:
+                          claim:
+                            description: JWT claim name.
+                            type: string
+                          header:
+                            description: HTTP header receiving the claim value.
+                            type: string
+                        type: object
+                      type: array
+                    outputPayloadToHeader:
+                      description: Copy the validated JWT payload as JSON to this
+                        HTTP header.
                       type: string
                   type: object
                 type: array

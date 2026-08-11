@@ -29,6 +29,35 @@ helm upgrade --install dubbod ./dubbod-${VERSION}.tgz \
   --set-string global.inherent.cni.image=registry.example.com/dubbod:${VERSION}
 ```
 
+## Security configuration
+
+The built-in rotating CA and TLS 1.2 minimum are enabled by default. A mounted
+four-file CA Secret (`ca-cert.pem`, `ca-key.pem`, `cert-chain.pem`, and
+`root-cert.pem`) can replace it:
+
+```bash
+helm upgrade --install dubbod ./manifests/charts/dubbod \
+  --namespace dubbo-system \
+  --set security.ca.provider=plugin \
+  --set security.ca.plugin.secretName=cacerts
+```
+
+To delegate certificate signing to the Kubernetes CSR API, provide the signer,
+its root bundle ConfigMap, and a matching `meshConfig.caCertificates` entry:
+
+```bash
+helm upgrade --install dubbod ./manifests/charts/dubbod \
+  --namespace dubbo-system \
+  --set security.ca.provider=kubernetes \
+  --set-string security.ca.kubernetes.signerName=example.com/dubbo \
+  --set-string security.ca.kubernetes.rootConfigMapName=dubbo-ca-root-cert
+```
+
+Set `meshConfig.minimumTlsVersion=TLSV1_3` to require TLS 1.3. Configure named
+HTTP or gRPC external authorization services under
+`meshConfig.extensionProviders`; `AuthorizationPolicy` resources reference
+them through `provider.name`.
+
 ## Uninstalling the Chart
 
 To uninstall/delete the dubbo deployment:
