@@ -18,8 +18,6 @@
 {{- $defaultManagement := $defaults.management | default dict }}
 {{- $proxy := .Values.proxy | default dict }}
 {{- $management := .Values.management | default dict }}
-{{- $meshConfig := .Values.meshConfig | default ($defaults.meshConfig | default dict) }}
-{{- $security := .Values.security | default ($defaults.security | default dict) }}
 {{- $clusterDomain := coalesce $proxy.clusterDomain $defaultProxy.clusterDomain "cluster.local" }}
 {{- $revision := .Values.revision | default "default" }}
 {{- $statusPort := coalesce .Values.statusPort $defaults.statusPort 26020 }}
@@ -42,10 +40,6 @@ data:
       clusterDomain: {{ $clusterDomain | quote }}
     management:
       port: {{ $managementPort }}
-    meshConfig:
-{{ $meshConfig | toYaml | nindent 6 }}
-    security:
-{{ $security | toYaml | nindent 6 }}
     statusPort: {{ $statusPort }}
   original-values: |-
 {{ $original | toYaml | nindent 4 }}

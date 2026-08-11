@@ -17,16 +17,11 @@
 package grpcgen
 
 import (
-	"strings"
-
 	"github.com/apache/dubbo-kubernetes/dubbod/discovery/pkg/model"
 	"github.com/apache/dubbo-kubernetes/dubbod/discovery/pkg/util/protoconv"
 	"github.com/apache/dubbo-kubernetes/pkg/config"
-	"github.com/apache/dubbo-kubernetes/pkg/util/sets"
 	"github.com/apache/dubbo-kubernetes/pkg/wellknown"
-	mesh "github.com/kdubbo/api/mesh/v1alpha1"
 	security "github.com/kdubbo/api/security/v1alpha3"
-	extauthzv1 "github.com/kdubbo/xds-api/extensions/filters/v1/http/ext_authz"
 	jwtv1 "github.com/kdubbo/xds-api/extensions/filters/v1/http/jwt_authn"
 	rbacv1 "github.com/kdubbo/xds-api/extensions/filters/v1/http/rbac"
 	routerv1 "github.com/kdubbo/xds-api/extensions/filters/v1/http/router"
@@ -42,7 +37,7 @@ func buildInboundHTTPFilters(push *model.PushContext, serviceTarget model.Servic
 	if jwt := buildJWTAuthenticationFilter(push.RequestAuthenticationsForWorkload(namespace, workloadLabels)); jwt != nil {
 		filters = append(filters, jwt)
 	}
-	filters = append(filters, buildAuthorizationFilters(push, push.AuthorizationPoliciesForWorkload(namespace, workloadLabels))...)
+	filters = append(filters, buildAuthorizationFilters(push.AuthorizationPoliciesForWorkload(namespace, workloadLabels))...)
 	filters = append(filters, routerHTTPFilter())
 	return filters
 }
@@ -85,31 +80,13 @@ func jwtProviderFromRule(rule *security.JWTRule) *jwtv1.JwtProvider {
 		headers = append(headers, &jwtv1.JwtHeader{Name: "authorization", Prefix: "Bearer "})
 	}
 	return &jwtv1.JwtProvider{
-		Issuer:                rule.GetIssuer(),
-		Audiences:             append([]string(nil), rule.GetAudiences()...),
-		JwksUri:               rule.GetJwksUri(),
-		Jwks:                  rule.GetJwks(),
-		FromHeaders:           headers,
-		FromParams:            append([]string(nil), rule.GetFromParams()...),
-		FromCookies:           append([]string(nil), rule.GetFromCookies()...),
-		ForwardOriginalToken:  rule.GetForwardOriginalToken(),
-		OutputPayloadToHeader: rule.GetOutputPayloadToHeader(),
-		OutputClaimToHeaders:  claimHeadersFromAPI(rule.GetOutputClaimToHeaders()),
+		Issuer:      rule.GetIssuer(),
+		Audiences:   append([]string(nil), rule.GetAudiences()...),
+		JwksUri:     rule.GetJwksUri(),
+		Jwks:        rule.GetJwks(),
+		FromHeaders: headers,
+		FromParams:  append([]string(nil), rule.GetFromParams()...),
 	}
-}
-
-func claimHeadersFromAPI(headers []*security.ClaimToHeader) []*jwtv1.ClaimToHeader {
-	out := make([]*jwtv1.ClaimToHeader, 0, len(headers))
-	for _, header := range headers {
-		if header == nil || strings.TrimSpace(header.GetClaim()) == "" || strings.TrimSpace(header.GetHeader()) == "" {
-			continue
-		}
-		out = append(out, &jwtv1.ClaimToHeader{
-			Claim:  header.GetClaim(),
-			Header: header.GetHeader(),
-		})
-	}
-	return out
 }
 
 // buildAuthorizationFilters translates AuthorizationPolicies into RBAC filters.
@@ -118,14 +95,10 @@ func claimHeadersFromAPI(headers []*security.ClaimToHeader) []*jwtv1.ClaimToHead
 // exists — rejected unless it matches an ALLOW rule. Emitting them as two
 // filters (DENY first) preserves those semantics; folding both actions into a
 // single filter would turn every ALLOW rule into a DENY rule.
-func buildAuthorizationFilters(push *model.PushContext, configs []config.Config) []*hcmv1.HttpFilter {
+func buildAuthorizationFilters(configs []config.Config) []*hcmv1.HttpFilter {
 	denyRules := []*rbacv1.Rule{}
 	allowRules := []*rbacv1.Rule{}
-	dryRunFilters := []*hcmv1.HttpFilter{}
-	customFilters := []*hcmv1.HttpFilter{}
 	hasAllowPolicy := false
-	denyNames := []string{}
-	allowNames := []string{}
 	for _, cfg := range configs {
 		spec, ok := cfg.Spec.(*security.AuthorizationPolicy)
 		if !ok || spec == nil {
@@ -133,105 +106,34 @@ func buildAuthorizationFilters(push *model.PushContext, configs []config.Config)
 		}
 		rules := make([]*rbacv1.Rule, 0, len(spec.GetRules()))
 		for _, rule := range spec.GetRules() {
-			rules = append(rules, authorizationRuleFromAPI(push, rule))
-		}
-		if spec.GetAction() == security.AuthorizationPolicy_CUSTOM {
-			if filter := buildExternalAuthorizationFilter(push, cfg.Name, spec, rules); filter != nil {
-				customFilters = append(customFilters, filter)
-			}
-			continue
-		}
-		if spec.GetDryRun() || spec.GetAction() == security.AuthorizationPolicy_AUDIT {
-			action := rbacv1.RBAC_ALLOW
-			if spec.GetAction() == security.AuthorizationPolicy_DENY {
-				action = rbacv1.RBAC_DENY
-			}
-			dryRunFilters = append(dryRunFilters, typedHTTPFilter(wellknown.HTTPRoleBasedAccessControl, &rbacv1.RBAC{
-				Action:     action,
-				Rules:      rules,
-				Shadow:     true,
-				PolicyName: cfg.Name,
-			}))
-			continue
+			rules = append(rules, authorizationRuleFromAPI(rule))
 		}
 		if spec.GetAction() == security.AuthorizationPolicy_DENY {
 			denyRules = append(denyRules, rules...)
-			denyNames = append(denyNames, cfg.Name)
 		} else {
 			// An ALLOW policy with no rules matches nothing and therefore
 			// rejects every request; track policy presence separately from rules.
 			hasAllowPolicy = true
 			allowRules = append(allowRules, rules...)
-			allowNames = append(allowNames, cfg.Name)
 		}
 	}
 	filters := []*hcmv1.HttpFilter{}
 	if len(denyRules) > 0 {
 		filters = append(filters, typedHTTPFilter(wellknown.HTTPRoleBasedAccessControl, &rbacv1.RBAC{
-			Action:     rbacv1.RBAC_DENY,
-			Rules:      denyRules,
-			PolicyName: strings.Join(denyNames, ","),
+			Action: rbacv1.RBAC_DENY,
+			Rules:  denyRules,
 		}))
 	}
 	if hasAllowPolicy {
 		filters = append(filters, typedHTTPFilter(wellknown.HTTPRoleBasedAccessControl, &rbacv1.RBAC{
-			Action:     rbacv1.RBAC_ALLOW,
-			Rules:      allowRules,
-			PolicyName: strings.Join(allowNames, ","),
+			Action: rbacv1.RBAC_ALLOW,
+			Rules:  allowRules,
 		}))
 	}
-	filters = append(filters, dryRunFilters...)
-	filters = append(filters, customFilters...)
 	return filters
 }
 
-func buildExternalAuthorizationFilter(
-	push *model.PushContext,
-	policyName string,
-	policy *security.AuthorizationPolicy,
-	rules []*rbacv1.Rule,
-) *hcmv1.HttpFilter {
-	if push == nil || push.Mesh == nil || policy.GetProvider().GetName() == "" {
-		return nil
-	}
-	name := policy.GetProvider().GetName()
-	for _, candidate := range push.Mesh.GetExtensionProviders() {
-		if candidate == nil || candidate.GetName() != name {
-			continue
-		}
-		provider, protocol := externalAuthorizationProvider(candidate)
-		if provider == nil || provider.GetService() == "" || provider.GetPort() == 0 {
-			return nil
-		}
-		return typedHTTPFilter(wellknown.HTTPExternalAuthorization, &extauthzv1.ExtAuthz{
-			Provider:                     name,
-			Protocol:                     protocol,
-			Service:                      provider.GetService(),
-			Port:                         provider.GetPort(),
-			PathPrefix:                   provider.GetPathPrefix(),
-			IncludeRequestHeadersInCheck: append([]string(nil), provider.GetIncludeRequestHeadersInCheck()...),
-			HeadersToUpstreamOnAllow:     append([]string(nil), provider.GetHeadersToUpstreamOnAllow()...),
-			HeadersToDownstreamOnDeny:    append([]string(nil), provider.GetHeadersToDownstreamOnDeny()...),
-			Timeout:                      provider.GetTimeout(),
-			FailOpen:                     provider.GetFailOpen(),
-			Shadow:                       policy.GetDryRun(),
-			Rules:                        rules,
-		})
-	}
-	return nil
-}
-
-func externalAuthorizationProvider(provider *mesh.MeshExtensionProvider) (*mesh.ExternalAuthorizationProvider, extauthzv1.ExtAuthz_Protocol) {
-	if httpProvider := provider.GetEnvoyExtAuthzHttp(); httpProvider != nil {
-		return httpProvider, extauthzv1.ExtAuthz_HTTP
-	}
-	if grpcProvider := provider.GetEnvoyExtAuthzGrpc(); grpcProvider != nil {
-		return grpcProvider, extauthzv1.ExtAuthz_GRPC
-	}
-	return nil, extauthzv1.ExtAuthz_HTTP
-}
-
-func authorizationRuleFromAPI(push *model.PushContext, rule *security.Rule) *rbacv1.Rule {
+func authorizationRuleFromAPI(rule *security.Rule) *rbacv1.Rule {
 	if rule == nil {
 		return &rbacv1.Rule{}
 	}
@@ -242,36 +144,8 @@ func authorizationRuleFromAPI(push *model.PushContext, rule *security.Rule) *rba
 			continue
 		}
 		sources = append(sources, &rbacv1.Source{
-			RequestPrincipals:    append([]string(nil), from.GetSource().GetRequestPrincipals()...),
-			Principals:           expandTrustDomainPrincipals(push, from.GetSource().GetPrincipals()),
-			NotPrincipals:        expandTrustDomainPrincipals(push, from.GetSource().GetNotPrincipals()),
-			NotRequestPrincipals: append([]string(nil), from.GetSource().GetNotRequestPrincipals()...),
-			Namespaces:           append([]string(nil), from.GetSource().GetNamespaces()...),
-			NotNamespaces:        append([]string(nil), from.GetSource().GetNotNamespaces()...),
-			ServiceAccounts:      append([]string(nil), from.GetSource().GetServiceAccounts()...),
-			NotServiceAccounts:   append([]string(nil), from.GetSource().GetNotServiceAccounts()...),
-			IpBlocks:             append([]string(nil), from.GetSource().GetIpBlocks()...),
-			NotIpBlocks:          append([]string(nil), from.GetSource().GetNotIpBlocks()...),
-			RemoteIpBlocks:       append([]string(nil), from.GetSource().GetRemoteIpBlocks()...),
-			NotRemoteIpBlocks:    append([]string(nil), from.GetSource().GetNotRemoteIpBlocks()...),
-		})
-	}
-	operations := make([]*rbacv1.Operation, 0, len(rule.GetTo()))
-	for _, to := range rule.GetTo() {
-		if to == nil || to.GetOperation() == nil {
-			operations = append(operations, &rbacv1.Operation{})
-			continue
-		}
-		operation := to.GetOperation()
-		operations = append(operations, &rbacv1.Operation{
-			Hosts:      append([]string(nil), operation.GetHosts()...),
-			NotHosts:   append([]string(nil), operation.GetNotHosts()...),
-			Ports:      append([]string(nil), operation.GetPorts()...),
-			NotPorts:   append([]string(nil), operation.GetNotPorts()...),
-			Methods:    append([]string(nil), operation.GetMethods()...),
-			NotMethods: append([]string(nil), operation.GetNotMethods()...),
-			Paths:      append([]string(nil), operation.GetPaths()...),
-			NotPaths:   append([]string(nil), operation.GetNotPaths()...),
+			RequestPrincipals: append([]string(nil), from.GetSource().GetRequestPrincipals()...),
+			Principals:        append([]string(nil), from.GetSource().GetPrincipals()...),
 		})
 	}
 	when := make([]*rbacv1.Condition, 0, len(rule.GetWhen()))
@@ -285,32 +159,7 @@ func authorizationRuleFromAPI(push *model.PushContext, rule *security.Rule) *rba
 			NotValues: append([]string(nil), condition.GetNotValues()...),
 		})
 	}
-	return &rbacv1.Rule{Sources: sources, Operations: operations, When: when}
-}
-
-func expandTrustDomainPrincipals(push *model.PushContext, principals []string) []string {
-	if len(principals) == 0 || push == nil || push.Mesh == nil || len(push.Mesh.GetTrustDomainAliases()) == 0 {
-		return append([]string(nil), principals...)
-	}
-	out := sets.New[string]()
-	for _, principal := range principals {
-		out.Insert(principal)
-		marker := strings.Index(principal, "/ns/")
-		if marker <= 0 || strings.HasPrefix(principal, "*/") {
-			continue
-		}
-		prefix := ""
-		if strings.HasPrefix(principal, "spiffe://") {
-			prefix = "spiffe://"
-		}
-		suffix := principal[marker:]
-		for _, alias := range push.Mesh.GetTrustDomainAliases() {
-			if alias != "" {
-				out.Insert(prefix + alias + suffix)
-			}
-		}
-	}
-	return sets.SortedList(out)
+	return &rbacv1.Rule{Sources: sources, When: when}
 }
 
 func routerHTTPFilter() *hcmv1.HttpFilter {

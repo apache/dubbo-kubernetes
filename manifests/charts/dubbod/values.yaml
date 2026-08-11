@@ -30,27 +30,6 @@ _internal_default_values_not_set:
   proxy:
     clusterDomain: "cluster.local"
 
-  meshConfig:
-    # SPIFFE trust domains accepted in addition to proxy.clusterDomain.
-    trustDomainAliases: []
-    # Valid values: TLSV1_2 or TLSV1_3.
-    minimumTlsVersion: TLSV1_2
-    # Raw MeshConfig provider and CA entries. Policies reference providers by name.
-    extensionProviders: []
-    caCertificates: []
-
-  security:
-    ca:
-      # builtin uses the rotating Dubbod CA; plugin mounts a four-file cacerts
-      # Secret; kubernetes delegates signing through the certificates.k8s.io API.
-      provider: builtin
-      plugin:
-        secretName: cacerts
-      kubernetes:
-        signerName: ""
-        signerDomain: ""
-        rootConfigMapName: dubbo-ca-root-cert
-
   statusPort: 26020
 
   management:

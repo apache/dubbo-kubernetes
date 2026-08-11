@@ -29,7 +29,6 @@ import (
 	"github.com/apache/dubbo-kubernetes/pkg/grpcxds"
 	"github.com/apache/dubbo-kubernetes/pkg/util/sets"
 	"github.com/apache/dubbo-kubernetes/pkg/wellknown"
-	meshv1alpha1 "github.com/kdubbo/api/mesh/v1alpha1"
 	core "github.com/kdubbo/xds-api/core/v1"
 	routerv1 "github.com/kdubbo/xds-api/extensions/filters/v1/http/router"
 	hcmv1 "github.com/kdubbo/xds-api/extensions/filters/v1/network/http_connection_manager"
@@ -287,7 +286,7 @@ func buildInboundListeners(node *model.Proxy, push *model.PushContext, names []s
 			},
 		}
 
-		filterChains := buildInboundFilterChains(filterChain, mode, push.Mesh)
+		filterChains := buildInboundFilterChains(filterChain, mode)
 		logInboundMTLSMode(name, mode, len(filterChains))
 
 		ll := &listener.Listener{
@@ -320,7 +319,7 @@ func buildInboundListeners(node *model.Proxy, push *model.PushContext, names []s
 	return out
 }
 
-func buildDownstreamTransportSocket(mode model.MutualTLSMode, meshConfig *meshv1alpha1.MeshConfig) *core.TransportSocket {
+func buildDownstreamTransportSocket(mode model.MutualTLSMode) *core.TransportSocket {
 	if mode != model.MTLSStrict {
 		return nil
 	}
@@ -331,7 +330,6 @@ func buildDownstreamTransportSocket(mode model.MutualTLSMode, meshConfig *meshv1
 		return nil
 	}
 	common.AlpnProtocols = []string{"h2"}
-	applyMeshMinimumTLSVersion(common, meshConfig)
 
 	// For STRICT mTLS, we require client certificates and validate them
 	// The validation context is already configured in buildCommonTLSContext
@@ -348,15 +346,15 @@ func buildDownstreamTransportSocket(mode model.MutualTLSMode, meshConfig *meshv1
 	}
 }
 
-func buildInboundFilterChains(plaintext *listener.FilterChain, mode model.MutualTLSMode, meshConfig *meshv1alpha1.MeshConfig) []*listener.FilterChain {
+func buildInboundFilterChains(plaintext *listener.FilterChain, mode model.MutualTLSMode) []*listener.FilterChain {
 	switch mode {
 	case model.MTLSStrict:
-		if ts := buildDownstreamTransportSocket(model.MTLSStrict, meshConfig); ts != nil {
+		if ts := buildDownstreamTransportSocket(model.MTLSStrict); ts != nil {
 			plaintext.TransportSocket = ts
 		}
 		return []*listener.FilterChain{plaintext}
 	case model.MTLSPermissive:
-		if ts := buildDownstreamTransportSocket(model.MTLSStrict, meshConfig); ts != nil {
+		if ts := buildDownstreamTransportSocket(model.MTLSStrict); ts != nil {
 			mtls := cloneInboundFilterChain(plaintext)
 			mtls.Name = "mtls"
 			mtls.FilterChainMatch = &listener.FilterChainMatch{

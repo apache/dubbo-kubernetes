@@ -142,10 +142,9 @@ func (b *clusterBuilder) requiresPeerAuthenticationMTLS() bool {
 	if b.push == nil || b.push.AuthenticationPolicies == nil || b.svc == nil {
 		return false
 	}
-	mode := b.push.AuthenticationPolicies.EffectiveMutualTLSMode(
+	return b.push.AuthenticationPolicies.EffectiveMutualTLSMode(
 		b.svc.Attributes.Namespace, nil, uint32(b.portNum),
-	)
-	return mode == model.MTLSStrict || mode == model.MTLSPermissive
+	) == model.MTLSStrict
 }
 
 func (b *clusterBuilder) applyPeerAuthenticationMTLS(c *cluster.Cluster) {
@@ -154,14 +153,14 @@ func (b *clusterBuilder) applyPeerAuthenticationMTLS(c *cluster.Cluster) {
 	}
 	tlsContext := b.buildUpstreamTLSContext(c)
 	if tlsContext == nil {
-		log.Warnf("failed to build automatic mTLS context for PeerAuthentication on cluster %s", c.Name)
+		log.Warnf("failed to build automatic mTLS context for STRICT PeerAuthentication on cluster %s", c.Name)
 		return
 	}
 	c.TransportSocket = &core.TransportSocket{
 		Name:       "transport_sockets.tls",
 		ConfigType: &core.TransportSocket_TypedConfig{TypedConfig: protoconv.MessageToAny(tlsContext)},
 	}
-	log.Debugf("applied automatic mTLS to cluster %s for mesh PeerAuthentication", c.Name)
+	log.Debugf("applied automatic mTLS to cluster %s for STRICT PeerAuthentication", c.Name)
 }
 
 func (b *clusterBuilder) edsCluster(name string) *cluster.Cluster {
@@ -250,7 +249,6 @@ func (b *clusterBuilder) buildUpstreamTLSContext(c *cluster.Cluster) *tlsv1.Upst
 	if common == nil {
 		return nil
 	}
-	applyMeshMinimumTLSVersion(common, b.push.Mesh)
 
 	tlsContext := &tlsv1.UpstreamTlsContext{
 		CommonTlsContext: common,

@@ -36,7 +36,6 @@ import (
 	"github.com/apache/dubbo-kubernetes/pkg/kube/inject"
 	"github.com/apache/dubbo-kubernetes/pkg/kube/krt"
 	"github.com/apache/dubbo-kubernetes/pkg/util/sets"
-	meshapi "github.com/kdubbo/api/mesh/v1alpha1"
 	networking "github.com/kdubbo/api/networking/v1alpha3"
 	security "github.com/kdubbo/api/security/v1alpha3"
 	"google.golang.org/protobuf/types/known/durationpb"
@@ -274,23 +273,7 @@ func TestBuildRuntimeTrafficConfigCapturesInherentSecurity(t *testing.T) {
 	svc := newInherentRuntimeTestService("provider", "grpc-app", string(hostname), 17070)
 	push := newInherentRuntimeTestPushContext(t, []config.Config{
 		newInherentStrictPeerAuthenticationConfig("grpc-app-strict-mtls", "grpc-app"),
-		{
-			Meta: config.Meta{
-				GroupVersionKind: gvk.AuthorizationPolicy,
-				Name:             "deny-private",
-				Namespace:        "grpc-app",
-			},
-			Spec: &security.AuthorizationPolicy{
-				Action: security.AuthorizationPolicy_DENY,
-				DryRun: true,
-				Rules: []*security.Rule{{
-					From: []*security.From{{Source: &security.Source{IpBlocks: []string{"10.0.0.0/8"}}}},
-					To:   []*security.To{{Operation: &security.Operation{Ports: []string{"17070"}}}},
-				}},
-			},
-		},
 	}, []*discoverymodel.Service{svc})
-	push.Mesh.MeshMtls = &meshapi.MeshMTLS{MinProtocolVersion: meshapi.MeshMTLS_TLSV1_3}
 
 	serviceConfig := buildRuntimeServiceConfig(push, nil, svc)
 	if len(serviceConfig.Ports) != 1 {
@@ -298,16 +281,6 @@ func TestBuildRuntimeTrafficConfigCapturesInherentSecurity(t *testing.T) {
 	}
 	if got := serviceConfig.Ports[0].MTLSMode; got != "STRICT" {
 		t.Fatalf("mtlsMode = %q, want STRICT", got)
-	}
-	if got := serviceConfig.Ports[0].MinimumTLSVersion; got != "TLSV1_3" {
-		t.Fatalf("minimumTLSVersion = %q, want TLSV1_3", got)
-	}
-	policies := serviceConfig.Ports[0].AuthorizationPolicies
-	if len(policies) != 1 || policies[0].Action != "DENY" || !policies[0].DryRun {
-		t.Fatalf("authorization policies = %+v, want dry-run DENY", policies)
-	}
-	if got := policies[0].Rules[0].Sources[0].IPBlocks; len(got) != 1 || got[0] != "10.0.0.0/8" {
-		t.Fatalf("IP blocks = %v, want [10.0.0.0/8]", got)
 	}
 
 	routeConfig := buildRuntimeRouteConfig(push, nil, svc, 17070)
@@ -317,6 +290,47 @@ func TestBuildRuntimeTrafficConfigCapturesInherentSecurity(t *testing.T) {
 	destination := routeConfig.Destinations[0]
 	if destination.Host != string(hostname) || destination.Weight != 100 || destination.TLSMode != "" {
 		t.Fatalf("destination = %+v, want default host weight 100 without outbound TLS policy", destination)
+	}
+}
+
+func TestBuildRuntimeTrafficConfigProjectsOnlyWorkloadPrincipalAuthorization(t *testing.T) {
+	svc := newInherentRuntimeTestService("provider", "grpc-app", "provider.grpc-app.svc.cluster.local", 17070)
+	workloadPolicy := config.Config{
+		Meta: config.Meta{
+			GroupVersionKind: gvk.AuthorizationPolicy,
+			Name:             "allow-workload",
+			Namespace:        "grpc-app",
+		},
+		Spec: &security.AuthorizationPolicy{
+			Action: security.AuthorizationPolicy_ALLOW,
+			Rules: []*security.Rule{{From: []*security.From{{Source: &security.Source{
+				Principals: []string{"cluster.local/ns/client/sa/caller"},
+			}}}}},
+		},
+	}
+	jwtPolicy := config.Config{
+		Meta: config.Meta{
+			GroupVersionKind: gvk.AuthorizationPolicy,
+			Name:             "allow-jwt",
+			Namespace:        "grpc-app",
+		},
+		Spec: &security.AuthorizationPolicy{
+			Action: security.AuthorizationPolicy_ALLOW,
+			Rules: []*security.Rule{{From: []*security.From{{Source: &security.Source{
+				RequestPrincipals: []string{"https://issuer.example/alice"},
+			}}}}},
+		},
+	}
+	push := newInherentRuntimeTestPushContext(t, []config.Config{workloadPolicy, jwtPolicy}, []*discoverymodel.Service{svc})
+
+	serviceConfig := buildRuntimeServiceConfig(push, nil, svc)
+	got := serviceConfig.Ports[0].AuthorizationPolicies
+	if len(got) != 1 || got[0].Name != "allow-workload" {
+		t.Fatalf("authorization policies = %+v, want only allow-workload", got)
+	}
+	principals := got[0].Rules[0].Sources[0].Principals
+	if len(principals) != 1 || principals[0] != "cluster.local/ns/client/sa/caller" {
+		t.Fatalf("principals = %v, want caller SPIFFE identity", principals)
 	}
 }
 

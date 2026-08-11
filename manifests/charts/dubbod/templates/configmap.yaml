@@ -16,13 +16,7 @@
 {{- $defaults := .Values._internal_default_values_not_set | default dict }}
 {{- $defaultProxy := $defaults.proxy | default dict }}
 {{- $proxy := .Values.proxy | default dict }}
-{{- $defaultMeshConfig := $defaults.meshConfig | default dict }}
-{{- $meshConfig := .Values.meshConfig | default dict }}
 {{- $clusterDomain := coalesce $proxy.clusterDomain $defaultProxy.clusterDomain "cluster.local" }}
-{{- $trustDomainAliases := $meshConfig.trustDomainAliases | default $defaultMeshConfig.trustDomainAliases | default (list) }}
-{{- $minimumTlsVersion := coalesce $meshConfig.minimumTlsVersion $defaultMeshConfig.minimumTlsVersion "TLSV1_2" }}
-{{- $extensionProviders := $meshConfig.extensionProviders | default $defaultMeshConfig.extensionProviders | default (list) }}
-{{- $caCertificates := $meshConfig.caCertificates | default $defaultMeshConfig.caCertificates | default (list) }}
 {{- $revision := .Values.revision | default "default" }}
 {{- $statusPort := coalesce .Values.statusPort $defaults.statusPort 26020 }}
 apiVersion: v1
@@ -40,17 +34,3 @@ data:
       statusPort: {{ $statusPort }}
     rootNamespace: dubbo-system
     trustDomain: {{ $clusterDomain }}
-{{- if gt (len $trustDomainAliases) 0 }}
-    trustDomainAliases:
-{{ $trustDomainAliases | toYaml | nindent 6 }}
-{{- end }}
-    meshMtls:
-      minimumTlsVersion: {{ $minimumTlsVersion }}
-{{- if gt (len $extensionProviders) 0 }}
-    extensionProviders:
-{{ $extensionProviders | toYaml | nindent 6 }}
-{{- end }}
-{{- if gt (len $caCertificates) 0 }}
-    caCertificates:
-{{ $caCertificates | toYaml | nindent 6 }}
-{{- end }}
