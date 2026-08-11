@@ -17,6 +17,7 @@ package nodeagent
 
 import (
 	"context"
+	"os/exec"
 	"strings"
 	"testing"
 )
@@ -44,7 +45,7 @@ func TestIPTablesRuleManagerAddsGRPCInboundBoundaryRules(t *testing.T) {
 		"-A DUBBO-GRPC-INBOUND -m set --match-set DUBBO-GRPC-INBOUND-PODS dst -p tcp --dport 15080 -j RETURN",
 		"-A DUBBO-GRPC-INBOUND -m set --match-set DUBBO-GRPC-INBOUND-PODS dst -p tcp --dport 26021 -j RETURN",
 		"-A DUBBO-GRPC-INBOUND -m set --match-set DUBBO-GRPC-INBOUND-PODS dst -p tcp --dport 15020 -j RETURN",
-		"-A DUBBO-GRPC-INBOUND -m set --match-set DUBBO-GRPC-INBOUND-PODS dst -p tcp -j REJECT",
+		"-A DUBBO-GRPC-INBOUND -m set --match-set DUBBO-GRPC-INBOUND-PODS dst -p tcp -m conntrack --ctstate NEW -j REJECT",
 		"ipset add DUBBO-GRPC-INBOUND-PODS 10.244.0.12 -exist",
 		"ipset add DUBBO-GRPC-INBOUND-EXCLUDE 10.244.0.12,tcp:9090 -exist",
 	} {
@@ -55,7 +56,7 @@ func TestIPTablesRuleManagerAddsGRPCInboundBoundaryRules(t *testing.T) {
 
 	// The exclusion must be evaluated before the catch-all REJECT.
 	excludeAt := strings.Index(joined, "--match-set DUBBO-GRPC-INBOUND-EXCLUDE dst,dst -p tcp -j RETURN")
-	rejectAt := strings.Index(joined, "DUBBO-GRPC-INBOUND-PODS dst -p tcp -j REJECT")
+	rejectAt := strings.Index(joined, "DUBBO-GRPC-INBOUND-PODS dst -p tcp -m conntrack --ctstate NEW -j REJECT")
 	if excludeAt < 0 || rejectAt < 0 || excludeAt > rejectAt {
 		t.Fatalf("exclusion rule is not appended before the REJECT rule:\n%s", joined)
 	}
@@ -95,6 +96,87 @@ func TestIPTablesRuleManagerReconcileRebuildsFence(t *testing.T) {
 	}
 }
 
+func TestIPTablesRuleManagerFallsBackToDirectRulesWithoutIPSet(t *testing.T) {
+	runner := &ipsetMissingRunner{}
+	conf, err := ParseNetConf([]byte(`{"grpcInboundPort":15080}`))
+	if err != nil {
+		t.Fatalf("ParseNetConf() failed: %v", err)
+	}
+	manager := NewIPTablesRuleManagerWithRunner(conf, runner)
+
+	if err := manager.AddPodRules(context.Background(), "10.244.0.12", []int{9090}); err != nil {
+		t.Fatalf("AddPodRules() failed: %v", err)
+	}
+
+	joined := strings.Join(runner.commands, "\n")
+	for _, want := range []string{
+		"ipset create DUBBO-GRPC-INBOUND-PODS hash:ip -exist",
+		"-A DUBBO-GRPC-INBOUND -d 10.244.0.12 -p tcp --dport 9090 -j RETURN",
+		"-A DUBBO-GRPC-INBOUND -d 10.244.0.12 -p tcp --dport 15080 -j RETURN",
+		"-A DUBBO-GRPC-INBOUND -d 10.244.0.12 -p tcp --dport 26021 -j RETURN",
+		"-A DUBBO-GRPC-INBOUND -d 10.244.0.12 -p tcp --dport 15020 -j RETURN",
+		"-A DUBBO-GRPC-INBOUND -d 10.244.0.12 -p tcp -m conntrack --ctstate NEW -j REJECT",
+	} {
+		if !strings.Contains(joined, want) {
+			t.Fatalf("commands missing %q:\n%s", want, joined)
+		}
+	}
+	if strings.Contains(joined, "--match-set") {
+		t.Fatalf("ipset rule leaked into direct fallback:\n%s", joined)
+	}
+}
+
+func TestIPTablesRuleManagerReconcilesDirectRulesWithoutIPSet(t *testing.T) {
+	runner := &ipsetMissingRunner{}
+	conf, err := ParseNetConf([]byte(`{"grpcInboundPort":15080}`))
+	if err != nil {
+		t.Fatalf("ParseNetConf() failed: %v", err)
+	}
+	manager := NewIPTablesRuleManagerWithRunner(conf, runner)
+
+	if err := manager.Reconcile(context.Background(), []PodState{{
+		IP:            "10.244.0.12",
+		ExcludedPorts: []int{9090},
+	}}); err != nil {
+		t.Fatalf("Reconcile() failed: %v", err)
+	}
+
+	joined := strings.Join(runner.commands, "\n")
+	for _, want := range []string{
+		"-F DUBBO-GRPC-INBOUND",
+		"-A DUBBO-GRPC-INBOUND -d 10.244.0.12 -p tcp --dport 9090 -j RETURN",
+		"-A DUBBO-GRPC-INBOUND -d 10.244.0.12 -p tcp -m conntrack --ctstate NEW -j REJECT",
+	} {
+		if !strings.Contains(joined, want) {
+			t.Fatalf("commands missing %q:\n%s", want, joined)
+		}
+	}
+}
+
+func TestIPTablesRuleManagerDeletesDirectRulesWithoutIPSet(t *testing.T) {
+	runner := &ipsetMissingRunner{}
+	conf, err := ParseNetConf([]byte(`{"grpcInboundPort":15080}`))
+	if err != nil {
+		t.Fatalf("ParseNetConf() failed: %v", err)
+	}
+	manager := NewIPTablesRuleManagerWithRunner(conf, runner)
+
+	if err := manager.DeletePodRules(context.Background(), "10.244.0.12", []int{9090}); err != nil {
+		t.Fatalf("DeletePodRules() failed: %v", err)
+	}
+
+	joined := strings.Join(runner.commands, "\n")
+	for _, want := range []string{
+		"-D DUBBO-GRPC-INBOUND -d 10.244.0.12 -p tcp --dport 9090 -j RETURN",
+		"-D DUBBO-GRPC-INBOUND -d 10.244.0.12 -p tcp --dport 15080 -j RETURN",
+		"-D DUBBO-GRPC-INBOUND -d 10.244.0.12 -p tcp -m conntrack --ctstate NEW -j REJECT",
+	} {
+		if !strings.Contains(joined, want) {
+			t.Fatalf("commands missing %q:\n%s", want, joined)
+		}
+	}
+}
+
 type recordingRunner struct {
 	commands []string
 }
@@ -107,6 +189,18 @@ func (r *recordingRunner) Run(_ context.Context, name string, args ...string) ([
 		}
 	}
 	return nil, nil
+}
+
+type ipsetMissingRunner struct {
+	recordingRunner
+}
+
+func (r *ipsetMissingRunner) Run(ctx context.Context, name string, args ...string) ([]byte, error) {
+	if name == "ipset" {
+		r.commands = append(r.commands, name+" "+strings.Join(args, " "))
+		return nil, &exec.Error{Name: name, Err: exec.ErrNotFound}
+	}
+	return r.recordingRunner.Run(ctx, name, args...)
 }
 
 var errCommandFailed = commandFailedError{}

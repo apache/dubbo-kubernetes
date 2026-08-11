@@ -18,8 +18,10 @@ package nodeagent
 import (
 	"bytes"
 	"context"
+	"errors"
 	"fmt"
 	"net"
+	"os"
 	"os/exec"
 )
 
@@ -53,6 +55,10 @@ type IPTablesRuleManager struct {
 	grpcInboundPort int
 	dryRun          bool
 	runner          CommandRunner
+	// directRules is used only when the node does not provide ipset. It keeps
+	// the same inbound fence with destination-IP rules instead of failing every
+	// managed Pod's sandbox creation.
+	directRules bool
 }
 
 func NewIPTablesRuleManager(conf NetConf) *IPTablesRuleManager {
@@ -76,7 +82,13 @@ func (m *IPTablesRuleManager) AddPodRules(ctx context.Context, podIP string, exc
 	if err != nil {
 		return err
 	}
+	if m.directRules {
+		return m.addDirectPodRules(ctx, ip, excludedPorts)
+	}
 	if err := m.ensureBase(ctx); err != nil {
+		if m.useDirectRules(err) {
+			return m.addDirectPodRules(ctx, ip, excludedPorts)
+		}
 		return err
 	}
 	if err := m.runIPSet(ctx, "add", meshPodIPSet, ip, "-exist"); err != nil {
@@ -90,12 +102,24 @@ func (m *IPTablesRuleManager) DeletePodRules(ctx context.Context, podIP string, 
 	if err != nil {
 		return err
 	}
+	if m.directRules {
+		return m.deleteDirectPodRules(ctx, ip, excludedPorts)
+	}
 	for _, port := range excludedPorts {
 		if err := m.runIPSet(ctx, "del", meshExcludeIPSet, excludeEntry(ip, port), "-exist"); err != nil {
+			if m.useDirectRules(err) {
+				return m.deleteDirectPodRules(ctx, ip, excludedPorts)
+			}
 			return err
 		}
 	}
-	return m.runIPSet(ctx, "del", meshPodIPSet, ip, "-exist")
+	if err := m.runIPSet(ctx, "del", meshPodIPSet, ip, "-exist"); err != nil {
+		if m.useDirectRules(err) {
+			return m.deleteDirectPodRules(ctx, ip, excludedPorts)
+		}
+		return err
+	}
+	return nil
 }
 
 // Reconcile rebuilds the whole fence from the supplied pod states.
@@ -105,7 +129,13 @@ func (m *IPTablesRuleManager) DeletePodRules(ctx context.Context, podIP string, 
 // Without this the fence silently disappears for every already-running pod,
 // so the node agent replays it from its own persisted state.
 func (m *IPTablesRuleManager) Reconcile(ctx context.Context, states []PodState) error {
+	if m.directRules {
+		return m.reconcileDirectRules(ctx, states)
+	}
 	if err := m.ensureBase(ctx); err != nil {
+		if m.useDirectRules(err) {
+			return m.reconcileDirectRules(ctx, states)
+		}
 		return err
 	}
 	if err := m.runIPSet(ctx, "flush", meshPodIPSet); err != nil {
@@ -128,6 +158,123 @@ func (m *IPTablesRuleManager) Reconcile(ctx context.Context, states []PodState) 
 		}
 	}
 	return nil
+}
+
+func (m *IPTablesRuleManager) useDirectRules(err error) bool {
+	if !errors.Is(err, exec.ErrNotFound) {
+		return false
+	}
+	m.directRules = true
+	fmt.Fprintln(os.Stderr, "dubbo-cni: ipset is unavailable; using direct iptables inbound rules")
+	return true
+}
+
+func (m *IPTablesRuleManager) addDirectPodRules(ctx context.Context, ip string, excludedPorts []int) error {
+	if err := m.ensureDirectBase(ctx); err != nil {
+		return err
+	}
+	rules, err := m.directPodRules(ip, excludedPorts)
+	if err != nil {
+		return err
+	}
+	m.deleteDirectRules(ctx, rules)
+	for _, rule := range rules {
+		if err := m.appendRule(ctx, rule...); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (m *IPTablesRuleManager) deleteDirectPodRules(ctx context.Context, ip string, excludedPorts []int) error {
+	rules, err := m.directPodRules(ip, excludedPorts)
+	if err != nil {
+		return err
+	}
+	m.deleteDirectRules(ctx, rules)
+	return nil
+}
+
+func (m *IPTablesRuleManager) reconcileDirectRules(ctx context.Context, states []PodState) error {
+	if err := m.ensureDirectBase(ctx); err != nil {
+		return err
+	}
+	if err := m.run(ctx, "-w", "-t", "filter", "-F", meshInboundChain); err != nil {
+		return err
+	}
+	for _, state := range states {
+		ip, err := normalizePodIP(state.IP)
+		if err != nil {
+			// A malformed entry must not stop the remaining pods from being restored.
+			continue
+		}
+		rules, err := m.directPodRules(ip, state.ExcludedPorts)
+		if err != nil {
+			return err
+		}
+		for _, rule := range rules {
+			if err := m.appendRule(ctx, rule...); err != nil {
+				return err
+			}
+		}
+	}
+	return nil
+}
+
+func (m *IPTablesRuleManager) ensureDirectBase(ctx context.Context) error {
+	if err := m.runIgnoreExists(ctx, "-w", "-t", "filter", "-N", meshInboundChain); err != nil {
+		return err
+	}
+	for _, chain := range []string{"FORWARD", "OUTPUT"} {
+		if err := m.run(ctx, "-w", "-t", "filter", "-C", chain, "-j", meshInboundChain); err == nil {
+			continue
+		}
+		if err := m.run(ctx, "-w", "-t", "filter", "-I", chain, "1", "-j", meshInboundChain); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (m *IPTablesRuleManager) directPodRules(ip string, excludedPorts []int) ([][]string, error) {
+	ports := make([]int, 0, len(excludedPorts)+3)
+	seen := make(map[int]struct{}, len(excludedPorts)+3)
+	addPort := func(port int) error {
+		if port < 1 || port > 65535 {
+			return fmt.Errorf("excluded port %d is out of range", port)
+		}
+		if _, found := seen[port]; found {
+			return nil
+		}
+		seen[port] = struct{}{}
+		ports = append(ports, port)
+		return nil
+	}
+	for _, port := range excludedPorts {
+		if err := addPort(port); err != nil {
+			return nil, err
+		}
+	}
+	for _, port := range []int{m.grpcInboundPort, dxgateAdminPort, dxproxyAdminPort} {
+		if err := addPort(port); err != nil {
+			return nil, err
+		}
+	}
+	rules := make([][]string, 0, len(ports)+1)
+	for _, port := range ports {
+		rules = append(rules, []string{"-d", ip, "-p", "tcp", "--dport", fmt.Sprint(port), "-j", "RETURN"})
+	}
+	// Fence only connection attempts. A reply to an outbound xDS/activation
+	// connection also has the Pod as its destination, but is ESTABLISHED and
+	// must pass; rejecting it would leave injected gateways permanently
+	// unready.
+	return append(rules, []string{"-d", ip, "-p", "tcp", "-m", "conntrack", "--ctstate", "NEW", "-j", "REJECT"}), nil
+}
+
+func (m *IPTablesRuleManager) deleteDirectRules(ctx context.Context, rules [][]string) {
+	for _, rule := range rules {
+		m.deleteRepeated(ctx, rule...)
+	}
 }
 
 func (m *IPTablesRuleManager) addExcludedPorts(ctx context.Context, ip string, ports []int) error {
@@ -170,7 +317,9 @@ func (m *IPTablesRuleManager) ensureBase(ctx context.Context) error {
 	allowGRPCInbound := []string{"-m", "set", "--match-set", meshPodIPSet, "dst", "-p", "tcp", "--dport", fmt.Sprint(m.grpcInboundPort), "-j", "RETURN"}
 	allowDxgateAdmin := []string{"-m", "set", "--match-set", meshPodIPSet, "dst", "-p", "tcp", "--dport", fmt.Sprint(dxgateAdminPort), "-j", "RETURN"}
 	allowDxproxyAdmin := []string{"-m", "set", "--match-set", meshPodIPSet, "dst", "-p", "tcp", "--dport", fmt.Sprint(dxproxyAdminPort), "-j", "RETURN"}
-	rejectOtherTCP := []string{"-m", "set", "--match-set", meshPodIPSet, "dst", "-p", "tcp", "-j", "REJECT"}
+	// Reject only new inbound connections. Established replies to outbound
+	// control-plane traffic still target a managed Pod and must not be fenced.
+	rejectOtherTCP := []string{"-m", "set", "--match-set", meshPodIPSet, "dst", "-p", "tcp", "-m", "conntrack", "--ctstate", "NEW", "-j", "REJECT"}
 	m.deleteRepeated(ctx, allowExcluded...)
 	m.deleteRepeated(ctx, allowGRPCInbound...)
 	m.deleteRepeated(ctx, allowDxgateAdmin...)

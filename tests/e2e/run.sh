@@ -66,6 +66,13 @@ fail() {
   echo "FAIL: $*" >&2
   echo "--- diagnostics: pods ---" >&2
   "${KUBECTL[@]}" get pods -A -o wide >&2 || true
+  # ContainerCreating failures have no container logs. Events and describe
+  # expose the kubelet/CNI/image error before cleanup deletes the cluster.
+  echo "--- diagnostics: events ---" >&2
+  "${KUBECTL[@]}" get events -A --sort-by=.lastTimestamp >&2 || true
+  echo "--- diagnostics: managed gateway pod descriptions ---" >&2
+  "${KUBECTL[@]}" -n "${APP_NS}" describe pods \
+    -l gateway.networking.k8s.io/gateway-name >&2 || true
   echo "--- diagnostics: dubbod logs ---" >&2
   "${KUBECTL[@]}" -n "${SYSTEM_NS}" logs deploy/dubbod --tail=100 >&2 || true
   echo "--- diagnostics: managed gateway logs ---" >&2
@@ -234,10 +241,11 @@ install_dubbod() {
       --set-string "gateway.image=${DXGATE_IMAGE}"
     )
   else
-    # The previous chart still exposes its legacy CNI configuration.
+    # 0.4.3 predates Inherent. These values target its immutable legacy
+    # chart schema; renaming them leaves its CNI enabled during the upgrade.
     chart_values=(
-      --set "global.inherent.cni.enabled=false"
-      --set-string "global.inherent.cni.image=${image}"
+      --set "global.proxyless.cni.enabled=false"
+      --set-string "global.proxyless.cni.image=${image}"
       --set-string "global.gateway.image=${DXGATE_IMAGE}"
     )
   fi
