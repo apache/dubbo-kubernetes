@@ -45,7 +45,7 @@ func TestIPTablesRuleManagerAddsGRPCInboundBoundaryRules(t *testing.T) {
 		"-A DUBBO-GRPC-INBOUND -m set --match-set DUBBO-GRPC-INBOUND-PODS dst -p tcp --dport 15080 -j RETURN",
 		"-A DUBBO-GRPC-INBOUND -m set --match-set DUBBO-GRPC-INBOUND-PODS dst -p tcp --dport 26021 -j RETURN",
 		"-A DUBBO-GRPC-INBOUND -m set --match-set DUBBO-GRPC-INBOUND-PODS dst -p tcp --dport 15020 -j RETURN",
-		"-A DUBBO-GRPC-INBOUND -m set --match-set DUBBO-GRPC-INBOUND-PODS dst -p tcp -j REJECT",
+		"-A DUBBO-GRPC-INBOUND -m set --match-set DUBBO-GRPC-INBOUND-PODS dst -p tcp -m conntrack --ctstate NEW -j REJECT",
 		"ipset add DUBBO-GRPC-INBOUND-PODS 10.244.0.12 -exist",
 		"ipset add DUBBO-GRPC-INBOUND-EXCLUDE 10.244.0.12,tcp:9090 -exist",
 	} {
@@ -56,7 +56,7 @@ func TestIPTablesRuleManagerAddsGRPCInboundBoundaryRules(t *testing.T) {
 
 	// The exclusion must be evaluated before the catch-all REJECT.
 	excludeAt := strings.Index(joined, "--match-set DUBBO-GRPC-INBOUND-EXCLUDE dst,dst -p tcp -j RETURN")
-	rejectAt := strings.Index(joined, "DUBBO-GRPC-INBOUND-PODS dst -p tcp -j REJECT")
+	rejectAt := strings.Index(joined, "DUBBO-GRPC-INBOUND-PODS dst -p tcp -m conntrack --ctstate NEW -j REJECT")
 	if excludeAt < 0 || rejectAt < 0 || excludeAt > rejectAt {
 		t.Fatalf("exclusion rule is not appended before the REJECT rule:\n%s", joined)
 	}
@@ -115,7 +115,7 @@ func TestIPTablesRuleManagerFallsBackToDirectRulesWithoutIPSet(t *testing.T) {
 		"-A DUBBO-GRPC-INBOUND -d 10.244.0.12 -p tcp --dport 15080 -j RETURN",
 		"-A DUBBO-GRPC-INBOUND -d 10.244.0.12 -p tcp --dport 26021 -j RETURN",
 		"-A DUBBO-GRPC-INBOUND -d 10.244.0.12 -p tcp --dport 15020 -j RETURN",
-		"-A DUBBO-GRPC-INBOUND -d 10.244.0.12 -p tcp -j REJECT",
+		"-A DUBBO-GRPC-INBOUND -d 10.244.0.12 -p tcp -m conntrack --ctstate NEW -j REJECT",
 	} {
 		if !strings.Contains(joined, want) {
 			t.Fatalf("commands missing %q:\n%s", want, joined)
@@ -145,7 +145,7 @@ func TestIPTablesRuleManagerReconcilesDirectRulesWithoutIPSet(t *testing.T) {
 	for _, want := range []string{
 		"-F DUBBO-GRPC-INBOUND",
 		"-A DUBBO-GRPC-INBOUND -d 10.244.0.12 -p tcp --dport 9090 -j RETURN",
-		"-A DUBBO-GRPC-INBOUND -d 10.244.0.12 -p tcp -j REJECT",
+		"-A DUBBO-GRPC-INBOUND -d 10.244.0.12 -p tcp -m conntrack --ctstate NEW -j REJECT",
 	} {
 		if !strings.Contains(joined, want) {
 			t.Fatalf("commands missing %q:\n%s", want, joined)
@@ -169,7 +169,7 @@ func TestIPTablesRuleManagerDeletesDirectRulesWithoutIPSet(t *testing.T) {
 	for _, want := range []string{
 		"-D DUBBO-GRPC-INBOUND -d 10.244.0.12 -p tcp --dport 9090 -j RETURN",
 		"-D DUBBO-GRPC-INBOUND -d 10.244.0.12 -p tcp --dport 15080 -j RETURN",
-		"-D DUBBO-GRPC-INBOUND -d 10.244.0.12 -p tcp -j REJECT",
+		"-D DUBBO-GRPC-INBOUND -d 10.244.0.12 -p tcp -m conntrack --ctstate NEW -j REJECT",
 	} {
 		if !strings.Contains(joined, want) {
 			t.Fatalf("commands missing %q:\n%s", want, joined)

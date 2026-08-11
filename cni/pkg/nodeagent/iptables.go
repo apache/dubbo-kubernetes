@@ -264,7 +264,11 @@ func (m *IPTablesRuleManager) directPodRules(ip string, excludedPorts []int) ([]
 	for _, port := range ports {
 		rules = append(rules, []string{"-d", ip, "-p", "tcp", "--dport", fmt.Sprint(port), "-j", "RETURN"})
 	}
-	return append(rules, []string{"-d", ip, "-p", "tcp", "-j", "REJECT"}), nil
+	// Fence only connection attempts. A reply to an outbound xDS/activation
+	// connection also has the Pod as its destination, but is ESTABLISHED and
+	// must pass; rejecting it would leave injected gateways permanently
+	// unready.
+	return append(rules, []string{"-d", ip, "-p", "tcp", "-m", "conntrack", "--ctstate", "NEW", "-j", "REJECT"}), nil
 }
 
 func (m *IPTablesRuleManager) deleteDirectRules(ctx context.Context, rules [][]string) {
@@ -313,7 +317,9 @@ func (m *IPTablesRuleManager) ensureBase(ctx context.Context) error {
 	allowGRPCInbound := []string{"-m", "set", "--match-set", meshPodIPSet, "dst", "-p", "tcp", "--dport", fmt.Sprint(m.grpcInboundPort), "-j", "RETURN"}
 	allowDxgateAdmin := []string{"-m", "set", "--match-set", meshPodIPSet, "dst", "-p", "tcp", "--dport", fmt.Sprint(dxgateAdminPort), "-j", "RETURN"}
 	allowDxproxyAdmin := []string{"-m", "set", "--match-set", meshPodIPSet, "dst", "-p", "tcp", "--dport", fmt.Sprint(dxproxyAdminPort), "-j", "RETURN"}
-	rejectOtherTCP := []string{"-m", "set", "--match-set", meshPodIPSet, "dst", "-p", "tcp", "-j", "REJECT"}
+	// Reject only new inbound connections. Established replies to outbound
+	// control-plane traffic still target a managed Pod and must not be fenced.
+	rejectOtherTCP := []string{"-m", "set", "--match-set", meshPodIPSet, "dst", "-p", "tcp", "-m", "conntrack", "--ctstate", "NEW", "-j", "REJECT"}
 	m.deleteRepeated(ctx, allowExcluded...)
 	m.deleteRepeated(ctx, allowGRPCInbound...)
 	m.deleteRepeated(ctx, allowDxgateAdmin...)
