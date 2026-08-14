@@ -154,8 +154,14 @@ github.com/inconshreveable/mousetrap v1.1.0 h1:wN+x4NVGpMsO7ErUn/mUI3vEoE6Jt13X2
 github.com/inconshreveable/mousetrap v1.1.0/go.mod h1:vpF70FUmC8bwa3OWnCshd2FqLfsEA9PFc4w1p2J65bw=
 github.com/json-iterator/go v1.1.12 h1:PV8peI4a0ysnczrg+LtxykD8LfKY9ML6u2jnxaEnrnM=
 github.com/json-iterator/go v1.1.12/go.mod h1:e30LSqwooZae/UwlEbR2852Gd8hjQvJoHmT4TnhNGBo=
+github.com/kdubbo/api v0.0.0-20260814141555-d9b670d33d9f h1:T1jlRZ+ulFTUGziUnTjMvNEtiknaHQr4vQYviz4U/kQ=
+github.com/kdubbo/api v0.0.0-20260814141555-d9b670d33d9f/go.mod h1:8BtJiIovg7QCPsCxXcw3gDf922VcvYq5ihOSvj49Rq8=
+github.com/kdubbo/client-go v0.0.0-20260814141742-c761bafa7cf3 h1:vTpsq7IAuUqKz05NoCWpDu0MY5SdjpH5NXZpj+l4I9Q=
+github.com/kdubbo/client-go v0.0.0-20260814141742-c761bafa7cf3/go.mod h1:wCARoHJuh9ccSRQYlGXzPyMfUMYavnRot05dKh1N4KY=
 github.com/kdubbo/xds-api v0.0.0-20260809042456-0d57cc43a21a h1:stTvOOGy4r6DoxquO928mB9AGGoFBvjVHxqAGIGiSkI=
 github.com/kdubbo/xds-api v0.0.0-20260809042456-0d57cc43a21a/go.mod h1:o2HDUgL1ntaDbWomZ4cD2tt8jBamuG2qRtjXOa1zZ0Q=
+github.com/kdubbo/xds-api v0.0.0-20260814141925-82c6d4ca43c1 h1:/PaNI7QypbLp32sqRd54iu1DMs2XmxHKAaVSjhcLF/4=
+github.com/kdubbo/xds-api v0.0.0-20260814141925-82c6d4ca43c1/go.mod h1:o2HDUgL1ntaDbWomZ4cD2tt8jBamuG2qRtjXOa1zZ0Q=
 github.com/kisielk/errcheck v1.5.0/go.mod h1:pFxgyoBC7bSaBwPgfKdkLd5X25qrDl4LWUI2bnpBCr8=
 github.com/kisielk/gotool v1.0.0/go.mod h1:XhKaO+MFFWcvkIS/tQcRk01m1F5IRFswLeQ+oQHNcck=
 github.com/klauspost/compress v1.18.6 h1:2jupLlAwFm95+YDR+NwD2MEfFO9d4z4Prjl1XXDjuao=

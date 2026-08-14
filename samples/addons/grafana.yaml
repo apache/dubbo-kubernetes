@@ -826,6 +826,193 @@ data:
       "version": 1,
       "weekStart": ""
     }
+  application-standard-metrics.json: |
+    {
+      "annotations": {
+        "list": []
+      },
+      "editable": true,
+      "graphTooltip": 0,
+      "id": null,
+      "links": [],
+      "panels": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "fieldConfig": {
+            "defaults": {
+              "unit": "reqps"
+            },
+            "overrides": []
+          },
+          "gridPos": {
+            "h": 8,
+            "w": 12,
+            "x": 0,
+            "y": 0
+          },
+          "id": 1,
+          "options": {
+            "legend": {
+              "displayMode": "list",
+              "placement": "bottom",
+              "showLegend": true
+            },
+            "tooltip": {
+              "mode": "multi",
+              "sort": "none"
+            }
+          },
+          "targets": [
+            {
+              "expr": "sum by (reporter) (rate(dubbo_inherent_requests_total[1m]))",
+              "legendFormat": "{{reporter}}",
+              "refId": "A"
+            }
+          ],
+          "title": "Request Rate",
+          "type": "timeseries"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "fieldConfig": {
+            "defaults": {
+              "unit": "s"
+            },
+            "overrides": []
+          },
+          "gridPos": {
+            "h": 8,
+            "w": 12,
+            "x": 12,
+            "y": 0
+          },
+          "id": 2,
+          "options": {
+            "legend": {
+              "displayMode": "list",
+              "placement": "bottom",
+              "showLegend": true
+            },
+            "tooltip": {
+              "mode": "multi",
+              "sort": "none"
+            }
+          },
+          "targets": [
+            {
+              "expr": "histogram_quantile(0.95, sum by (le, reporter) (rate(dubbo_inherent_request_duration_seconds_bucket[5m])))",
+              "legendFormat": "{{reporter}}",
+              "refId": "A"
+            }
+          ],
+          "title": "Request Duration P95",
+          "type": "timeseries"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "fieldConfig": {
+            "defaults": {
+              "unit": "bytes"
+            },
+            "overrides": []
+          },
+          "gridPos": {
+            "h": 8,
+            "w": 12,
+            "x": 0,
+            "y": 8
+          },
+          "id": 3,
+          "options": {
+            "legend": {
+              "displayMode": "list",
+              "placement": "bottom",
+              "showLegend": true
+            },
+            "tooltip": {
+              "mode": "multi",
+              "sort": "none"
+            }
+          },
+          "targets": [
+            {
+              "expr": "sum by (reporter) (rate(dubbo_inherent_request_size_bytes_sum[5m])) / sum by (reporter) (rate(dubbo_inherent_request_size_bytes_count[5m]))",
+              "legendFormat": "{{reporter}}",
+              "refId": "A"
+            }
+          ],
+          "title": "Average Request Size",
+          "type": "timeseries"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "fieldConfig": {
+            "defaults": {
+              "unit": "bytes"
+            },
+            "overrides": []
+          },
+          "gridPos": {
+            "h": 8,
+            "w": 12,
+            "x": 12,
+            "y": 8
+          },
+          "id": 4,
+          "options": {
+            "legend": {
+              "displayMode": "list",
+              "placement": "bottom",
+              "showLegend": true
+            },
+            "tooltip": {
+              "mode": "multi",
+              "sort": "none"
+            }
+          },
+          "targets": [
+            {
+              "expr": "sum by (reporter) (rate(dubbo_inherent_response_size_bytes_sum[5m])) / sum by (reporter) (rate(dubbo_inherent_response_size_bytes_count[5m]))",
+              "legendFormat": "{{reporter}}",
+              "refId": "A"
+            }
+          ],
+          "title": "Average Response Size",
+          "type": "timeseries"
+        }
+      ],
+      "refresh": "15s",
+      "schemaVersion": 39,
+      "tags": [
+        "dubbo",
+        "application",
+        "observability"
+      ],
+      "templating": {
+        "list": []
+      },
+      "time": {
+        "from": "now-30m",
+        "to": "now"
+      },
+      "timezone": "browser",
+      "title": "Application Standard Metrics",
+      "uid": "dubbo-application-standard-metrics",
+      "version": 1,
+      "weekStart": ""
+    }
 ---
 apiVersion: v1
 kind: Service

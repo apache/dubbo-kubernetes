@@ -16,16 +16,21 @@
 package main
 
 import (
+	"context"
 	"log"
+	"net"
 	"net/http"
 	"os"
 	"time"
 
+	runtimetelemetry "github.com/kdubbo/xds-api/grpc/telemetry"
 	"golang.org/x/net/http2"
 	"golang.org/x/net/http2/h2c"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/grpc/health"
 	healthpb "google.golang.org/grpc/health/grpc_health_v1"
+	"google.golang.org/protobuf/types/known/emptypb"
 )
 
 func main() {
@@ -35,6 +40,8 @@ func main() {
 	switch os.Args[1] {
 	case "server":
 		runServer()
+	case "telemetry":
+		runTelemetryApplication()
 	case "sleep":
 		time.Sleep(5 * time.Second)
 	default:
@@ -57,4 +64,59 @@ func runServer() {
 	}), &http2.Server{})
 	log.Printf("SERVING address=:8080")
 	log.Fatal(http.ListenAndServe(":8080", handler))
+}
+
+func runTelemetryApplication() {
+	runtime := runtimetelemetry.Default()
+	listener, err := net.Listen("tcp", ":8080")
+	if err != nil {
+		log.Fatal(err)
+	}
+	grpcServer := grpc.NewServer(runtime.ServerOption())
+	checker := health.NewServer()
+	checker.SetServingStatus("", healthpb.HealthCheckResponse_SERVING)
+	checker.SetServingStatus("telemetry-load", healthpb.HealthCheckResponse_SERVING)
+	healthpb.RegisterHealthServer(grpcServer, checker)
+	go func() {
+		log.Printf("SERVING grpc=:8080")
+		log.Fatal(grpcServer.Serve(listener))
+	}()
+
+	mux := http.NewServeMux()
+	mux.Handle("/metrics", runtime.Handler())
+	mux.HandleFunc("/healthz", func(response http.ResponseWriter, _ *http.Request) {
+		response.WriteHeader(http.StatusOK)
+	})
+	go func() {
+		log.Printf("SERVING metrics=:9090")
+		log.Fatal(http.ListenAndServe(":9090", mux))
+	}()
+
+	connection, err := grpc.NewClient(
+		"passthrough:///127.0.0.1:8080",
+		grpc.WithTransportCredentials(insecure.NewCredentials()),
+		runtime.ClientDialOption(),
+	)
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer connection.Close()
+
+	client := healthpb.NewHealthClient(connection)
+	ticker := time.NewTicker(time.Second)
+	defer ticker.Stop()
+	for range ticker.C {
+		ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+		_, successErr := client.Check(ctx, &healthpb.HealthCheckRequest{Service: "telemetry-load"})
+		// The unknown method supplies a stable non-OK status for label and
+		// aggregation verification without opening another connection.
+		failureErr := connection.Invoke(ctx, "/telemetry.v1.Probe/Missing", &emptypb.Empty{}, &emptypb.Empty{})
+		cancel()
+		if successErr != nil {
+			log.Printf("health request failed: %v", successErr)
+		}
+		if failureErr == nil {
+			log.Printf("unknown method unexpectedly succeeded")
+		}
+	}
 }

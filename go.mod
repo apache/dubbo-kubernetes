@@ -17,10 +17,6 @@ module github.com/apache/dubbo-kubernetes
 
 go 1.25.12
 
-replace github.com/kdubbo/api => ../api
-
-replace github.com/kdubbo/client-go => ../client-go
-
 require (
 	k8s.io/apimachinery v0.34.1
 	k8s.io/client-go v0.34.1
