@@ -30,3 +30,13 @@ func TestConfigKindForSchemaIdentifierIncludesDxgateService(t *testing.T) {
 		t.Fatalf("kind = %v, want %v", got, kind.DxgateService)
 	}
 }
+
+func TestConfigKindForSchemaIdentifierIncludesTelemetry(t *testing.T) {
+	got, found := configKindForSchemaIdentifier("Telemetry")
+	if !found {
+		t.Fatal("Telemetry schema identifier was not mapped")
+	}
+	if got != kind.Telemetry {
+		t.Fatalf("kind = %v, want %v", got, kind.Telemetry)
+	}
+}
