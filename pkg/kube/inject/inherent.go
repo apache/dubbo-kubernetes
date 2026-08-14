@@ -36,6 +36,10 @@ const (
 	InherentGRPCBootstrapPath                   = InherentXDSMountPath + "/" + InherentGRPCBootstrapFileName
 	InherentXDSAddressEnvName                   = "XDS_ADDRESS"
 	InherentGRPCConfigEnvName                   = "DUBBO_GRPC_XDS_CONFIG"
+	InherentGRPCMetricsAddressEnvName           = "DUBBO_GRPC_METRICS_ADDRESS"
+	InherentGRPCMetricsAddress                  = ":9090"
+	InherentGRPCMetricsPortName                 = "metrics"
+	InherentGRPCMetricsPort                     = 9090
 	InherentGRPCKeepaliveEnvName                = "DUBBO_GRPC_KEEPALIVE"
 	InherentGRPCKeepaliveTimeEnv                = "GRPC_KEEPALIVE_INTERVAL"
 	InherentGRPCKeepaliveTimeoutEnv             = "GRPC_KEEPALIVE_TIMEOUT"

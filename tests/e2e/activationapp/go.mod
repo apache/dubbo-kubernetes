@@ -18,7 +18,7 @@ module dubbo.apache.org/activation-e2e
 go 1.25.0
 
 require (
-	github.com/kdubbo/xds-api v0.0.0-20260814141925-82c6d4ca43c1
+	github.com/kdubbo/xds-api v0.0.0-20260814172110-c45be7c324a3
 	golang.org/x/net v0.53.0
 	google.golang.org/grpc v1.82.1
 	google.golang.org/protobuf v1.36.11

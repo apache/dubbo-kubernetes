@@ -43,7 +43,7 @@ require (
 	github.com/hashicorp/golang-lru/v2 v2.0.7
 	github.com/kdubbo/api v0.0.0-20260814141555-d9b670d33d9f
 	github.com/kdubbo/client-go v0.0.0-20260814141742-c761bafa7cf3
-	github.com/kdubbo/xds-api v0.0.0-20260814141925-82c6d4ca43c1
+	github.com/kdubbo/xds-api v0.0.0-20260814172110-c45be7c324a3
 	github.com/prometheus/client_golang v1.23.2
 	github.com/prometheus/client_model v0.6.2
 	github.com/spf13/cobra v1.10.2

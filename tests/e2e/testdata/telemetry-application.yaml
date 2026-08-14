@@ -31,23 +31,17 @@ spec:
         inherent.dubbo.apache.org/inject: "true"
       annotations:
         inject.dubbo.apache.org/templates: grpc-engine
-        inherent.dubbo.apache.org/excludeInboundPorts: "9090"
-        prometheus.io/scrape: "true"
-        prometheus.io/path: /metrics
-        prometheus.io/port: "9090"
     spec:
       serviceAccountName: telemetry-application
       containers:
       - name: application
-        image: kdubbo/activation-e2e:telemetry-r2
+        image: kdubbo/activation-e2e:telemetry-auto-r2
         imagePullPolicy: IfNotPresent
         args:
         - telemetry
         ports:
         - name: grpc
           containerPort: 8080
-        - name: metrics
-          containerPort: 9090
         readinessProbe:
           httpGet:
             path: /healthz

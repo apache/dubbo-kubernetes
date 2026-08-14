@@ -23,7 +23,7 @@ import (
 	"os"
 	"time"
 
-	runtimetelemetry "github.com/kdubbo/xds-api/grpc/telemetry"
+	runtimeapplication "github.com/kdubbo/xds-api/grpc/application"
 	"golang.org/x/net/http2"
 	"golang.org/x/net/http2/h2c"
 	"google.golang.org/grpc"
@@ -67,12 +67,14 @@ func runServer() {
 }
 
 func runTelemetryApplication() {
-	runtime := runtimetelemetry.Default()
 	listener, err := net.Listen("tcp", ":8080")
 	if err != nil {
 		log.Fatal(err)
 	}
-	grpcServer := grpc.NewServer(runtime.ServerOption())
+	grpcServer, err := runtimeapplication.NewServer()
+	if err != nil {
+		log.Fatal(err)
+	}
 	checker := health.NewServer()
 	checker.SetServingStatus("", healthpb.HealthCheckResponse_SERVING)
 	checker.SetServingStatus("telemetry-load", healthpb.HealthCheckResponse_SERVING)
@@ -82,20 +84,9 @@ func runTelemetryApplication() {
 		log.Fatal(grpcServer.Serve(listener))
 	}()
 
-	mux := http.NewServeMux()
-	mux.Handle("/metrics", runtime.Handler())
-	mux.HandleFunc("/healthz", func(response http.ResponseWriter, _ *http.Request) {
-		response.WriteHeader(http.StatusOK)
-	})
-	go func() {
-		log.Printf("SERVING metrics=:9090")
-		log.Fatal(http.ListenAndServe(":9090", mux))
-	}()
-
-	connection, err := grpc.NewClient(
+	connection, err := runtimeapplication.NewClient(
 		"passthrough:///127.0.0.1:8080",
 		grpc.WithTransportCredentials(insecure.NewCredentials()),
-		runtime.ClientDialOption(),
 	)
 	if err != nil {
 		log.Fatal(err)

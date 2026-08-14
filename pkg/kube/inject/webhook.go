@@ -23,6 +23,7 @@ import (
 
 	"net/http"
 	"os"
+	"strconv"
 	"strings"
 	"sync"
 	"text/template"
@@ -47,7 +48,6 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/serializer"
 	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/apimachinery/pkg/util/mergepatch"
 	"k8s.io/apimachinery/pkg/util/strategicpatch"
 	"sigs.k8s.io/yaml"
@@ -323,52 +323,7 @@ func (wh *Webhook) injectPod(ar *kube.AdmissionReview, path string) *kube.Admiss
 }
 
 func (wh *Webhook) injectService(ar *kube.AdmissionReview, path string) *kube.AdmissionResponse {
-	log := webhookLog.WithLabels("path", path)
-	req := ar.Request
-	var svc corev1.Service
-	if err := json.Unmarshal(req.Object.Raw, &svc); err != nil {
-		log.Errorf("Could not unmarshal raw service object: %v %s", err, string(req.Object.Raw))
-		return toAdmissionResponse(err)
-	}
-	if svc.Namespace == "" {
-		svc.Namespace = req.Namespace
-	}
-
-	log = log.WithLabels("service", svc.Namespace+"/"+svc.Name)
-	log.Infof("Process inherent service request")
-
-	wh.mu.RLock()
-	required := injectRequired(IgnoredNamespaces.UnsortedList(), wh.Config, &corev1.PodSpec{}, svc.ObjectMeta)
-	wh.mu.RUnlock()
-	if !required {
-		log.Infof("Skipping service due to policy check")
-		return &kube.AdmissionResponse{Allowed: true}
-	}
-
-	originalService, err := json.Marshal(svc)
-	if err != nil {
-		return toAdmissionResponse(err)
-	}
-	if !rewriteInherentServiceTargetPorts(&svc) {
-		return &kube.AdmissionResponse{Allowed: true}
-	}
-
-	patchBytes, err := createServicePatch(&svc, originalService)
-	if err != nil {
-		log.Errorf("Service injection failed: %v", err)
-		return toAdmissionResponse(err)
-	}
-
-	log.Infof("Service injection successfully, patch size: %d bytes", len(patchBytes))
-	reviewResponse := kube.AdmissionResponse{
-		Allowed: true,
-		Patch:   patchBytes,
-		PatchType: func() *string {
-			pt := "JSONPatch"
-			return &pt
-		}(),
-	}
-	return &reviewResponse
+	return &kube.AdmissionResponse{Allowed: true}
 }
 
 func (wh *Webhook) Run(stop <-chan struct{}) {
@@ -454,12 +409,9 @@ func postProcessPod(pod *corev1.Pod, injectedPod corev1.Pod, req InjectionParame
 	if shouldInjectInherentGRPC(req) {
 		// Add Inherent gRPC env and shared bootstrap/cert volume to application containers.
 		ensureInherentGRPCTemplateAnnotation(pod)
-		ensureInherentManagedLabel(pod)
 		if err := addApplicationContainerConfig(pod, req); err != nil {
 			return err
 		}
-		// Must run after the sidecar is merged in: the rewrite reads the port it forwards to.
-		RewriteAppProbes(pod)
 	}
 
 	if err := reorderPod(pod, req); err != nil {
@@ -543,6 +495,19 @@ func addApplicationContainerConfig(pod *corev1.Pod, req InjectionParameters) err
 		pod.Spec.Volumes = append(pod.Spec.Volumes, desiredVolume)
 	}
 
+	if len(pod.Spec.Containers) > 0 {
+		application := &pod.Spec.Containers[0]
+		application.Env = ensureEnvVar(application.Env, corev1.EnvVar{
+			Name:  InherentGRPCMetricsAddressEnvName,
+			Value: InherentGRPCMetricsAddress,
+		})
+		application.Ports = ensureContainerPort(application.Ports, corev1.ContainerPort{
+			Name:          InherentGRPCMetricsPortName,
+			ContainerPort: InherentGRPCMetricsPort,
+			Protocol:      corev1.ProtocolTCP,
+		})
+		ensureApplicationMetricsAnnotations(pod)
+	}
 	for i := range pod.Spec.Containers {
 		container := &pod.Spec.Containers[i]
 		if container.Name == "dubbo-proxy" || container.Name == "dubbo-validation" {
@@ -668,6 +633,30 @@ func addApplicationContainerConfig(pod *corev1.Pod, req InjectionParameters) err
 	return nil
 }
 
+func ensureContainerPort(ports []corev1.ContainerPort, desired corev1.ContainerPort) []corev1.ContainerPort {
+	for _, port := range ports {
+		if port.Name == desired.Name || port.ContainerPort == desired.ContainerPort {
+			return ports
+		}
+	}
+	return append(ports, desired)
+}
+
+func ensureApplicationMetricsAnnotations(pod *corev1.Pod) {
+	if pod.Annotations == nil {
+		pod.Annotations = map[string]string{}
+	}
+	for key, value := range map[string]string{
+		"prometheus.io/scrape": "true",
+		"prometheus.io/path":   "/metrics",
+		"prometheus.io/port":   strconv.Itoa(InherentGRPCMetricsPort),
+	} {
+		if _, found := pod.Annotations[key]; !found {
+			pod.Annotations[key] = value
+		}
+	}
+}
+
 func ensureInherentGRPCTemplateAnnotation(pod *corev1.Pod) {
 	if pod.Annotations == nil {
 		pod.Annotations = map[string]string{}
@@ -683,13 +672,6 @@ func ensureInherentGRPCTemplateAnnotation(pod *corev1.Pod) {
 		return
 	}
 	pod.Annotations[InherentInjectTemplatesAnnoName] = templates + "," + InherentGRPCTemplateName
-}
-
-func ensureInherentManagedLabel(pod *corev1.Pod) {
-	if pod.Labels == nil {
-		pod.Labels = map[string]string{}
-	}
-	pod.Labels[InherentManagedLabel] = InherentManagedLabelValue
 }
 
 func ensureEnvVar(envs []corev1.EnvVar, desired corev1.EnvVar) []corev1.EnvVar {
@@ -714,7 +696,6 @@ func reorderPod(pod *corev1.Pod, req InjectionParameters) error {
 	// Proxy container should be last to ensure `kubectl exec` and similar commands
 	// continue to default to the user's container
 	pod.Spec.Containers = modifyContainers(pod.Spec.Containers, ProxyContainerName, MoveLast)
-	pod.Spec.Containers = modifyContainers(pod.Spec.Containers, InherentGRPCInboundContainerName, MoveLast)
 	return nil
 }
 
@@ -728,38 +709,6 @@ func createPatch(pod *corev1.Pod, original []byte) ([]byte, error) {
 		return nil, err
 	}
 	return json.Marshal(p)
-}
-
-func createServicePatch(svc *corev1.Service, original []byte) ([]byte, error) {
-	reinjected, err := json.Marshal(svc)
-	if err != nil {
-		return nil, err
-	}
-	p, err := jsonpatch.CreatePatch(original, reinjected)
-	if err != nil {
-		return nil, err
-	}
-	return json.Marshal(p)
-}
-
-func rewriteInherentServiceTargetPorts(svc *corev1.Service) bool {
-	if svc.Spec.Type == corev1.ServiceTypeExternalName || len(svc.Spec.Selector) == 0 {
-		return false
-	}
-
-	changed := false
-	for i := range svc.Spec.Ports {
-		port := &svc.Spec.Ports[i]
-		if port.Protocol != "" && port.Protocol != corev1.ProtocolTCP {
-			continue
-		}
-		if port.TargetPort.Type == intstr.Int && port.TargetPort.IntVal == InherentGRPCInboundPort {
-			continue
-		}
-		port.TargetPort = intstr.FromInt(InherentGRPCInboundPort)
-		changed = true
-	}
-	return changed
 }
 
 func applyOverlayYAML(target *corev1.Pod, overlayYAML []byte) (*corev1.Pod, error) {
