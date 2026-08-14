@@ -98,6 +98,17 @@ func TestBuildInboundHTTPFiltersAddsJWTAndAuthorizationBeforeRouter(t *testing.T
 	}
 }
 
+func TestAuthorizationRuleProjectsWorkloadPrincipal(t *testing.T) {
+	rule := authorizationRuleFromAPI(&security.Rule{
+		From: []*security.From{{Source: &security.Source{
+			Principals: []string{"cluster.local/ns/orders/sa/client"},
+		}}},
+	})
+	if got := rule.GetSources()[0].GetPrincipals(); len(got) != 1 || got[0] != "cluster.local/ns/orders/sa/client" {
+		t.Fatalf("principals = %v, want workload principal", got)
+	}
+}
+
 func newRequestAuthenticationConfig() config.Config {
 	return config.Config{
 		Meta: config.Meta{

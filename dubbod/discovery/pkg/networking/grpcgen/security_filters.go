@@ -145,6 +145,7 @@ func authorizationRuleFromAPI(rule *security.Rule) *rbacv1.Rule {
 		}
 		sources = append(sources, &rbacv1.Source{
 			RequestPrincipals: append([]string(nil), from.GetSource().GetRequestPrincipals()...),
+			Principals:        append([]string(nil), from.GetSource().GetPrincipals()...),
 		})
 	}
 	when := make([]*rbacv1.Condition, 0, len(rule.GetWhen()))

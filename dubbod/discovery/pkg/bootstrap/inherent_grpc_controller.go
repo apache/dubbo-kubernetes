@@ -50,6 +50,7 @@ import (
 	pkiutil "github.com/apache/dubbo-kubernetes/dubbod/security/pkg/pki/util"
 	caserver "github.com/apache/dubbo-kubernetes/dubbod/security/pkg/server/ca"
 	meshv1alpha1 "github.com/kdubbo/api/mesh/v1alpha1"
+	securityv1alpha3 "github.com/kdubbo/api/security/v1alpha3"
 	"google.golang.org/protobuf/proto"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -430,10 +431,25 @@ type inherentGRPCServiceRuntimeConfig struct {
 }
 
 type inherentGRPCPortRuntimeConfig struct {
-	Name     string                          `json:"name,omitempty"`
-	Port     int                             `json:"port"`
-	MTLSMode string                          `json:"mtlsMode,omitempty"`
-	Fault    *inherentGRPCFaultRuntimeConfig `json:"fault,omitempty"`
+	Name                  string                                         `json:"name,omitempty"`
+	Port                  int                                            `json:"port"`
+	MTLSMode              string                                         `json:"mtlsMode,omitempty"`
+	AuthorizationPolicies []inherentGRPCAuthorizationPolicyRuntimeConfig `json:"authorizationPolicies,omitempty"`
+	Fault                 *inherentGRPCFaultRuntimeConfig                `json:"fault,omitempty"`
+}
+
+type inherentGRPCAuthorizationPolicyRuntimeConfig struct {
+	Name   string                                       `json:"name"`
+	Action string                                       `json:"action"`
+	Rules  []inherentGRPCAuthorizationRuleRuntimeConfig `json:"rules,omitempty"`
+}
+
+type inherentGRPCAuthorizationRuleRuntimeConfig struct {
+	Sources []inherentGRPCAuthorizationSourceRuntimeConfig `json:"sources,omitempty"`
+}
+
+type inherentGRPCAuthorizationSourceRuntimeConfig struct {
+	Principals []string `json:"principals,omitempty"`
 }
 
 type inherentGRPCFaultRuntimeConfig struct {
@@ -821,15 +837,80 @@ func buildRuntimeServiceConfig(push *discoverymodel.PushContext, endpointIndex *
 			continue
 		}
 		cfg.Ports = append(cfg.Ports, inherentGRPCPortRuntimeConfig{
-			Name:     port.Name,
-			Port:     port.Port,
-			MTLSMode: runtimeInboundMTLSMode(push, svc.Attributes.Namespace, port.Port),
-			Fault:    runtimeFaultInjection(push, svc.Attributes.Namespace, svc.Attributes.Name, port.Name),
+			Name:                  port.Name,
+			Port:                  port.Port,
+			MTLSMode:              runtimeInboundMTLSMode(push, svc.Attributes.Namespace, port.Port),
+			AuthorizationPolicies: runtimeWorkloadAuthorizationPolicies(push, svc),
+			Fault:                 runtimeFaultInjection(push, svc.Attributes.Namespace, svc.Attributes.Name, port.Name),
 		})
 		cfg.Endpoints = append(cfg.Endpoints, runtimeEndpointsForService(endpointIndex, svc, port.Port, nil)...)
 	}
 	sortRuntimeEndpoints(cfg.Endpoints)
 	return cfg
+}
+
+func runtimeWorkloadAuthorizationPolicies(
+	push *discoverymodel.PushContext,
+	svc *discoverymodel.Service,
+) []inherentGRPCAuthorizationPolicyRuntimeConfig {
+	if push == nil || svc == nil {
+		return nil
+	}
+	workloadLabels := svc.Attributes.LabelSelectors
+	if len(workloadLabels) == 0 {
+		workloadLabels = svc.Attributes.Labels
+	}
+	configs := push.AuthorizationPoliciesForWorkload(svc.Attributes.Namespace, workloadLabels)
+	out := make([]inherentGRPCAuthorizationPolicyRuntimeConfig, 0, len(configs))
+	for _, cfg := range configs {
+		spec, ok := cfg.Spec.(*securityv1alpha3.AuthorizationPolicy)
+		if !ok || spec == nil {
+			continue
+		}
+		policy := inherentGRPCAuthorizationPolicyRuntimeConfig{
+			Name:   cfg.Name,
+			Action: spec.GetAction().String(),
+		}
+		for _, rule := range spec.GetRules() {
+			projected, ok := runtimeWorkloadAuthorizationRule(rule)
+			if ok {
+				policy.Rules = append(policy.Rules, projected)
+			}
+		}
+		// JWT claim constraints are enforced by dxgate. Never weaken them into
+		// an unconstrained L4 workload rule in dxproxy.
+		if len(spec.GetRules()) > 0 && len(policy.Rules) == 0 {
+			continue
+		}
+		out = append(out, policy)
+	}
+	return out
+}
+
+func runtimeWorkloadAuthorizationRule(
+	rule *securityv1alpha3.Rule,
+) (inherentGRPCAuthorizationRuleRuntimeConfig, bool) {
+	if rule == nil {
+		return inherentGRPCAuthorizationRuleRuntimeConfig{}, true
+	}
+	if len(rule.GetWhen()) > 0 {
+		return inherentGRPCAuthorizationRuleRuntimeConfig{}, false
+	}
+	projected := inherentGRPCAuthorizationRuleRuntimeConfig{}
+	for _, from := range rule.GetFrom() {
+		source := from.GetSource()
+		if source == nil {
+			projected.Sources = append(projected.Sources, inherentGRPCAuthorizationSourceRuntimeConfig{})
+			continue
+		}
+		if len(source.GetRequestPrincipals()) > 0 {
+			return inherentGRPCAuthorizationRuleRuntimeConfig{}, false
+		}
+		projected.Sources = append(projected.Sources, inherentGRPCAuthorizationSourceRuntimeConfig{
+			Principals: append([]string(nil), source.GetPrincipals()...),
+		})
+	}
+	return projected, true
 }
 
 func runtimeFaultInjection(push *discoverymodel.PushContext, namespace, name, portName string) *inherentGRPCFaultRuntimeConfig {

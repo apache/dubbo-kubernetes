@@ -57,6 +57,8 @@ var ValidateAuthorizationPolicy = validateFunc(
 				v = appendValidation(v, fmt.Errorf("rule[%d] must not be null", i))
 				continue
 			}
+			hasWorkloadPrincipal := false
+			hasRequestPrincipal := false
 			for j, from := range rule.GetFrom() {
 				if from == nil {
 					v = appendValidation(v, fmt.Errorf("rule[%d].from[%d] must not be null", i, j))
@@ -66,14 +68,28 @@ var ValidateAuthorizationPolicy = validateFunc(
 					v = appendValidation(v, fmt.Errorf("rule[%d].from[%d].source must be set", i, j))
 					continue
 				}
-				if len(from.GetSource().GetRequestPrincipals()) == 0 {
-					v = appendValidation(v, fmt.Errorf("rule[%d].from[%d].source must specify requestPrincipals", i, j))
+				source := from.GetSource()
+				hasWorkloadPrincipal = hasWorkloadPrincipal || len(source.GetPrincipals()) > 0
+				hasRequestPrincipal = hasRequestPrincipal || len(source.GetRequestPrincipals()) > 0
+				if len(source.GetPrincipals()) == 0 && len(source.GetRequestPrincipals()) == 0 {
+					v = appendValidation(v, fmt.Errorf("rule[%d].from[%d].source must specify principals or requestPrincipals", i, j))
 				}
-				for k, principal := range from.GetSource().GetRequestPrincipals() {
+				if len(source.GetPrincipals()) > 0 && len(source.GetRequestPrincipals()) > 0 {
+					v = appendValidation(v, fmt.Errorf("rule[%d].from[%d].source must not mix principals and requestPrincipals", i, j))
+				}
+				for k, principal := range source.GetPrincipals() {
+					if principal == "" {
+						v = appendValidation(v, fmt.Errorf("rule[%d].from[%d].source.principals[%d] must not be empty", i, j, k))
+					}
+				}
+				for k, principal := range source.GetRequestPrincipals() {
 					if principal == "" {
 						v = appendValidation(v, fmt.Errorf("rule[%d].from[%d].source.requestPrincipals[%d] must not be empty", i, j, k))
 					}
 				}
+			}
+			if hasWorkloadPrincipal && (hasRequestPrincipal || len(rule.GetWhen()) > 0) {
+				v = appendValidation(v, fmt.Errorf("rule[%d] must not mix workload principal and JWT constraints", i))
 			}
 			for j, when := range rule.GetWhen() {
 				if when == nil {
