@@ -3,44 +3,19 @@
 # this work for additional information regarding copyright ownership.
 # The ASF licenses this file to You under the Apache License, Version 2.0.
 
-# Exactly one selectorless Telemetry is allowed in dubbo-system. It defines
-# the meshlevel defaults.
-apiVersion: telemetry.dubbo.apache.org/v1alpha1
+# Mesh-level Prometheus metrics for Inherent client and server reporters.
+apiVersion: telemetry.dubbo.apache.org/v1alpha3
 kind: Telemetry
 metadata:
-  name: mesh-default
+  name: metrics-tags
   namespace: dubbo-system
 spec:
-  tracing:
+  metrics:
   - providers:
-    - name: localtrace
-    tags:
-    - name: foo
-      value: bar
-    randomSamplingPercentage: 100
----
-# Fields present here replace the corresponding meshlevel field. Unspecified
-# fields, including providers and sampling, remain inherited.
-apiVersion: telemetry.dubbo.apache.org/v1alpha1
-kind: Telemetry
-metadata:
-  name: namespace-override
-  namespace: myapp
-spec:
-  tracing:
-  - tags:
-    - name: userId
-      value: unknown
----
-# A selector applies the final workload-level override inside its namespace.
-apiVersion: telemetry.dubbo.apache.org/v1alpha1
-kind: Telemetry
-metadata:
-  name: workload-override
-  namespace: myapp
-spec:
-  selector:
-    matchLabels:
-      app: frontend
-  tracing:
-  - disableSpanReporting: true
+    - name: prometheus
+    rules:
+    - metric: REQUEST_COUNT
+      scope: CLIENT_AND_SERVER
+      tags:
+        grpc_response_status:
+          action: REMOVE

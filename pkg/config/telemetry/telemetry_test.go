@@ -20,7 +20,7 @@ import (
 	"testing"
 	"time"
 
-	api "github.com/kdubbo/api/telemetry/v1alpha1"
+	api "github.com/kdubbo/api/telemetry/v1alpha3"
 	typeapi "github.com/kdubbo/api/type/v1alpha3"
 	"google.golang.org/protobuf/types/known/wrapperspb"
 )
@@ -33,6 +33,15 @@ func TestResolveTelemetryLevels(t *testing.T) {
 				Providers:                []*api.Tracing_TracingProvider{{Name: "localtrace"}},
 				Tags:                     []*api.Tracing_Tag{{Name: "foo", Value: "bar"}},
 				RandomSamplingPercentage: wrapperspb.Double(100),
+			}}, Metrics: []*api.Metrics{{
+				Providers: []*api.Metrics_MetricsProvider{{Name: PrometheusProvider}},
+				Rules: []*api.MetricRule{{
+					Metric: api.StandardMetric_REQUEST_COUNT,
+					Scope:  api.MetricScope_CLIENT_AND_SERVER,
+					Tags: map[string]*api.TagOverride{
+						"grpc_response_status": {Action: api.TagOverride_REMOVE},
+					},
+				}},
 			}}},
 		},
 		{
@@ -62,6 +71,71 @@ func TestResolveTelemetryLevels(t *testing.T) {
 	}
 	if !got.Disabled() {
 		t.Fatal("workload override did not disable span reporting")
+	}
+	if !got.MetricsEnabled() || got.MetricsProvider() != PrometheusProvider {
+		t.Fatalf("metrics = enabled:%v provider:%q", got.MetricsEnabled(), got.MetricsProvider())
+	}
+	if len(got.MetricRules) != 1 ||
+		got.MetricRules[0].Metric != api.StandardMetric_REQUEST_COUNT ||
+		got.MetricRules[0].Scope != api.MetricScope_CLIENT_AND_SERVER ||
+		len(got.MetricRules[0].Tags) != 1 ||
+		got.MetricRules[0].Tags[0].Name != "grpc_response_status" ||
+		got.MetricRules[0].Tags[0].Action != api.TagOverride_REMOVE {
+		t.Fatalf("metric rules = %#v", got.MetricRules)
+	}
+}
+
+func TestResolveMetricsDisableOverride(t *testing.T) {
+	resources := []Resource{
+		{
+			Name: "mesh-default", Namespace: "dubbo-system",
+			Spec: &api.Telemetry{Metrics: []*api.Metrics{{
+				Providers: []*api.Metrics_MetricsProvider{{Name: PrometheusProvider}},
+			}}},
+		},
+		{
+			Name: "namespace-disable", Namespace: "myapp",
+			Spec: &api.Telemetry{Metrics: []*api.Metrics{{
+				Enabled: wrapperspb.Bool(false),
+			}}},
+		},
+	}
+
+	got := Resolve(resources, "dubbo-system", "myapp", nil)
+	if got.MetricsEnabled() {
+		t.Fatal("namespace override did not disable metrics")
+	}
+	if got.MetricsProvider() != PrometheusProvider {
+		t.Fatalf("provider = %q, want inherited prometheus", got.MetricsProvider())
+	}
+}
+
+func TestResolveMetricsRulesOverride(t *testing.T) {
+	resources := []Resource{
+		{
+			Name: "mesh-default", Namespace: "dubbo-system",
+			Spec: &api.Telemetry{Metrics: []*api.Metrics{{
+				Providers: []*api.Metrics_MetricsProvider{{Name: PrometheusProvider}},
+				Rules: []*api.MetricRule{{
+					Metric: api.StandardMetric_REQUEST_COUNT,
+					Scope:  api.MetricScope_CLIENT,
+				}},
+			}}},
+		},
+		{
+			Name: "namespace-rules", Namespace: "myapp",
+			Spec: &api.Telemetry{Metrics: []*api.Metrics{{
+				Rules: []*api.MetricRule{{
+					Metric: api.StandardMetric_REQUEST_COUNT,
+					Scope:  api.MetricScope_SERVER,
+				}},
+			}}},
+		},
+	}
+
+	got := Resolve(resources, "dubbo-system", "myapp", nil)
+	if len(got.MetricRules) != 1 || got.MetricRules[0].Scope != api.MetricScope_SERVER {
+		t.Fatalf("metric rules = %#v, want namespace replacement", got.MetricRules)
 	}
 }
 

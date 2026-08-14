@@ -19,18 +19,20 @@ package telemetry
 import (
 	"encoding/json"
 	"fmt"
+	"slices"
 	"sort"
 	"strconv"
 	"strings"
 	"time"
 
 	"github.com/apache/dubbo-kubernetes/pkg/config"
-	api "github.com/kdubbo/api/telemetry/v1alpha1"
-	clientapi "github.com/kdubbo/client-go/pkg/apis/telemetry/v1alpha1"
+	api "github.com/kdubbo/api/telemetry/v1alpha3"
+	clientapi "github.com/kdubbo/client-go/pkg/apis/telemetry/v1alpha3"
 )
 
 const (
 	LocalTraceProvider = "localtrace"
+	PrometheusProvider = "prometheus"
 	OTLPPort           = 4317
 )
 
@@ -46,12 +48,27 @@ type Tag struct {
 	Value string
 }
 
+type MetricTagOverride struct {
+	Name   string
+	Action api.TagOverride_Action
+}
+
+type MetricRule struct {
+	Metric api.StandardMetric
+	Scope  api.MetricScope
+	Tags   []MetricTagOverride
+}
+
 type EffectiveTracing struct {
 	Configured               bool
 	Providers                []string
 	Tags                     []Tag
 	RandomSamplingPercentage *float64
 	DisableSpanReporting     *bool
+	MetricsConfigured        bool
+	MetricProviders          []string
+	EnableMetrics            *bool
+	MetricRules              []MetricRule
 }
 
 func ResourcesFromConfigs(configs []config.Config) []Resource {
@@ -146,6 +163,47 @@ func matches(selector, labels map[string]string) bool {
 }
 
 func apply(result *EffectiveTracing, spec *api.Telemetry) {
+	for _, metrics := range spec.GetMetrics() {
+		if metrics == nil {
+			continue
+		}
+		result.MetricsConfigured = true
+		if len(metrics.GetProviders()) > 0 {
+			result.MetricProviders = make([]string, 0, len(metrics.GetProviders()))
+			for _, provider := range metrics.GetProviders() {
+				result.MetricProviders = append(result.MetricProviders, provider.GetName())
+			}
+		}
+		if enabled := metrics.GetEnabled(); enabled != nil {
+			value := enabled.GetValue()
+			result.EnableMetrics = &value
+		}
+		if len(metrics.GetRules()) > 0 {
+			result.MetricRules = make([]MetricRule, 0, len(metrics.GetRules()))
+			for _, rule := range metrics.GetRules() {
+				if rule == nil {
+					continue
+				}
+				tagNames := make([]string, 0, len(rule.GetTags()))
+				for name := range rule.GetTags() {
+					tagNames = append(tagNames, name)
+				}
+				sort.Strings(tagNames)
+				effective := MetricRule{
+					Metric: rule.GetMetric(),
+					Scope:  rule.GetScope(),
+					Tags:   make([]MetricTagOverride, 0, len(tagNames)),
+				}
+				for _, name := range tagNames {
+					effective.Tags = append(effective.Tags, MetricTagOverride{
+						Name:   name,
+						Action: rule.GetTags()[name].GetAction(),
+					})
+				}
+				result.MetricRules = append(result.MetricRules, effective)
+			}
+		}
+	}
 	for _, tracing := range spec.GetTracing() {
 		if tracing == nil {
 			continue
@@ -172,6 +230,23 @@ func apply(result *EffectiveTracing, spec *api.Telemetry) {
 			result.DisableSpanReporting = &value
 		}
 	}
+}
+
+func (t EffectiveTracing) MetricsEnabled() bool {
+	if !t.MetricsConfigured {
+		return false
+	}
+	if t.EnableMetrics != nil {
+		return *t.EnableMetrics
+	}
+	return slices.Contains(t.MetricProviders, PrometheusProvider)
+}
+
+func (t EffectiveTracing) MetricsProvider() string {
+	if len(t.MetricProviders) == 0 {
+		return ""
+	}
+	return t.MetricProviders[0]
 }
 
 func (t EffectiveTracing) Disabled() bool {

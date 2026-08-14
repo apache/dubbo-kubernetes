@@ -8,10 +8,10 @@ import (
 	githubcomkdubboapimeshv1alpha1 "github.com/kdubbo/api/mesh/v1alpha1"
 	githubcomkdubboapinetworkingv1alpha3 "github.com/kdubbo/api/networking/v1alpha3"
 	githubcomkdubboapisecurityv1alpha3 "github.com/kdubbo/api/security/v1alpha3"
-	githubcomkdubboapitelemetryv1alpha1 "github.com/kdubbo/api/telemetry/v1alpha1"
+	githubcomkdubboapitelemetryv1alpha3 "github.com/kdubbo/api/telemetry/v1alpha3"
 	apigithubcomapachedubbokubernetesapinetworkingv1alpha3 "github.com/kdubbo/client-go/pkg/apis/networking/v1alpha3"
 	apigithubcomapachedubbokubernetesapisecurityv1alpha3 "github.com/kdubbo/client-go/pkg/apis/security/v1alpha3"
-	apigithubcomapachedubbokubernetesapitelemetryv1alpha1 "github.com/kdubbo/client-go/pkg/apis/telemetry/v1alpha1"
+	apigithubcomapachedubbokubernetesapitelemetryv1alpha3 "github.com/kdubbo/client-go/pkg/apis/telemetry/v1alpha3"
 	k8sioapiadmissionregistrationv1 "k8s.io/api/admissionregistration/v1"
 	k8sioapiappsv1 "k8s.io/api/apps/v1"
 	k8sioapiautoscalingv2 "k8s.io/api/autoscaling/v2"
@@ -104,9 +104,9 @@ func getGvk(obj any) (config.GroupVersionKind, bool) {
 		return gvk.ServiceEntry, true
 	case *k8sioapiappsv1.StatefulSet:
 		return gvk.StatefulSet, true
-	case *githubcomkdubboapitelemetryv1alpha1.Telemetry:
+	case *githubcomkdubboapitelemetryv1alpha3.Telemetry:
 		return gvk.Telemetry, true
-	case *apigithubcomapachedubbokubernetesapitelemetryv1alpha1.Telemetry:
+	case *apigithubcomapachedubbokubernetesapitelemetryv1alpha3.Telemetry:
 		return gvk.Telemetry, true
 	case *k8sioapiadmissionregistrationv1.ValidatingWebhookConfiguration:
 		return gvk.ValidatingWebhookConfiguration, true

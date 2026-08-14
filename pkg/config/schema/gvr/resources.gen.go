@@ -41,7 +41,7 @@ var (
 	ServiceActivationPolicy        = schema.GroupVersionResource{Group: "networking.dubbo.apache.org", Version: "v1alpha3", Resource: "serviceactivationpolicies"}
 	ServiceEntry                   = schema.GroupVersionResource{Group: "networking.dubbo.apache.org", Version: "v1alpha3", Resource: "serviceentries"}
 	StatefulSet                    = schema.GroupVersionResource{Group: "apps", Version: "v1", Resource: "statefulsets"}
-	Telemetry                      = schema.GroupVersionResource{Group: "telemetry.dubbo.apache.org", Version: "v1alpha1", Resource: "telemetries"}
+	Telemetry                      = schema.GroupVersionResource{Group: "telemetry.dubbo.apache.org", Version: "v1alpha3", Resource: "telemetries"}
 	ValidatingWebhookConfiguration = schema.GroupVersionResource{Group: "admissionregistration.k8s.io", Version: "v1", Resource: "validatingwebhookconfigurations"}
 	WorkloadEntry                  = schema.GroupVersionResource{Group: "networking.dubbo.apache.org", Version: "v1alpha3", Resource: "workloadentries"}
 )

@@ -1157,7 +1157,7 @@ metadata:
     dubbo: security
     heritage: Tiller
     release: dubbo
-  name: authorizationpolicys.security.dubbo.apache.org
+  name: authorizationpolicies.security.dubbo.apache.org
 spec:
   group: security.dubbo.apache.org
   names:
@@ -1166,7 +1166,7 @@ spec:
     - security
     kind: AuthorizationPolicy
     listKind: AuthorizationPolicyList
-    plural: authorizationpolicys
+    plural: authorizationpolicies
     shortNames:
     - ap
     singular: authorizationpolicy
@@ -1213,6 +1213,12 @@ spec:
                           source:
                             description: Source attributes.
                             properties:
+                              principals:
+                                description: Workload identities derived from a verified
+                                  mutual TLS certificate.
+                                items:
+                                  type: string
+                                type: array
                               requestPrincipals:
                                 description: Request identities derived from validated
                                   JWT issuer and subject.
@@ -1587,14 +1593,74 @@ spec:
       jsonPath: .metadata.creationTimestamp
       name: Age
       type: date
-    name: v1alpha1
+    name: v1alpha3
     schema:
       openAPIV3Schema:
         properties:
           spec:
-            description: 'Telemetry configuration for workloads. See more details
-              at: '
+            description: 'Telemetry configuration for Inherent workloads. See more
+              details at: '
             properties:
+              metrics:
+                description: Metrics configures metric generation for selected workloads.
+                items:
+                  properties:
+                    enabled:
+                      description: Controls metric generation.
+                      nullable: true
+                      type: boolean
+                    providers:
+                      description: Providers used for metric reporting.
+                      items:
+                        properties:
+                          name:
+                            description: REQUIRED.
+                            type: string
+                        type: object
+                      type: array
+                    rules:
+                      description: Rules customize standard metrics.
+                      items:
+                        properties:
+                          metric:
+                            description: |-
+                              REQUIRED.
+
+                              Valid Options: REQUEST_COUNT
+                            enum:
+                            - STANDARD_METRIC_UNSPECIFIED
+                            - REQUEST_COUNT
+                            type: string
+                          scope:
+                            description: |-
+                              REQUIRED.
+
+                              Valid Options: CLIENT, SERVER, CLIENT_AND_SERVER
+                            enum:
+                            - METRIC_SCOPE_UNSPECIFIED
+                            - CLIENT
+                            - SERVER
+                            - CLIENT_AND_SERVER
+                            type: string
+                          tags:
+                            additionalProperties:
+                              properties:
+                                action:
+                                  description: |-
+                                    REQUIRED.
+
+                                    Valid Options: REMOVE
+                                  enum:
+                                  - ACTION_UNSPECIFIED
+                                  - REMOVE
+                                  type: string
+                              type: object
+                            description: Tag overrides keyed by metric tag name.
+                            type: object
+                        type: object
+                      type: array
+                  type: object
+                type: array
               selector:
                 description: The selector determines the workloads to apply the Telemetry
                   on.
@@ -1615,12 +1681,11 @@ spec:
                       rule: self.all(key, key.size() != 0)
                 type: object
               tracing:
-                description: Tracing configures the tracing behavior for all selected
-                  workloads.
+                description: Tracing configures tracing behavior for selected workloads.
                 items:
                   properties:
                     disableSpanReporting:
-                      description: Controls span reporting.
+                      description: Disables span reporting for selected workloads.
                       nullable: true
                       type: boolean
                     providers:
@@ -1633,8 +1698,7 @@ spec:
                         type: object
                       type: array
                     randomSamplingPercentage:
-                      description: Controls the rate at which traffic will be selected
-                        for tracing if no prior sampling decision has been made.
+                      description: Sampling percentage in range [0.0, 100.0].
                       format: double
                       nullable: true
                       type: number

@@ -19,7 +19,7 @@ import (
 	"testing"
 
 	"github.com/apache/dubbo-kubernetes/pkg/config/schema/collections"
-	telemetry "github.com/kdubbo/api/telemetry/v1alpha1"
+	telemetry "github.com/kdubbo/api/telemetry/v1alpha3"
 )
 
 func TestFromJSONTelemetryScalarWrappers(t *testing.T) {

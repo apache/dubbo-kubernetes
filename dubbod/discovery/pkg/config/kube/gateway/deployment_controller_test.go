@@ -30,7 +30,7 @@ import (
 	"github.com/apache/dubbo-kubernetes/pkg/kube/inject"
 	"github.com/google/go-cmp/cmp"
 	networking "github.com/kdubbo/api/networking/v1alpha3"
-	apitelemetry "github.com/kdubbo/api/telemetry/v1alpha1"
+	apitelemetry "github.com/kdubbo/api/telemetry/v1alpha3"
 	typeapi "github.com/kdubbo/api/type/v1alpha3"
 	"google.golang.org/protobuf/types/known/durationpb"
 	"google.golang.org/protobuf/types/known/wrapperspb"
@@ -768,6 +768,7 @@ func TestKubeGatewayTemplateRendersDxgateResources(t *testing.T) {
 		!strings.Contains(rendered[4], `value: "http://tracing.dubbo-system.svc:4317"`) {
 		t.Fatalf("deployment did not render dxgate OTEL endpoint:\n%s", rendered[4])
 	}
+
 }
 
 // TestKubeGatewayTemplateRendersHighAvailabilityResources covers the path a
@@ -874,7 +875,6 @@ func TestResolveGatewayObservabilityTelemetryHierarchy(t *testing.T) {
 	if cfg.OtelTags != `{"userId":"unknown"}` {
 		t.Fatalf("otel tags = %q", cfg.OtelTags)
 	}
-
 	resources = append(resources, telemetryconfig.Resource{
 		Name: "workload-override", Namespace: "app", CreationTimestamp: time.Unix(3, 0),
 		Spec: &apitelemetry.Telemetry{
