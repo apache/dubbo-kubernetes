@@ -31,7 +31,9 @@ import (
 	"github.com/apache/dubbo-kubernetes/pkg/config/constants"
 	configlabels "github.com/apache/dubbo-kubernetes/pkg/config/labels"
 	meshconfig "github.com/apache/dubbo-kubernetes/pkg/config/mesh"
+	"github.com/apache/dubbo-kubernetes/pkg/config/schema/gvk"
 	"github.com/apache/dubbo-kubernetes/pkg/config/schema/kind"
+	telemetryconfig "github.com/apache/dubbo-kubernetes/pkg/config/telemetry"
 	"github.com/apache/dubbo-kubernetes/pkg/grpcxds"
 	kubelib "github.com/apache/dubbo-kubernetes/pkg/kube"
 	"github.com/apache/dubbo-kubernetes/pkg/kube/controllers"
@@ -239,7 +241,7 @@ func inherentGRPCRuntimeConfigNeedsUpdate(req *discoverymodel.PushRequest) bool 
 	}
 	for cfg := range req.ConfigsUpdated {
 		switch cfg.Kind {
-		case kind.HTTPRoute, kind.BackendTLSPolicy, kind.CircuitBreakerPolicy, kind.FaultInjectionPolicy, kind.PeerAuthentication, kind.RequestAuthentication, kind.AuthorizationPolicy, kind.Service, kind.EndpointSlice, kind.Endpoints, kind.Pod, kind.Namespace:
+		case kind.HTTPRoute, kind.BackendTLSPolicy, kind.CircuitBreakerPolicy, kind.FaultInjectionPolicy, kind.PeerAuthentication, kind.RequestAuthentication, kind.AuthorizationPolicy, kind.Telemetry, kind.Service, kind.EndpointSlice, kind.Endpoints, kind.Pod, kind.Namespace:
 			return true
 		}
 	}
@@ -357,15 +359,36 @@ type inherentGRPCWorkloadContext struct {
 }
 
 type inherentGRPCRuntimeConfig struct {
-	Version      string                             `json:"version"`
-	Mode         string                             `json:"mode"`
-	Env          map[string]string                  `json:"env"`
-	Bootstrap    inherentGRPCBootstrapRuntimeConfig `json:"bootstrap"`
-	Certificates inherentGRPCCertRuntimeConfig      `json:"certificates"`
-	Keepalive    inherentGRPCKeepaliveRuntimeConfig `json:"keepalive"`
-	Workload     inherentGRPCWorkloadRuntimeConfig  `json:"workload"`
-	Services     []inherentGRPCServiceRuntimeConfig `json:"services,omitempty"`
-	Routes       []inherentGRPCRouteRuntimeConfig   `json:"routes,omitempty"`
+	Version      string                              `json:"version"`
+	Mode         string                              `json:"mode"`
+	Env          map[string]string                   `json:"env"`
+	Bootstrap    inherentGRPCBootstrapRuntimeConfig  `json:"bootstrap"`
+	Certificates inherentGRPCCertRuntimeConfig       `json:"certificates"`
+	Keepalive    inherentGRPCKeepaliveRuntimeConfig  `json:"keepalive"`
+	Workload     inherentGRPCWorkloadRuntimeConfig   `json:"workload"`
+	Telemetry    *inherentGRPCTelemetryRuntimeConfig `json:"telemetry,omitempty"`
+	Services     []inherentGRPCServiceRuntimeConfig  `json:"services,omitempty"`
+	Routes       []inherentGRPCRouteRuntimeConfig    `json:"routes,omitempty"`
+}
+
+type inherentGRPCTelemetryRuntimeConfig struct {
+	Metrics *inherentGRPCMetricsRuntimeConfig `json:"metrics,omitempty"`
+}
+
+type inherentGRPCMetricsRuntimeConfig struct {
+	Enabled   bool                                  `json:"enabled"`
+	Providers []string                              `json:"providers,omitempty"`
+	Rules     []inherentGRPCMetricRuleRuntimeConfig `json:"rules,omitempty"`
+}
+
+type inherentGRPCMetricRuleRuntimeConfig struct {
+	Metric string                                          `json:"metric"`
+	Scope  string                                          `json:"scope"`
+	Tags   map[string]inherentGRPCTagOverrideRuntimeConfig `json:"tags,omitempty"`
+}
+
+type inherentGRPCTagOverrideRuntimeConfig struct {
+	Action string `json:"action"`
 }
 
 type inherentGRPCBootstrapRuntimeConfig struct {
@@ -479,7 +502,7 @@ func (c *inherentGRPCWorkloadController) buildSecret(pod *corev1.Pod, current *c
 	}
 
 	services, routes := c.buildRuntimeTrafficConfig()
-	runtimeConfigJSON, err := buildRuntimeConfigJSON(workload, services, routes)
+	runtimeConfigJSON, err := buildRuntimeConfigJSON(workload, services, routes, c.resolveTelemetry(pod))
 	if err != nil {
 		return nil, time.Time{}, err
 	}
@@ -494,6 +517,22 @@ func (c *inherentGRPCWorkloadController) buildSecret(pod *corev1.Pod, current *c
 
 	secret := buildInherentGRPCSecret(pod, bootstrapJSON, runtimeConfigJSON, certChain, keyPEM, rootCert)
 	return secret, expireAt, nil
+}
+
+func (c *inherentGRPCWorkloadController) resolveTelemetry(pod *corev1.Pod) telemetryconfig.EffectiveTracing {
+	if c == nil || c.server == nil || c.server.environment == nil || c.server.environment.ConfigStore == nil || pod == nil {
+		return telemetryconfig.EffectiveTracing{}
+	}
+	meshNamespace := c.server.namespace
+	if meshNamespace == "" {
+		meshNamespace = constants.DubboSystemNamespace
+	}
+	return telemetryconfig.Resolve(
+		telemetryconfig.ResourcesFromConfigs(c.server.environment.List(gvk.Telemetry, "")),
+		meshNamespace,
+		pod.Namespace,
+		pod.Labels,
+	)
 }
 
 func buildInherentGRPCSecret(pod *corev1.Pod, bootstrapJSON, runtimeConfigJSON, certChain, keyPEM, rootCert []byte) *corev1.Secret {
@@ -666,7 +705,12 @@ func buildBootstrapJSON(workload *inherentGRPCWorkloadContext) ([]byte, error) {
 	return json.MarshalIndent(bootstrapCfg, "", "  ")
 }
 
-func buildRuntimeConfigJSON(workload *inherentGRPCWorkloadContext, services []inherentGRPCServiceRuntimeConfig, routes []inherentGRPCRouteRuntimeConfig) ([]byte, error) {
+func buildRuntimeConfigJSON(
+	workload *inherentGRPCWorkloadContext,
+	services []inherentGRPCServiceRuntimeConfig,
+	routes []inherentGRPCRouteRuntimeConfig,
+	effectiveTelemetry telemetryconfig.EffectiveTracing,
+) ([]byte, error) {
 	cfg := inherentGRPCRuntimeConfig{
 		Version: inherentGRPCRuntimeConfigVersion,
 		Mode:    "inherent-grpc",
@@ -719,10 +763,36 @@ func buildRuntimeConfigJSON(workload *inherentGRPCWorkloadContext, services []in
 			TrustDomain:    workload.trustDomain,
 			ClusterID:      workload.clusterID,
 		},
-		Services: services,
-		Routes:   routes,
+		Telemetry: inherentGRPCTelemetryConfig(effectiveTelemetry),
+		Services:  services,
+		Routes:    routes,
 	}
 	return json.MarshalIndent(cfg, "", "  ")
+}
+
+func inherentGRPCTelemetryConfig(effective telemetryconfig.EffectiveTracing) *inherentGRPCTelemetryRuntimeConfig {
+	if !effective.MetricsConfigured {
+		return nil
+	}
+	metrics := &inherentGRPCMetricsRuntimeConfig{
+		Enabled:   effective.MetricsEnabled(),
+		Providers: append([]string(nil), effective.MetricProviders...),
+		Rules:     make([]inherentGRPCMetricRuleRuntimeConfig, 0, len(effective.MetricRules)),
+	}
+	for _, rule := range effective.MetricRules {
+		runtimeRule := inherentGRPCMetricRuleRuntimeConfig{
+			Metric: rule.Metric.String(),
+			Scope:  rule.Scope.String(),
+		}
+		if len(rule.Tags) > 0 {
+			runtimeRule.Tags = make(map[string]inherentGRPCTagOverrideRuntimeConfig, len(rule.Tags))
+			for _, tag := range rule.Tags {
+				runtimeRule.Tags[tag.Name] = inherentGRPCTagOverrideRuntimeConfig{Action: tag.Action.String()}
+			}
+		}
+		metrics.Rules = append(metrics.Rules, runtimeRule)
+	}
+	return &inherentGRPCTelemetryRuntimeConfig{Metrics: metrics}
 }
 
 func (c *inherentGRPCWorkloadController) buildRuntimeTrafficConfig() ([]inherentGRPCServiceRuntimeConfig, []inherentGRPCRouteRuntimeConfig) {

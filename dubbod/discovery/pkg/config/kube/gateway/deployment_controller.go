@@ -55,7 +55,7 @@ import (
 	dubbolog "github.com/apache/dubbo-kubernetes/pkg/log"
 	networking "github.com/kdubbo/api/networking/v1alpha3"
 	clientnetworking "github.com/kdubbo/client-go/pkg/apis/networking/v1alpha3"
-	clienttelemetry "github.com/kdubbo/client-go/pkg/apis/telemetry/v1alpha1"
+	clienttelemetry "github.com/kdubbo/client-go/pkg/apis/telemetry/v1alpha3"
 	"google.golang.org/protobuf/types/known/durationpb"
 	"google.golang.org/protobuf/types/known/wrapperspb"
 )

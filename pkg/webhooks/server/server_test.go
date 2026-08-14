@@ -21,7 +21,7 @@ import (
 
 	"github.com/apache/dubbo-kubernetes/pkg/config"
 	"github.com/apache/dubbo-kubernetes/pkg/config/schema/gvk"
-	telemetry "github.com/kdubbo/api/telemetry/v1alpha1"
+	telemetry "github.com/kdubbo/api/telemetry/v1alpha3"
 )
 
 type fakeConfigLister struct {

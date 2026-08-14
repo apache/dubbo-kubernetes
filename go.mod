@@ -17,6 +17,10 @@ module github.com/apache/dubbo-kubernetes
 
 go 1.25.12
 
+replace github.com/kdubbo/api => ../api
+
+replace github.com/kdubbo/client-go => ../client-go
+
 require (
 	k8s.io/apimachinery v0.34.1
 	k8s.io/client-go v0.34.1
@@ -42,8 +46,8 @@ require (
 	github.com/hashicorp/go-multierror v1.1.1
 	github.com/hashicorp/golang-lru/v2 v2.0.7
 	github.com/kdubbo/api v0.0.0-20260811085311-7752d1da2bcb
-	github.com/kdubbo/client-go v0.0.0-20260811085609-07dfedad5b33
-	github.com/kdubbo/xds-api v0.0.0-20260811085311-5a7b086ecdc6
+	github.com/kdubbo/client-go v0.0.0-20260809042806-04a31db14165
+	github.com/kdubbo/xds-api v0.0.0-20260809042456-0d57cc43a21a
 	github.com/prometheus/client_golang v1.23.2
 	github.com/prometheus/client_model v0.6.2
 	github.com/spf13/cobra v1.10.2

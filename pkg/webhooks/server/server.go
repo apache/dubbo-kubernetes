@@ -34,7 +34,7 @@ import (
 	"github.com/apache/dubbo-kubernetes/pkg/config/validation"
 	"github.com/apache/dubbo-kubernetes/pkg/kube"
 	"github.com/hashicorp/go-multierror"
-	telemetry "github.com/kdubbo/api/telemetry/v1alpha1"
+	telemetry "github.com/kdubbo/api/telemetry/v1alpha3"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/serializer"

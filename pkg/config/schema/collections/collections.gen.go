@@ -15,7 +15,7 @@ import (
 	githubcomkdubboapimetav1alpha1 "github.com/kdubbo/api/meta/v1alpha1"
 	githubcomkdubboapinetworkingv1alpha3 "github.com/kdubbo/api/networking/v1alpha3"
 	githubcomkdubboapisecurityv1alpha3 "github.com/kdubbo/api/security/v1alpha3"
-	githubcomkdubboapitelemetryv1alpha1 "github.com/kdubbo/api/telemetry/v1alpha1"
+	githubcomkdubboapitelemetryv1alpha3 "github.com/kdubbo/api/telemetry/v1alpha3"
 	k8sioapiadmissionregistrationv1 "k8s.io/api/admissionregistration/v1"
 	k8sioapiappsv1 "k8s.io/api/apps/v1"
 	k8sioapiautoscalingv2 "k8s.io/api/autoscaling/v2"
@@ -514,10 +514,10 @@ var (
 		Group:      "telemetry.dubbo.apache.org",
 		Kind:       "Telemetry",
 		Plural:     "telemetries",
-		Version:    "v1alpha1",
-		Proto:      "dubbo.telemetry.v1alpha1.Telemetry", StatusProto: "dubbo.meta.v1alpha1.DubboStatus",
-		ReflectType: reflect.TypeOf(&githubcomkdubboapitelemetryv1alpha1.Telemetry{}).Elem(), StatusType: reflect.TypeOf(&githubcomkdubboapimetav1alpha1.DubboStatus{}).Elem(),
-		ProtoPackage: "github.com/kdubbo/api/telemetry/v1alpha1", StatusPackage: "github.com/kdubbo/api/meta/v1alpha1",
+		Version:    "v1alpha3",
+		Proto:      "dubbo.telemetry.v1alpha3.Telemetry", StatusProto: "dubbo.meta.v1alpha1.DubboStatus",
+		ReflectType: reflect.TypeOf(&githubcomkdubboapitelemetryv1alpha3.Telemetry{}).Elem(), StatusType: reflect.TypeOf(&githubcomkdubboapimetav1alpha1.DubboStatus{}).Elem(),
+		ProtoPackage: "github.com/kdubbo/api/telemetry/v1alpha3", StatusPackage: "github.com/kdubbo/api/meta/v1alpha1",
 		ClusterScoped: false,
 		Synthetic:     false,
 		Builtin:       false,

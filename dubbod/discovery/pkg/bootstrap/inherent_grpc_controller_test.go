@@ -31,6 +31,7 @@ import (
 	"github.com/apache/dubbo-kubernetes/pkg/config/schema/collections"
 	"github.com/apache/dubbo-kubernetes/pkg/config/schema/gvk"
 	"github.com/apache/dubbo-kubernetes/pkg/config/schema/kind"
+	telemetryconfig "github.com/apache/dubbo-kubernetes/pkg/config/telemetry"
 	"github.com/apache/dubbo-kubernetes/pkg/grpcxds"
 	"github.com/apache/dubbo-kubernetes/pkg/kube/controllers"
 	"github.com/apache/dubbo-kubernetes/pkg/kube/inject"
@@ -38,6 +39,7 @@ import (
 	"github.com/apache/dubbo-kubernetes/pkg/util/sets"
 	networking "github.com/kdubbo/api/networking/v1alpha3"
 	security "github.com/kdubbo/api/security/v1alpha3"
+	telemetryapi "github.com/kdubbo/api/telemetry/v1alpha3"
 	"google.golang.org/protobuf/types/known/durationpb"
 	"google.golang.org/protobuf/types/known/wrapperspb"
 	corev1 "k8s.io/api/core/v1"
@@ -149,7 +151,19 @@ func TestBuildRuntimeConfigJSON(t *testing.T) {
 		caAddress:        "192.168.15.164:32049",
 	}
 
-	data, err := buildRuntimeConfigJSON(workload, nil, nil)
+	effectiveTelemetry := telemetryconfig.EffectiveTracing{
+		MetricsConfigured: true,
+		MetricProviders:   []string{telemetryconfig.PrometheusProvider},
+		MetricRules: []telemetryconfig.MetricRule{{
+			Metric: telemetryapi.StandardMetric_REQUEST_COUNT,
+			Scope:  telemetryapi.MetricScope_CLIENT_AND_SERVER,
+			Tags: []telemetryconfig.MetricTagOverride{{
+				Name:   "grpc_response_status",
+				Action: telemetryapi.TagOverride_REMOVE,
+			}},
+		}},
+	}
+	data, err := buildRuntimeConfigJSON(workload, nil, nil, effectiveTelemetry)
 	if err != nil {
 		t.Fatalf("buildRuntimeConfigJSON() failed: %v", err)
 	}
@@ -221,6 +235,54 @@ func TestBuildRuntimeConfigJSON(t *testing.T) {
 	}
 	if got.Workload.ClusterID != workload.clusterID {
 		t.Fatalf("clusterId = %q, want %q", got.Workload.ClusterID, workload.clusterID)
+	}
+	if got.Telemetry == nil || got.Telemetry.Metrics == nil || !got.Telemetry.Metrics.Enabled {
+		t.Fatalf("telemetry metrics = %#v, want enabled", got.Telemetry)
+	}
+	if len(got.Telemetry.Metrics.Rules) != 1 {
+		t.Fatalf("telemetry rules = %#v, want one", got.Telemetry.Metrics.Rules)
+	}
+	rule := got.Telemetry.Metrics.Rules[0]
+	if rule.Metric != "REQUEST_COUNT" || rule.Scope != "CLIENT_AND_SERVER" {
+		t.Fatalf("telemetry rule = %#v", rule)
+	}
+	if tag := rule.Tags["grpc_response_status"]; tag.Action != "REMOVE" {
+		t.Fatalf("grpc_response_status override = %#v", tag)
+	}
+}
+
+func TestResolveInherentTelemetryForWorkload(t *testing.T) {
+	env, _ := newInherentRuntimeTestEnvironment(t, []config.Config{{
+		Meta: config.Meta{
+			GroupVersionKind: gvk.Telemetry,
+			Name:             "metrics-tags",
+			Namespace:        constants.DubboSystemNamespace,
+		},
+		Spec: &telemetryapi.Telemetry{Metrics: []*telemetryapi.Metrics{{
+			Providers: []*telemetryapi.Metrics_MetricsProvider{{Name: telemetryconfig.PrometheusProvider}},
+			Rules: []*telemetryapi.MetricRule{{
+				Metric: telemetryapi.StandardMetric_REQUEST_COUNT,
+				Scope:  telemetryapi.MetricScope_CLIENT_AND_SERVER,
+				Tags: map[string]*telemetryapi.TagOverride{
+					"grpc_response_status": {Action: telemetryapi.TagOverride_REMOVE},
+				},
+			}},
+		}}},
+	}}, nil)
+	controller := &inherentGRPCWorkloadController{server: &Server{
+		environment: env,
+		namespace:   constants.DubboSystemNamespace,
+	}}
+
+	got := controller.resolveTelemetry(&corev1.Pod{ObjectMeta: metav1.ObjectMeta{
+		Namespace: "app",
+		Labels:    map[string]string{"app": "frontend"},
+	}})
+	if !got.MetricsEnabled() || len(got.MetricRules) != 1 {
+		t.Fatalf("resolved telemetry = %#v", got)
+	}
+	if got.MetricRules[0].Scope != telemetryapi.MetricScope_CLIENT_AND_SERVER {
+		t.Fatalf("scope = %s, want CLIENT_AND_SERVER", got.MetricRules[0].Scope)
 	}
 }
 

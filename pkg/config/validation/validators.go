@@ -28,10 +28,11 @@ import (
 	"github.com/apache/dubbo-kubernetes/pkg/config/constants"
 	"github.com/apache/dubbo-kubernetes/pkg/config/labels"
 	"github.com/apache/dubbo-kubernetes/pkg/config/protocol"
+	telemetryconfig "github.com/apache/dubbo-kubernetes/pkg/config/telemetry"
 	"github.com/apache/dubbo-kubernetes/pkg/config/visibility"
 	networking "github.com/kdubbo/api/networking/v1alpha3"
 	security "github.com/kdubbo/api/security/v1alpha3"
-	telemetry "github.com/kdubbo/api/telemetry/v1alpha1"
+	telemetry "github.com/kdubbo/api/telemetry/v1alpha3"
 	kvalidation "k8s.io/apimachinery/pkg/util/validation"
 )
 
@@ -584,6 +585,58 @@ var ValidateTelemetry = RegisterValidateFunc("ValidateTelemetry",
 		v = appendValidation(v, validateWorkloadSelector(spec.GetSelector()))
 		if cfg.Namespace == constants.DubboSystemNamespace && spec.GetSelector() != nil {
 			v = appendValidation(v, fmt.Errorf("selector is not allowed on meshlevel Telemetry in namespace %q", constants.DubboSystemNamespace))
+		}
+		for i, m := range spec.GetMetrics() {
+			if m == nil {
+				v = appendValidation(v, fmt.Errorf("metrics[%d] must not be null", i))
+				continue
+			}
+			providers := map[string]struct{}{}
+			for j, p := range m.GetProviders() {
+				name := strings.TrimSpace(p.GetName())
+				if name == "" {
+					v = appendValidation(v, fmt.Errorf("metrics[%d].providers[%d].name must be set", i, j))
+					continue
+				}
+				if name != telemetryconfig.PrometheusProvider {
+					v = appendValidation(v, fmt.Errorf("metrics[%d].providers[%d].name %q is unsupported", i, j, name))
+				}
+				if _, found := providers[name]; found {
+					v = appendValidation(v, fmt.Errorf("metrics[%d].providers[%d].name %q is duplicated", i, j, name))
+				}
+				providers[name] = struct{}{}
+			}
+			rules := map[string]struct{}{}
+			for j, rule := range m.GetRules() {
+				if rule == nil {
+					v = appendValidation(v, fmt.Errorf("metrics[%d].rules[%d] must not be null", i, j))
+					continue
+				}
+				if rule.GetMetric() == telemetry.StandardMetric_STANDARD_METRIC_UNSPECIFIED {
+					v = appendValidation(v, fmt.Errorf("metrics[%d].rules[%d].metric must be set", i, j))
+				}
+				if rule.GetScope() == telemetry.MetricScope_METRIC_SCOPE_UNSPECIFIED {
+					v = appendValidation(v, fmt.Errorf("metrics[%d].rules[%d].scope must be set", i, j))
+				}
+				key := fmt.Sprintf("%d/%d", rule.GetMetric(), rule.GetScope())
+				if _, found := rules[key]; found {
+					v = appendValidation(v, fmt.Errorf("metrics[%d].rules[%d] duplicates metric %s with scope %s",
+						i, j, rule.GetMetric(), rule.GetScope()))
+				}
+				rules[key] = struct{}{}
+				for name, override := range rule.GetTags() {
+					if strings.TrimSpace(name) == "" {
+						v = appendValidation(v, fmt.Errorf("metrics[%d].rules[%d].tags contains an empty name", i, j))
+					}
+					if override == nil {
+						v = appendValidation(v, fmt.Errorf("metrics[%d].rules[%d].tags[%q] must not be null", i, j, name))
+						continue
+					}
+					if override.GetAction() != telemetry.TagOverride_REMOVE {
+						v = appendValidation(v, fmt.Errorf("metrics[%d].rules[%d].tags[%q].action must be REMOVE", i, j, name))
+					}
+				}
+			}
 		}
 		for i, t := range spec.GetTracing() {
 			if t == nil {

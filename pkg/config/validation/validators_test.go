@@ -27,7 +27,7 @@ import (
 	"github.com/apache/dubbo-kubernetes/pkg/config"
 	networking "github.com/kdubbo/api/networking/v1alpha3"
 	security "github.com/kdubbo/api/security/v1alpha3"
-	telemetry "github.com/kdubbo/api/telemetry/v1alpha1"
+	telemetry "github.com/kdubbo/api/telemetry/v1alpha3"
 	typev1alpha3 "github.com/kdubbo/api/type/v1alpha3"
 )
 
@@ -616,6 +616,60 @@ func TestValidateTelemetry(t *testing.T) {
 				}},
 			},
 			wantErr: false,
+		},
+		{
+			name: "valid metrics provider",
+			spec: &telemetry.Telemetry{Metrics: []*telemetry.Metrics{{
+				Providers: []*telemetry.Metrics_MetricsProvider{{Name: "prometheus"}},
+				Enabled:   wrapperspb.Bool(true),
+				Rules: []*telemetry.MetricRule{{
+					Metric: telemetry.StandardMetric_REQUEST_COUNT,
+					Scope:  telemetry.MetricScope_CLIENT_AND_SERVER,
+					Tags: map[string]*telemetry.TagOverride{
+						"grpc_response_status": {Action: telemetry.TagOverride_REMOVE},
+					},
+				}},
+			}}},
+			wantErr: false,
+		},
+		{
+			name: "metrics rule without metric",
+			spec: &telemetry.Telemetry{Metrics: []*telemetry.Metrics{{
+				Rules: []*telemetry.MetricRule{{Scope: telemetry.MetricScope_SERVER}},
+			}}},
+			wantErr: true,
+		},
+		{
+			name: "metrics rule without scope",
+			spec: &telemetry.Telemetry{Metrics: []*telemetry.Metrics{{
+				Rules: []*telemetry.MetricRule{{Metric: telemetry.StandardMetric_REQUEST_COUNT}},
+			}}},
+			wantErr: true,
+		},
+		{
+			name: "metrics tag without action",
+			spec: &telemetry.Telemetry{Metrics: []*telemetry.Metrics{{
+				Rules: []*telemetry.MetricRule{{
+					Metric: telemetry.StandardMetric_REQUEST_COUNT,
+					Scope:  telemetry.MetricScope_CLIENT,
+					Tags:   map[string]*telemetry.TagOverride{"grpc_response_status": {}},
+				}},
+			}}},
+			wantErr: true,
+		},
+		{
+			name: "metrics provider without name",
+			spec: &telemetry.Telemetry{Metrics: []*telemetry.Metrics{{
+				Providers: []*telemetry.Metrics_MetricsProvider{{}},
+			}}},
+			wantErr: true,
+		},
+		{
+			name: "unsupported metrics provider",
+			spec: &telemetry.Telemetry{Metrics: []*telemetry.Metrics{{
+				Providers: []*telemetry.Metrics_MetricsProvider{{Name: "unknown"}},
+			}}},
+			wantErr: true,
 		},
 		{
 			name: "provider without name",

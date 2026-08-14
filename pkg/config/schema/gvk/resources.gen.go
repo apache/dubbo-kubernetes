@@ -46,7 +46,7 @@ var (
 	ServiceActivationPolicy        = config.GroupVersionKind{Group: "networking.dubbo.apache.org", Version: "v1alpha3", Kind: "ServiceActivationPolicy"}
 	ServiceEntry                   = config.GroupVersionKind{Group: "networking.dubbo.apache.org", Version: "v1alpha3", Kind: "ServiceEntry"}
 	StatefulSet                    = config.GroupVersionKind{Group: "apps", Version: "v1", Kind: "StatefulSet"}
-	Telemetry                      = config.GroupVersionKind{Group: "telemetry.dubbo.apache.org", Version: "v1alpha1", Kind: "Telemetry"}
+	Telemetry                      = config.GroupVersionKind{Group: "telemetry.dubbo.apache.org", Version: "v1alpha3", Kind: "Telemetry"}
 	ValidatingWebhookConfiguration = config.GroupVersionKind{Group: "admissionregistration.k8s.io", Version: "v1", Kind: "ValidatingWebhookConfiguration"}
 	WorkloadEntry                  = config.GroupVersionKind{Group: "networking.dubbo.apache.org", Version: "v1alpha3", Kind: "WorkloadEntry"}
 )

@@ -17,10 +17,10 @@ import (
 	githubcomkdubboapimetav1alpha1 "github.com/kdubbo/api/meta/v1alpha1"
 	githubcomkdubboapinetworkingv1alpha3 "github.com/kdubbo/api/networking/v1alpha3"
 	githubcomkdubboapisecurityv1alpha3 "github.com/kdubbo/api/security/v1alpha3"
-	githubcomkdubboapitelemetryv1alpha1 "github.com/kdubbo/api/telemetry/v1alpha1"
+	githubcomkdubboapitelemetryv1alpha3 "github.com/kdubbo/api/telemetry/v1alpha3"
 	apigithubcomapachedubbokubernetesapinetworkingv1alpha3 "github.com/kdubbo/client-go/pkg/apis/networking/v1alpha3"
 	apigithubcomapachedubbokubernetesapisecurityv1alpha3 "github.com/kdubbo/client-go/pkg/apis/security/v1alpha3"
-	apigithubcomapachedubbokubernetesapitelemetryv1alpha1 "github.com/kdubbo/client-go/pkg/apis/telemetry/v1alpha1"
+	apigithubcomapachedubbokubernetesapitelemetryv1alpha3 "github.com/kdubbo/client-go/pkg/apis/telemetry/v1alpha3"
 	k8sioapiadmissionregistrationv1 "k8s.io/api/admissionregistration/v1"
 	k8sioapiappsv1 "k8s.io/api/apps/v1"
 	k8sioapiautoscalingv2 "k8s.io/api/autoscaling/v2"
@@ -101,9 +101,9 @@ func create(c kube.Client, cfg config.Config, objMeta metav1.ObjectMeta) (metav1
 			Spec:       *(cfg.Spec.(*githubcomkdubboapinetworkingv1alpha3.ServiceEntry)),
 		}, metav1.CreateOptions{})
 	case gvk.Telemetry:
-		return c.Dubbo().TelemetryV1alpha1().Telemetries(cfg.Namespace).Create(context.TODO(), &apigithubcomapachedubbokubernetesapitelemetryv1alpha1.Telemetry{
+		return c.Dubbo().TelemetryV1alpha3().Telemetries(cfg.Namespace).Create(context.TODO(), &apigithubcomapachedubbokubernetesapitelemetryv1alpha3.Telemetry{
 			ObjectMeta: objMeta,
-			Spec:       *(cfg.Spec.(*githubcomkdubboapitelemetryv1alpha1.Telemetry)),
+			Spec:       *(cfg.Spec.(*githubcomkdubboapitelemetryv1alpha3.Telemetry)),
 		}, metav1.CreateOptions{})
 	case gvk.WorkloadEntry:
 		return c.Dubbo().NetworkingV1alpha3().WorkloadEntries(cfg.Namespace).Create(context.TODO(), &apigithubcomapachedubbokubernetesapinetworkingv1alpha3.WorkloadEntry{
@@ -183,9 +183,9 @@ func update(c kube.Client, cfg config.Config, objMeta metav1.ObjectMeta) (metav1
 			Spec:       *(cfg.Spec.(*githubcomkdubboapinetworkingv1alpha3.ServiceEntry)),
 		}, metav1.UpdateOptions{})
 	case gvk.Telemetry:
-		return c.Dubbo().TelemetryV1alpha1().Telemetries(cfg.Namespace).Update(context.TODO(), &apigithubcomapachedubbokubernetesapitelemetryv1alpha1.Telemetry{
+		return c.Dubbo().TelemetryV1alpha3().Telemetries(cfg.Namespace).Update(context.TODO(), &apigithubcomapachedubbokubernetesapitelemetryv1alpha3.Telemetry{
 			ObjectMeta: objMeta,
-			Spec:       *(cfg.Spec.(*githubcomkdubboapitelemetryv1alpha1.Telemetry)),
+			Spec:       *(cfg.Spec.(*githubcomkdubboapitelemetryv1alpha3.Telemetry)),
 		}, metav1.UpdateOptions{})
 	case gvk.WorkloadEntry:
 		return c.Dubbo().NetworkingV1alpha3().WorkloadEntries(cfg.Namespace).Update(context.TODO(), &apigithubcomapachedubbokubernetesapinetworkingv1alpha3.WorkloadEntry{
@@ -260,7 +260,7 @@ func updateStatus(c kube.Client, cfg config.Config, objMeta metav1.ObjectMeta) (
 			Status:     *(cfg.Status.(*githubcomkdubboapimetav1alpha1.DubboStatus)),
 		}, metav1.UpdateOptions{})
 	case gvk.Telemetry:
-		return c.Dubbo().TelemetryV1alpha1().Telemetries(cfg.Namespace).UpdateStatus(context.TODO(), &apigithubcomapachedubbokubernetesapitelemetryv1alpha1.Telemetry{
+		return c.Dubbo().TelemetryV1alpha3().Telemetries(cfg.Namespace).UpdateStatus(context.TODO(), &apigithubcomapachedubbokubernetesapitelemetryv1alpha3.Telemetry{
 			ObjectMeta: objMeta,
 			Status:     *(cfg.Status.(*githubcomkdubboapimetav1alpha1.DubboStatus)),
 		}, metav1.UpdateOptions{})
@@ -475,19 +475,19 @@ func patch(c kube.Client, orig config.Config, origMeta metav1.ObjectMeta, mod co
 		return c.Dubbo().NetworkingV1alpha3().ServiceEntries(orig.Namespace).
 			Patch(context.TODO(), orig.Name, typ, patchBytes, metav1.PatchOptions{FieldManager: "pilot-discovery"})
 	case gvk.Telemetry:
-		oldRes := &apigithubcomapachedubbokubernetesapitelemetryv1alpha1.Telemetry{
+		oldRes := &apigithubcomapachedubbokubernetesapitelemetryv1alpha3.Telemetry{
 			ObjectMeta: origMeta,
-			Spec:       *(orig.Spec.(*githubcomkdubboapitelemetryv1alpha1.Telemetry)),
+			Spec:       *(orig.Spec.(*githubcomkdubboapitelemetryv1alpha3.Telemetry)),
 		}
-		modRes := &apigithubcomapachedubbokubernetesapitelemetryv1alpha1.Telemetry{
+		modRes := &apigithubcomapachedubbokubernetesapitelemetryv1alpha3.Telemetry{
 			ObjectMeta: modMeta,
-			Spec:       *(mod.Spec.(*githubcomkdubboapitelemetryv1alpha1.Telemetry)),
+			Spec:       *(mod.Spec.(*githubcomkdubboapitelemetryv1alpha3.Telemetry)),
 		}
 		patchBytes, err := genPatchBytes(oldRes, modRes, typ)
 		if err != nil {
 			return nil, err
 		}
-		return c.Dubbo().TelemetryV1alpha1().Telemetries(orig.Namespace).
+		return c.Dubbo().TelemetryV1alpha3().Telemetries(orig.Namespace).
 			Patch(context.TODO(), orig.Name, typ, patchBytes, metav1.PatchOptions{FieldManager: "pilot-discovery"})
 	case gvk.WorkloadEntry:
 		oldRes := &apigithubcomapachedubbokubernetesapinetworkingv1alpha3.WorkloadEntry{
@@ -542,7 +542,7 @@ func delete(c kube.Client, typ config.GroupVersionKind, name, namespace string, 
 	case gvk.ServiceEntry:
 		return c.Dubbo().NetworkingV1alpha3().ServiceEntries(namespace).Delete(context.TODO(), name, deleteOptions)
 	case gvk.Telemetry:
-		return c.Dubbo().TelemetryV1alpha1().Telemetries(namespace).Delete(context.TODO(), name, deleteOptions)
+		return c.Dubbo().TelemetryV1alpha3().Telemetries(namespace).Delete(context.TODO(), name, deleteOptions)
 	case gvk.WorkloadEntry:
 		return c.Dubbo().NetworkingV1alpha3().WorkloadEntries(namespace).Delete(context.TODO(), name, deleteOptions)
 	default:
@@ -1107,7 +1107,7 @@ var translationMap = map[config.GroupVersionKind]func(r runtime.Object) config.C
 		}
 	},
 	gvk.Telemetry: func(r runtime.Object) config.Config {
-		obj := r.(*apigithubcomapachedubbokubernetesapitelemetryv1alpha1.Telemetry)
+		obj := r.(*apigithubcomapachedubbokubernetesapitelemetryv1alpha3.Telemetry)
 		return config.Config{
 			Meta: config.Meta{
 				GroupVersionKind:  gvk.Telemetry,
