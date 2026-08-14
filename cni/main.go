@@ -121,6 +121,12 @@ func runInstall(args []string) error {
 		IPSetPath:       opts.IPSetPath,
 		StateDir:        opts.StateDir,
 	}
+	// The cluster source reads the host kubeconfig written by Install. Build it
+	// only after the first installation; InstallLoop repeats this operation to
+	// refresh the projected service-account credentials.
+	if err := nodeagent.Install(ctx, opts); err != nil {
+		return err
+	}
 	cluster := clusterSource(opts, nodeName)
 	go func() {
 		_ = nodeagent.ReconcileLoop(ctx,

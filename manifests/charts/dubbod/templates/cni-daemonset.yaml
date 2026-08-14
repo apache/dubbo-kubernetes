@@ -81,6 +81,9 @@ spec:
             capabilities:
               drop:
                 - ALL
+              add:
+                - NET_ADMIN
+                - NET_RAW
           volumeMounts:
             - name: cni-bin-dir
               mountPath: /opt/cni/bin
