@@ -251,6 +251,36 @@ func TestBuildRuntimeConfigJSON(t *testing.T) {
 	}
 }
 
+func TestInherentTelemetrySerializesAllStandardMetrics(t *testing.T) {
+	metrics := []telemetryapi.StandardMetric{
+		telemetryapi.StandardMetric_REQUEST_COUNT,
+		telemetryapi.StandardMetric_REQUEST_DURATION,
+		telemetryapi.StandardMetric_REQUEST_SIZE,
+		telemetryapi.StandardMetric_RESPONSE_SIZE,
+	}
+	effective := telemetryconfig.EffectiveTracing{
+		MetricsConfigured: true,
+		MetricProviders:   []string{telemetryconfig.PrometheusProvider},
+		MetricRules:       make([]telemetryconfig.MetricRule, 0, len(metrics)),
+	}
+	for _, metric := range metrics {
+		effective.MetricRules = append(effective.MetricRules, telemetryconfig.MetricRule{
+			Metric: metric,
+			Scope:  telemetryapi.MetricScope_CLIENT_AND_SERVER,
+		})
+	}
+
+	got := inherentGRPCTelemetryConfig(effective)
+	if got == nil || got.Metrics == nil || len(got.Metrics.Rules) != len(metrics) {
+		t.Fatalf("telemetry metrics = %#v", got)
+	}
+	for i, metric := range metrics {
+		if got.Metrics.Rules[i].Metric != metric.String() {
+			t.Fatalf("rule[%d].metric = %q, want %q", i, got.Metrics.Rules[i].Metric, metric)
+		}
+	}
+}
+
 func TestResolveInherentTelemetryForWorkload(t *testing.T) {
 	env, _ := newInherentRuntimeTestEnvironment(t, []config.Config{{
 		Meta: config.Meta{

@@ -626,6 +626,9 @@ func TestValidateTelemetry(t *testing.T) {
 					Metric: telemetry.StandardMetric_REQUEST_COUNT,
 					Scope:  telemetry.MetricScope_CLIENT_AND_SERVER,
 					Tags: map[string]*telemetry.TagOverride{
+						"reporter":             {Action: telemetry.TagOverride_REMOVE},
+						"grpc_service":         {Action: telemetry.TagOverride_REMOVE},
+						"grpc_method":          {Action: telemetry.TagOverride_REMOVE},
 						"grpc_response_status": {Action: telemetry.TagOverride_REMOVE},
 					},
 				}},
@@ -636,6 +639,19 @@ func TestValidateTelemetry(t *testing.T) {
 			name: "metrics rule without metric",
 			spec: &telemetry.Telemetry{Metrics: []*telemetry.Metrics{{
 				Rules: []*telemetry.MetricRule{{Scope: telemetry.MetricScope_SERVER}},
+			}}},
+			wantErr: true,
+		},
+		{
+			name: "unknown metrics standard label",
+			spec: &telemetry.Telemetry{Metrics: []*telemetry.Metrics{{
+				Rules: []*telemetry.MetricRule{{
+					Metric: telemetry.StandardMetric_REQUEST_COUNT,
+					Scope:  telemetry.MetricScope_CLIENT,
+					Tags: map[string]*telemetry.TagOverride{
+						"pod": {Action: telemetry.TagOverride_REMOVE},
+					},
+				}},
 			}}},
 			wantErr: true,
 		},
