@@ -17,10 +17,6 @@ module github.com/apache/dubbo-kubernetes
 
 go 1.25.12
 
-replace github.com/kdubbo/api => ../api
-
-replace github.com/kdubbo/client-go => ../client-go
-
 require (
 	k8s.io/apimachinery v0.34.1
 	k8s.io/client-go v0.34.1
@@ -45,9 +41,9 @@ require (
 	github.com/grpc-ecosystem/go-grpc-prometheus v1.2.0
 	github.com/hashicorp/go-multierror v1.1.1
 	github.com/hashicorp/golang-lru/v2 v2.0.7
-	github.com/kdubbo/api v0.0.0-20260811085311-7752d1da2bcb
-	github.com/kdubbo/client-go v0.0.0-20260809042806-04a31db14165
-	github.com/kdubbo/xds-api v0.0.0-20260809042456-0d57cc43a21a
+	github.com/kdubbo/api v0.0.0-20260814141555-d9b670d33d9f
+	github.com/kdubbo/client-go v0.0.0-20260814141742-c761bafa7cf3
+	github.com/kdubbo/xds-api v0.0.0-20260814172110-c45be7c324a3
 	github.com/prometheus/client_golang v1.23.2
 	github.com/prometheus/client_model v0.6.2
 	github.com/spf13/cobra v1.10.2
@@ -146,7 +142,7 @@ require (
 	golang.org/x/oauth2 v0.36.0 // indirect
 	golang.org/x/sync v0.22.0 // indirect
 	golang.org/x/text v0.40.0 // indirect
-	google.golang.org/genproto/googleapis/api v0.0.0-20260414002931-afd174a4e478 // indirect
+	google.golang.org/genproto/googleapis/api v0.0.0-20260420184626-e10c466a9529 // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20260427160629-7cedc36a6bc4 // indirect
 	gopkg.in/evanphx/json-patch.v4 v4.13.0 // indirect
 	gopkg.in/inf.v0 v0.9.1 // indirect
@@ -158,3 +154,5 @@ require (
 	sigs.k8s.io/randfill v1.0.0 // indirect
 	sigs.k8s.io/structured-merge-diff/v6 v6.3.0 // indirect
 )
+
+replace google.golang.org/genproto => google.golang.org/genproto v0.0.0-20260427160629-7cedc36a6bc4

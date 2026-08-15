@@ -21,7 +21,6 @@ import (
 	"runtime"
 	"strings"
 	"testing"
-	"time"
 
 	telemetryconfig "github.com/apache/dubbo-kubernetes/pkg/config/telemetry"
 	meshv1alpha1 "github.com/kdubbo/api/mesh/v1alpha1"
@@ -85,18 +84,17 @@ func TestInstallerGRPCEngineTemplateInjectsDirectXDSConnection(t *testing.T) {
 		t.Fatalf("RunTemplate() failed: %v", err)
 	}
 
-	if len(injectedPod.Spec.Containers) != 2 {
-		t.Fatalf("template containers = %d, want app overlay plus grpc-inbound", len(injectedPod.Spec.Containers))
+	if len(injectedPod.Spec.Containers) != 1 {
+		t.Fatalf("template containers = %d, want application overlay only", len(injectedPod.Spec.Containers))
 	}
 	if err := postProcessPod(mergedPod, *injectedPod, req); err != nil {
 		t.Fatalf("postProcessPod() failed: %v", err)
 	}
 
-	if len(mergedPod.Spec.Containers) != 2 {
-		t.Fatalf("containers = %d, want application container plus grpc-inbound", len(mergedPod.Spec.Containers))
+	if len(mergedPod.Spec.Containers) != 1 {
+		t.Fatalf("containers = %d, want original application container only", len(mergedPod.Spec.Containers))
 	}
 	assertDirectXDSConnection(t, mergedPod, "app", InherentGRPCSecretNameForMeta(pod.ObjectMeta))
-	assertGRPCInboundContainer(t, mergedPod)
 }
 
 func TestInstallerGRPCEngineTemplateUsesGenerateNameForDeploymentPods(t *testing.T) {
@@ -155,11 +153,10 @@ func TestInstallerGRPCEngineTemplateUsesGenerateNameForDeploymentPods(t *testing
 	if err := postProcessPod(mergedPod, *injectedPod, req); err != nil {
 		t.Fatalf("postProcessPod() failed: %v", err)
 	}
-	if len(mergedPod.Spec.Containers) != 2 {
-		t.Fatalf("containers = %d, want original nginx container plus grpc-inbound", len(mergedPod.Spec.Containers))
+	if len(mergedPod.Spec.Containers) != 1 {
+		t.Fatalf("containers = %d, want original application container only", len(mergedPod.Spec.Containers))
 	}
 	assertDirectXDSConnection(t, mergedPod, "nginx", InherentGRPCSecretNameForMeta(pod.ObjectMeta))
-	assertGRPCInboundContainer(t, mergedPod)
 	if got := mergedPod.Spec.Volumes[0].Secret.SecretName; got == InherentGRPCSecretName("") {
 		t.Fatalf("secret name = %q, want generateName-based secret", got)
 	}
@@ -177,6 +174,21 @@ func assertDirectXDSConnection(t *testing.T, pod *corev1.Pod, containerName, sec
 	}
 	if !hasEnv(container.Env, InherentGRPCConfigEnvName, InherentGRPCConfigPath) {
 		t.Fatalf("%s env missing", InherentGRPCConfigEnvName)
+	}
+	if !hasEnv(container.Env, InherentGRPCMetricsAddressEnvName, InherentGRPCMetricsAddress) {
+		t.Fatalf("%s env missing", InherentGRPCMetricsAddressEnvName)
+	}
+	foundMetricsPort := false
+	for _, port := range container.Ports {
+		if port.Name == InherentGRPCMetricsPortName && port.ContainerPort == InherentGRPCMetricsPort {
+			foundMetricsPort = true
+		}
+	}
+	if !foundMetricsPort {
+		t.Fatalf("metrics port %d missing", InherentGRPCMetricsPort)
+	}
+	if got := pod.Annotations["prometheus.io/scrape"]; got != "true" {
+		t.Fatalf("prometheus scrape annotation = %q, want true", got)
 	}
 	if !hasEnv(container.Env, InherentXDSAddressEnvName, "dubbod.dubbo-system.svc:26012") {
 		t.Fatalf("%s env missing", InherentXDSAddressEnvName)
@@ -244,53 +256,6 @@ func assertNoArgs(t *testing.T, pod *corev1.Pod) {
 	}
 }
 
-// inherentDrainDelay mirrors the sidecar's default termination drain delay.
-// The readiness probe must detect termination inside this window.
-const inherentDrainDelay = 5 * time.Second
-
-func assertGRPCInboundContainer(t *testing.T, pod *corev1.Pod) {
-	t.Helper()
-	container := FindContainer(InherentGRPCInboundContainerName, pod.Spec.Containers)
-	if container == nil {
-		t.Fatalf("%s container missing", InherentGRPCInboundContainerName)
-	}
-	if container.Image != "kdubbo/dubbod:debug" {
-		t.Fatalf("grpc-inbound image = %q, want kdubbo/dubbod:debug", container.Image)
-	}
-	wantArgs := []string{"grpc-inbound", "--listen", ":15080", "--upstream", "127.0.0.1:80"}
-	if strings.Join(container.Args, ",") != strings.Join(wantArgs, ",") {
-		t.Fatalf("grpc-inbound args = %v, want %v", container.Args, wantArgs)
-	}
-	if !hasMount(container.VolumeMounts, InherentXDSVolumeName, InherentXDSMountPath, true) {
-		t.Fatalf("grpc-inbound inherent xds mount missing")
-	}
-	assertDrainReadinessProbe(t, container)
-}
-
-// assertDrainReadinessProbe checks the probe that withdraws a terminating pod
-// from its EndpointSlice. Without it the sidecar's drain delay is inert: kubelet
-// never observes the listener closing, so the endpoint is still published
-// after the data-plane port is gone.
-func assertDrainReadinessProbe(t *testing.T, container *corev1.Container) {
-	t.Helper()
-	probe := container.ReadinessProbe
-	if probe == nil || probe.TCPSocket == nil {
-		t.Fatalf("grpc-inbound readiness probe missing")
-	}
-	if probe.TCPSocket.Port.IntValue() != InherentGRPCInboundPort {
-		t.Fatalf("grpc-inbound readiness probe = %v, want TCP port %d",
-			probe.TCPSocket.Port, InherentGRPCInboundPort)
-	}
-	// The probe has to fail before the sidecar stops accepting, otherwise the
-	// endpoint is withdrawn only after the listener is already gone.
-	if detection := time.Duration(probe.PeriodSeconds*probe.FailureThreshold) * time.Second; detection >= inherentDrainDelay {
-		t.Fatalf("readiness detection window = %v, want less than the %v drain delay", detection, inherentDrainDelay)
-	}
-	if !hasContainerPort(container.Ports, InherentGRPCInboundPort) {
-		t.Fatalf("grpc-inbound port %d not declared", InherentGRPCInboundPort)
-	}
-}
-
 func TestGetProxyImageUsesTopLevelImage(t *testing.T) {
 	values := map[string]any{
 		"image": "kdubbo/dubbod:test",
@@ -298,15 +263,6 @@ func TestGetProxyImageUsesTopLevelImage(t *testing.T) {
 	if got := getProxyImage(values, "default"); got != "kdubbo/dubbod:test" {
 		t.Fatalf("getProxyImage() = %q, want top-level image", got)
 	}
-}
-
-func hasContainerPort(ports []corev1.ContainerPort, want int) bool {
-	for _, port := range ports {
-		if int(port.ContainerPort) == want {
-			return true
-		}
-	}
-	return false
 }
 
 func TestAddApplicationContainerConfigInjectsInherentGRPCContract(t *testing.T) {
@@ -586,14 +542,6 @@ func TestEnsureInherentGRPCTemplateAnnotation(t *testing.T) {
 	}
 }
 
-func TestEnsureInherentManagedLabel(t *testing.T) {
-	pod := &corev1.Pod{}
-	ensureInherentManagedLabel(pod)
-	if got := pod.Labels[InherentManagedLabel]; got != InherentManagedLabelValue {
-		t.Fatalf("managed label = %q, want %q", got, InherentManagedLabelValue)
-	}
-}
-
 func TestInherentGRPCSecretNameFitsKubernetesLengthLimit(t *testing.T) {
 	name := InherentGRPCSecretName("grpc-provider-012345678901234567890123456789012345678901234567890123")
 	if len(name) > 63 {
@@ -711,6 +659,34 @@ func TestInstallerGRPCEngineTemplateInjectsTelemetryEnv(t *testing.T) {
 	mergedPod, _, err := RunTemplate(newParams(tracing))
 	if err != nil {
 		t.Fatalf("RunTemplate() failed: %v", err)
+	}
+	if err := postProcessPod(mergedPod, corev1.Pod{}, newParams(tracing)); err != nil {
+		t.Fatalf("postProcessPod() failed: %v", err)
+	}
+	if got := envValue(mergedPod, InherentGRPCMetricsAddressEnvName); got != InherentGRPCMetricsAddress {
+		t.Fatalf("%s = %q, want %q", InherentGRPCMetricsAddressEnvName, got, InherentGRPCMetricsAddress)
+	}
+	app := FindContainer("app", mergedPod.Spec.Containers)
+	if app == nil {
+		t.Fatal("app container not found")
+	}
+	foundMetricsPort := false
+	for _, port := range app.Ports {
+		if port.Name == InherentGRPCMetricsPortName && port.ContainerPort == InherentGRPCMetricsPort {
+			foundMetricsPort = true
+		}
+	}
+	if !foundMetricsPort {
+		t.Fatalf("application metrics port %d missing", InherentGRPCMetricsPort)
+	}
+	for key, want := range map[string]string{
+		"prometheus.io/scrape": "true",
+		"prometheus.io/path":   "/metrics",
+		"prometheus.io/port":   "9090",
+	} {
+		if got := mergedPod.Annotations[key]; got != want {
+			t.Fatalf("annotation %s = %q, want %q", key, got, want)
+		}
 	}
 	if got, want := envValue(mergedPod, "OTEL_EXPORTER_OTLP_ENDPOINT"), "http://tracing.dubbo-system.svc:4317"; got != want {
 		t.Fatalf("OTEL_EXPORTER_OTLP_ENDPOINT = %q, want %q", got, want)

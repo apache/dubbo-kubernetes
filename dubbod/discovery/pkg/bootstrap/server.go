@@ -622,6 +622,8 @@ func configKindForSchemaIdentifier(schemaID string) (kind.Kind, bool) {
 		return kind.DxgateService, true
 	case "ServiceActivationPolicy":
 		return kind.ServiceActivationPolicy, true
+	case "Telemetry":
+		return kind.Telemetry, true
 	default:
 		return 0, false
 	}

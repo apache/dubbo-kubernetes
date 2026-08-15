@@ -26,10 +26,12 @@ import (
 )
 
 const (
-	meshInboundChain = "DUBBO-GRPC-INBOUND"
-	meshPodIPSet     = "DUBBO-GRPC-INBOUND-PODS"
-	meshExcludeIPSet = "DUBBO-GRPC-INBOUND-EXCLUDE"
-	dxgateAdminPort  = 26021
+	meshInboundChain   = "DUBBO-GRPC-INBOUND"
+	meshPodIPSet       = "DUBBO-GRPC-INBOUND-PODS"
+	meshExcludeIPSet   = "DUBBO-GRPC-INBOUND-EXCLUDE"
+	legacyInboundChain = "DUBBO-XSERVER-INBOUND"
+	legacyPodIPSet     = "DUBBO-XSERVER-PODS"
+	dxgateAdminPort    = 26021
 	// dxproxyAdminPort carries the inbound sidecar's health, readiness and
 	// metrics endpoints. kubelet probes it from the host, so the fence has to
 	// exempt it or every injected pod fails its readiness probe. Workloads that
@@ -320,11 +322,16 @@ func (m *IPTablesRuleManager) ensureBase(ctx context.Context) error {
 	// Reject only new inbound connections. Established replies to outbound
 	// control-plane traffic still target a managed Pod and must not be fenced.
 	rejectOtherTCP := []string{"-m", "set", "--match-set", meshPodIPSet, "dst", "-p", "tcp", "-m", "conntrack", "--ctstate", "NEW", "-j", "REJECT"}
+	// Older releases installed an unconditional reject before the allow rules.
+	// Remove it during every reconciliation so upgrades converge without
+	// requiring an operator to flush the chain manually.
+	legacyRejectOtherTCP := []string{"-m", "set", "--match-set", meshPodIPSet, "dst", "-p", "tcp", "-j", "REJECT"}
 	m.deleteRepeated(ctx, allowExcluded...)
 	m.deleteRepeated(ctx, allowGRPCInbound...)
 	m.deleteRepeated(ctx, allowDxgateAdmin...)
 	m.deleteRepeated(ctx, allowDxproxyAdmin...)
 	m.deleteRepeated(ctx, rejectOtherTCP...)
+	m.deleteRepeated(ctx, legacyRejectOtherTCP...)
 	if err := m.appendRule(ctx, allowExcluded...); err != nil {
 		return err
 	}
@@ -337,7 +344,26 @@ func (m *IPTablesRuleManager) ensureBase(ctx context.Context) error {
 	if err := m.appendRule(ctx, allowDxproxyAdmin...); err != nil {
 		return err
 	}
-	return m.appendRule(ctx, rejectOtherTCP...)
+	if err := m.appendRule(ctx, rejectOtherTCP...); err != nil {
+		return err
+	}
+	m.cleanupLegacyBase(ctx)
+	return nil
+}
+
+func (m *IPTablesRuleManager) cleanupLegacyBase(ctx context.Context) {
+	for _, chain := range []string{"FORWARD", "OUTPUT"} {
+		for i := 0; i < 20; i++ {
+			if err := m.run(ctx, "-w", "-t", "filter", "-D", chain, "-j", legacyInboundChain); err != nil {
+				break
+			}
+		}
+	}
+	// Migration cleanup is best effort: absence means the node is already
+	// clean, while the new chain is fully installed before this runs.
+	_ = m.run(ctx, "-w", "-t", "filter", "-F", legacyInboundChain)
+	_ = m.run(ctx, "-w", "-t", "filter", "-X", legacyInboundChain)
+	_ = m.runIPSet(ctx, "destroy", legacyPodIPSet)
 }
 
 func (m *IPTablesRuleManager) deleteRepeated(ctx context.Context, args ...string) {

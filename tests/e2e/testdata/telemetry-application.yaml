@@ -1,0 +1,49 @@
+# Licensed to the Apache Software Foundation (ASF) under one or more
+# contributor license agreements. See the NOTICE file distributed with
+# this work for additional information regarding copyright ownership.
+# The ASF licenses this file to You under the Apache License, Version 2.0.
+
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: telemetry-e2e
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: telemetry-application
+  namespace: telemetry-e2e
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: telemetry-application
+  namespace: telemetry-e2e
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: telemetry-application
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: telemetry-application
+        inherent.dubbo.apache.org/inject: "true"
+      annotations:
+        inject.dubbo.apache.org/templates: grpc-engine
+    spec:
+      serviceAccountName: telemetry-application
+      containers:
+      - name: application
+        image: kdubbo/activation-e2e:telemetry-auto-r2
+        imagePullPolicy: IfNotPresent
+        args:
+        - telemetry
+        ports:
+        - name: grpc
+          containerPort: 8080
+        readinessProbe:
+          httpGet:
+            path: /healthz
+            port: metrics
+          periodSeconds: 2

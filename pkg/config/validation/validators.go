@@ -574,6 +574,13 @@ func validateWorkloadAddress(field, value string) error {
 	return validateServiceEntryHost(field, value)
 }
 
+var telemetryStandardLabels = map[string]struct{}{
+	"reporter":             {},
+	"grpc_service":         {},
+	"grpc_method":          {},
+	"grpc_response_status": {},
+}
+
 // ValidateTelemetry checks that a Telemetry resource is well-formed.
 var ValidateTelemetry = RegisterValidateFunc("ValidateTelemetry",
 	func(cfg config.Config) (Warning, error) {
@@ -627,6 +634,9 @@ var ValidateTelemetry = RegisterValidateFunc("ValidateTelemetry",
 				for name, override := range rule.GetTags() {
 					if strings.TrimSpace(name) == "" {
 						v = appendValidation(v, fmt.Errorf("metrics[%d].rules[%d].tags contains an empty name", i, j))
+					} else if _, found := telemetryStandardLabels[name]; !found {
+						v = appendValidation(v, fmt.Errorf(
+							"metrics[%d].rules[%d].tags[%q] is not a standard label", i, j, name))
 					}
 					if override == nil {
 						v = appendValidation(v, fmt.Errorf("metrics[%d].rules[%d].tags[%q] must not be null", i, j, name))

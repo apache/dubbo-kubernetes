@@ -1626,10 +1626,13 @@ spec:
                             description: |-
                               REQUIRED.
 
-                              Valid Options: REQUEST_COUNT
+                              Valid Options: REQUEST_COUNT, REQUEST_DURATION, REQUEST_SIZE, RESPONSE_SIZE
                             enum:
                             - STANDARD_METRIC_UNSPECIFIED
                             - REQUEST_COUNT
+                            - REQUEST_DURATION
+                            - REQUEST_SIZE
+                            - RESPONSE_SIZE
                             type: string
                           scope:
                             description: |-
@@ -1655,7 +1658,7 @@ spec:
                                   - REMOVE
                                   type: string
                               type: object
-                            description: Tag overrides keyed by metric tag name.
+                            description: Tag overrides keyed by standard label name.
                             type: object
                         type: object
                       type: array

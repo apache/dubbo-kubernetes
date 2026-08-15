@@ -103,35 +103,6 @@ spec:
     - name: dubbo-xds
       mountPath: /etc/dubbo/proxy
       readOnly: true
-{{- $appPort := 80 }}
-{{- if and (gt (len .Spec.Containers) 0) (gt (len ((index .Spec.Containers 0).Ports)) 0) }}
-{{- $appPort = int ((index ((index .Spec.Containers 0).Ports) 0).ContainerPort) }}
-{{- end }}
-  - name: dubbo-grpc-inbound
-    image: {{ .ProxyImage | quote }}
-    imagePullPolicy: IfNotPresent
-    args:
-    - grpc-inbound
-    - --listen
-    - :15080
-    - --upstream
-    - 127.0.0.1:{{ $appPort }}
-    ports:
-    - name: grpc-inbound
-      containerPort: 15080
-      protocol: TCP
-    # Probe the listener the sidecar actually owns. periodSeconds x
-    # failureThreshold must stay below the sidecar's termination drain delay
-    # (5s by default), so kubelet withdraws the endpoint promptly.
-    readinessProbe:
-      tcpSocket:
-        port: 15080
-      periodSeconds: 2
-      failureThreshold: 2
-    volumeMounts:
-    - name: dubbo-xds
-      mountPath: /etc/dubbo/proxy
-      readOnly: true
   volumes:
   - name: dubbo-xds
     secret:
