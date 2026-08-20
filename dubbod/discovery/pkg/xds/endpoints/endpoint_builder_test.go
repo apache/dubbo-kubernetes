@@ -31,6 +31,7 @@ import (
 	"github.com/apache/dubbo-kubernetes/pkg/kube/krt"
 	"github.com/apache/dubbo-kubernetes/pkg/kube/multicluster"
 	networking "github.com/kdubbo/api/networking/v1alpha3"
+	security "github.com/kdubbo/api/security/v1alpha3"
 	endpoint "github.com/kdubbo/xds-api/endpoint/v1"
 )
 
@@ -52,6 +53,36 @@ func TestBuildClusterLoadAssignmentKeepsAppPortWithoutDUBBOMutual(t *testing.T) 
 
 	if got := firstEndpointPort(t, cla); got != 80 {
 		t.Fatalf("endpoint port = %d, want app port 80", got)
+	}
+}
+
+func TestBuildClusterLoadAssignmentKeepsNativeAppPortWithStrictMTLS(t *testing.T) {
+	hostname := host.Name("payment.app.svc.cluster.local")
+	svc := newEndpointTestService("payment", "app", string(hostname), 8080)
+	push := newEndpointTestPushContext(t, []config.Config{{
+		Meta: config.Meta{
+			GroupVersionKind: gvk.PeerAuthentication,
+			Name:             "strict",
+			Namespace:        "app",
+		},
+		Spec: &security.PeerAuthentication{
+			Mtls: &security.PeerAuthentication_MutualTLS{
+				Mode: security.PeerAuthentication_MutualTLS_STRICT,
+			},
+		},
+	}}, []*model.Service{svc})
+	index := model.NewEndpointIndex(model.DisabledCache{})
+	index.UpdateServiceEndpoints(model.ShardKey{}, string(hostname), "app", []*model.DubboEndpoint{{
+		Addresses:       []string{"10.0.0.5"},
+		EndpointPort:    8080,
+		ServicePortName: "http",
+		HealthStatus:    model.Healthy,
+	}}, false)
+
+	clusterName := model.BuildSubsetKey(model.TrafficDirectionOutbound, "", hostname, 8080)
+	cla := NewEndpointBuilder(clusterName, newEndpointTestProxy(), push).BuildClusterLoadAssignment(index)
+	if got := firstEndpointPort(t, cla); got != 8080 {
+		t.Fatalf("endpoint port = %d, want native application port 8080", got)
 	}
 }
 

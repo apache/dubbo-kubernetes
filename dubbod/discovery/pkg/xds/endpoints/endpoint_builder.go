@@ -26,7 +26,6 @@ import (
 	"github.com/apache/dubbo-kubernetes/dubbod/discovery/pkg/networking/util"
 	"github.com/apache/dubbo-kubernetes/pkg/cluster"
 	"github.com/apache/dubbo-kubernetes/pkg/config/host"
-	"github.com/apache/dubbo-kubernetes/pkg/kube/inject"
 	"github.com/apache/dubbo-kubernetes/pkg/kube/multicluster"
 	dubbolog "github.com/apache/dubbo-kubernetes/pkg/log"
 	"github.com/cespare/xxhash/v2"
@@ -342,7 +341,7 @@ func (b *EndpointBuilder) buildLbEndpointForCluster(ep *model.DubboEndpoint, end
 	}
 
 	endpointAddress := ep.Addresses[0]
-	endpointPort := b.endpointPort(ep)
+	endpointPort := ep.EndpointPort
 	if gateway, ok := b.eastWestGatewayForCluster(endpointCluster, gateways); ok {
 		endpointAddress = gateway.Address
 		endpointPort = gateway.Port
@@ -405,23 +404,6 @@ func (b *EndpointBuilder) eastWestGatewayForCluster(endpointCluster cluster.ID, 
 	}
 	gateway, ok := gateways[endpointCluster]
 	return gateway, ok
-}
-
-func (b *EndpointBuilder) endpointPort(ep *model.DubboEndpoint) uint32 {
-	if b.useGRPCInboundEndpointPort() {
-		return inject.InherentGatewayInboundPort
-	}
-	return ep.EndpointPort
-}
-
-func (b *EndpointBuilder) useGRPCInboundEndpointPort() bool {
-	if b == nil || b.proxy == nil || !b.proxy.IsInherentGrpc() || b.push == nil ||
-		b.push.AuthenticationPolicies == nil || b.service == nil {
-		return false
-	}
-	return b.push.AuthenticationPolicies.EffectiveMutualTLSMode(
-		b.service.Attributes.Namespace, nil, uint32(b.port),
-	) == model.MTLSStrict
 }
 
 func buildEmptyClusterLoadAssignment(clusterName string) *endpoint.ClusterLoadAssignment {
