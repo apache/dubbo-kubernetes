@@ -372,7 +372,17 @@ type inherentGRPCRuntimeConfig struct {
 }
 
 type inherentGRPCTelemetryRuntimeConfig struct {
-	Metrics *inherentGRPCMetricsRuntimeConfig `json:"metrics,omitempty"`
+	Metrics *inherentGRPCMetricsRuntimeConfig  `json:"metrics,omitempty"`
+	Logging []inherentGRPCLoggingRuntimeConfig `json:"logging,omitempty"`
+}
+
+type inherentGRPCLoggingRuntimeConfig struct {
+	Providers        []string          `json:"providers,omitempty"`
+	Disabled         bool              `json:"disabled"`
+	Mode             string            `json:"mode,omitempty"`
+	FilterExpression string            `json:"filterExpression,omitempty"`
+	Tags             map[string]string `json:"tags,omitempty"`
+	Endpoint         string            `json:"endpoint,omitempty"`
 }
 
 type inherentGRPCMetricsRuntimeConfig struct {
@@ -771,28 +781,52 @@ func buildRuntimeConfigJSON(
 }
 
 func inherentGRPCTelemetryConfig(effective telemetryconfig.EffectiveTracing) *inherentGRPCTelemetryRuntimeConfig {
-	if !effective.MetricsConfigured {
+	if !effective.MetricsConfigured && !effective.LoggingConfigured {
 		return nil
 	}
-	metrics := &inherentGRPCMetricsRuntimeConfig{
-		Enabled:   effective.MetricsEnabled(),
-		Providers: append([]string(nil), effective.MetricProviders...),
-		Rules:     make([]inherentGRPCMetricRuleRuntimeConfig, 0, len(effective.MetricRules)),
+	config := &inherentGRPCTelemetryRuntimeConfig{
+		Logging: make([]inherentGRPCLoggingRuntimeConfig, 0, len(effective.Logging)),
 	}
-	for _, rule := range effective.MetricRules {
-		runtimeRule := inherentGRPCMetricRuleRuntimeConfig{
-			Metric: rule.Metric.String(),
-			Scope:  rule.Scope.String(),
+	if effective.MetricsConfigured {
+		config.Metrics = &inherentGRPCMetricsRuntimeConfig{
+			Enabled:   effective.MetricsEnabled(),
+			Providers: append([]string(nil), effective.MetricProviders...),
+			Rules:     make([]inherentGRPCMetricRuleRuntimeConfig, 0, len(effective.MetricRules)),
 		}
-		if len(rule.Tags) > 0 {
-			runtimeRule.Tags = make(map[string]inherentGRPCTagOverrideRuntimeConfig, len(rule.Tags))
-			for _, tag := range rule.Tags {
-				runtimeRule.Tags[tag.Name] = inherentGRPCTagOverrideRuntimeConfig{Action: tag.Action.String()}
+		for _, rule := range effective.MetricRules {
+			runtimeRule := inherentGRPCMetricRuleRuntimeConfig{
+				Metric: rule.Metric.String(),
+				Scope:  rule.Scope.String(),
 			}
+			if len(rule.Tags) > 0 {
+				runtimeRule.Tags = make(map[string]inherentGRPCTagOverrideRuntimeConfig, len(rule.Tags))
+				for _, tag := range rule.Tags {
+					runtimeRule.Tags[tag.Name] = inherentGRPCTagOverrideRuntimeConfig{Action: tag.Action.String()}
+				}
+			}
+			config.Metrics.Rules = append(config.Metrics.Rules, runtimeRule)
 		}
-		metrics.Rules = append(metrics.Rules, runtimeRule)
 	}
-	return &inherentGRPCTelemetryRuntimeConfig{Metrics: metrics}
+	for _, rule := range effective.Logging {
+		runtimeRule := inherentGRPCLoggingRuntimeConfig{
+			Providers:        append([]string(nil), rule.Providers...),
+			Disabled:         rule.Disabled,
+			Mode:             rule.Mode.String(),
+			FilterExpression: rule.FilterExpression,
+			Tags:             make(map[string]string, len(rule.Tags)),
+		}
+		if runtimeRule.Mode == "MODE_UNSPECIFIED" {
+			runtimeRule.Mode = "CLIENT_AND_SERVER"
+		}
+		if len(rule.Providers) > 0 {
+			runtimeRule.Endpoint = telemetryconfig.ProviderEndpoint(rule.Providers[0], constants.DubboSystemNamespace)
+		}
+		for _, tag := range rule.Tags {
+			runtimeRule.Tags[tag.Name] = tag.Value
+		}
+		config.Logging = append(config.Logging, runtimeRule)
+	}
+	return config
 }
 
 func (c *inherentGRPCWorkloadController) buildRuntimeTrafficConfig() ([]inherentGRPCServiceRuntimeConfig, []inherentGRPCRouteRuntimeConfig) {

@@ -593,6 +593,50 @@ var ValidateTelemetry = RegisterValidateFunc("ValidateTelemetry",
 		if cfg.Namespace == constants.DubboSystemNamespace && spec.GetSelector() != nil {
 			v = appendValidation(v, fmt.Errorf("selector is not allowed on meshlevel Telemetry in namespace %q", constants.DubboSystemNamespace))
 		}
+		for i, logging := range spec.GetLogging() {
+			if logging == nil {
+				v = appendValidation(v, fmt.Errorf("logging[%d] must not be null", i))
+				continue
+			}
+			providers := map[string]struct{}{}
+			for j, provider := range logging.GetProviders() {
+				name := strings.TrimSpace(provider.GetName())
+				if name == "" {
+					v = appendValidation(v, fmt.Errorf("logging[%d].providers[%d].name must be set", i, j))
+					continue
+				}
+				if name != telemetryconfig.OTELLogProvider {
+					v = appendValidation(v, fmt.Errorf("logging[%d].providers[%d].name %q is unsupported", i, j, name))
+				}
+				if _, found := providers[name]; found {
+					v = appendValidation(v, fmt.Errorf("logging[%d].providers[%d].name %q is duplicated", i, j, name))
+				}
+				providers[name] = struct{}{}
+			}
+			switch logging.GetMatch().GetMode() {
+			case telemetry.Logging_Match_MODE_UNSPECIFIED,
+				telemetry.Logging_Match_CLIENT,
+				telemetry.Logging_Match_SERVER,
+				telemetry.Logging_Match_CLIENT_AND_SERVER:
+			default:
+				v = appendValidation(v, fmt.Errorf("logging[%d].match.mode is invalid", i))
+			}
+			if logging.GetFilter() != nil && strings.TrimSpace(logging.GetFilter().GetExpression()) == "" {
+				v = appendValidation(v, fmt.Errorf("logging[%d].filter.expression must be set", i))
+			}
+			tagNames := map[string]struct{}{}
+			for j, tag := range logging.GetTags() {
+				name := strings.TrimSpace(tag.GetName())
+				if name == "" {
+					v = appendValidation(v, fmt.Errorf("logging[%d].tags[%d].name must be set", i, j))
+					continue
+				}
+				if _, found := tagNames[name]; found {
+					v = appendValidation(v, fmt.Errorf("logging[%d].tags[%d].name %q is duplicated", i, j, name))
+				}
+				tagNames[name] = struct{}{}
+			}
+		}
 		for i, m := range spec.GetMetrics() {
 			if m == nil {
 				v = appendValidation(v, fmt.Errorf("metrics[%d] must not be null", i))

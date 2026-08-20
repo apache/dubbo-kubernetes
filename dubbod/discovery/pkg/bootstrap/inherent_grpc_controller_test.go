@@ -162,6 +162,13 @@ func TestBuildRuntimeConfigJSON(t *testing.T) {
 				Action: telemetryapi.TagOverride_REMOVE,
 			}},
 		}},
+		LoggingConfigured: true,
+		Logging: []telemetryconfig.LoggingRule{{
+			Providers:        []string{telemetryconfig.OTELLogProvider},
+			Mode:             telemetryapi.Logging_Match_SERVER,
+			FilterExpression: "response.code >= 500",
+			Tags:             []telemetryconfig.Tag{{Name: "environment", Value: "test"}},
+		}},
 	}
 	data, err := buildRuntimeConfigJSON(workload, nil, nil, effectiveTelemetry)
 	if err != nil {
@@ -248,6 +255,16 @@ func TestBuildRuntimeConfigJSON(t *testing.T) {
 	}
 	if tag := rule.Tags["grpc_response_status"]; tag.Action != "REMOVE" {
 		t.Fatalf("grpc_response_status override = %#v", tag)
+	}
+	if len(got.Telemetry.Logging) != 1 {
+		t.Fatalf("telemetry logging = %#v, want one", got.Telemetry.Logging)
+	}
+	logging := got.Telemetry.Logging[0]
+	if logging.Mode != "SERVER" ||
+		logging.Endpoint != "http://opentelemetry-collector.dubbo-system.svc:4317" ||
+		logging.FilterExpression != "response.code >= 500" ||
+		logging.Tags["environment"] != "test" {
+		t.Fatalf("telemetry logging = %#v", logging)
 	}
 }
 

@@ -1601,6 +1601,60 @@ spec:
             description: 'Telemetry configuration for Inherent workloads. See more
               details at: '
             properties:
+              logging:
+                description: Logging configures access logging for selected workloads.
+                items:
+                  properties:
+                    disabled:
+                      description: Disables access logging for selected workloads.
+                      nullable: true
+                      type: boolean
+                    filter:
+                      description: Filters access logs using a CEL expression.
+                      properties:
+                        expression:
+                          description: REQUIRED.
+                          type: string
+                      type: object
+                    match:
+                      description: Restricts access logs to a reporter side.
+                      properties:
+                        mode:
+                          description: |-
+                            Reporter side selected for access logging.
+
+                            Valid Options: CLIENT, SERVER, CLIENT_AND_SERVER
+                          enum:
+                          - MODE_UNSPECIFIED
+                          - CLIENT
+                          - SERVER
+                          - CLIENT_AND_SERVER
+                          type: string
+                      type: object
+                    providers:
+                      description: Providers used for access log reporting.
+                      items:
+                        properties:
+                          name:
+                            description: REQUIRED.
+                            type: string
+                        type: object
+                      type: array
+                    tags:
+                      description: Static custom attributes added to generated access
+                        logs.
+                      items:
+                        properties:
+                          name:
+                            description: REQUIRED.
+                            type: string
+                          value:
+                            description: Static access log attribute value.
+                            type: string
+                        type: object
+                      type: array
+                  type: object
+                type: array
               metrics:
                 description: Metrics configures metric generation for selected workloads.
                 items:

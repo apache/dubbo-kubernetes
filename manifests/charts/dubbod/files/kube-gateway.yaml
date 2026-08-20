@@ -161,10 +161,26 @@ spec:
         - name: DXGATE_OTEL_ENDPOINT
           value: {{ .OtelEndpoint | quote }}
 {{- end }}
+{{- if .OtelLogsEndpoint }}
+        - name: DXGATE_OTEL_LOGS_ENDPOINT
+          value: {{ .OtelLogsEndpoint | quote }}
+{{- end }}
         - name: DXGATE_ACCESS_LOG
           value: {{ .AccessLog | quote }}
         - name: DXGATE_ACCESS_LOG_FORMAT
           value: {{ .AccessLogFormat | quote }}
+{{- if .AccessLogMode }}
+        - name: DXGATE_ACCESS_LOG_MODE
+          value: {{ .AccessLogMode | quote }}
+{{- end }}
+{{- if .AccessLogFilter }}
+        - name: DXGATE_ACCESS_LOG_FILTER
+          value: {{ .AccessLogFilter | quote }}
+{{- end }}
+{{- if .AccessLogTags }}
+        - name: DXGATE_ACCESS_LOG_TAGS
+          value: {{ .AccessLogTags | quote }}
+{{- end }}
 {{- if .ActivationControlPlane }}
         # On-demand activation. Absent, the gateway fails a request for a
         # scaled-to-zero backend immediately, which is the behaviour every
