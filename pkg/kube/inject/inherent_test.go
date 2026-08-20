@@ -256,15 +256,6 @@ func assertNoArgs(t *testing.T, pod *corev1.Pod) {
 	}
 }
 
-func TestGetProxyImageUsesTopLevelImage(t *testing.T) {
-	values := map[string]any{
-		"image": "kdubbo/dubbod:test",
-	}
-	if got := getProxyImage(values, "default"); got != "kdubbo/dubbod:test" {
-		t.Fatalf("getProxyImage() = %q, want top-level image", got)
-	}
-}
-
 func TestAddApplicationContainerConfigInjectsInherentGRPCContract(t *testing.T) {
 	pod := &corev1.Pod{
 		ObjectMeta: metav1.ObjectMeta{
@@ -717,90 +708,5 @@ func TestInstallerGRPCEngineTemplateInjectsTelemetryEnv(t *testing.T) {
 	}
 	if got := envValue(mergedPod, "OTEL_TRACES_EXPORTER"); got != "none" {
 		t.Fatalf("OTEL_TRACES_EXPORTER = %q, want none", got)
-	}
-}
-
-func TestInherentExcludedInboundPortsDefaultsToUnmeshedPorts(t *testing.T) {
-	pod := &corev1.Pod{
-		Spec: corev1.PodSpec{
-			Containers: []corev1.Container{
-				{
-					Name: "app",
-					Ports: []corev1.ContainerPort{
-						{ContainerPort: 9080},
-						{ContainerPort: 9090},
-						{ContainerPort: 15020},
-					},
-				},
-				{
-					Name: InherentGRPCInboundContainerName,
-					Args: []string{"grpc-inbound", "--listen", ":15080", "--upstream", "127.0.0.1:9080"},
-				},
-			},
-		},
-	}
-
-	ports, err := InherentExcludedInboundPorts(pod)
-	if err != nil {
-		t.Fatalf("InherentExcludedInboundPorts() failed: %v", err)
-	}
-	// 9080 is forwarded by the listener and 15080 is the listener itself.
-	if len(ports) != 2 || ports[0] != 9090 || ports[1] != 15020 {
-		t.Fatalf("excluded ports = %v, want [9090 15020]", ports)
-	}
-}
-
-func TestInherentExcludedInboundPortsAnnotationOverrides(t *testing.T) {
-	pod := &corev1.Pod{
-		ObjectMeta: metav1.ObjectMeta{
-			Annotations: map[string]string{InherentExcludeInboundPortsAnnotation: "9090, 9090,15020"},
-		},
-		Spec: corev1.PodSpec{
-			Containers: []corev1.Container{{
-				Name:  "app",
-				Ports: []corev1.ContainerPort{{ContainerPort: 9080}, {ContainerPort: 8443}},
-			}},
-		},
-	}
-
-	ports, err := InherentExcludedInboundPorts(pod)
-	if err != nil {
-		t.Fatalf("InherentExcludedInboundPorts() failed: %v", err)
-	}
-	if len(ports) != 2 || ports[0] != 9090 || ports[1] != 15020 {
-		t.Fatalf("excluded ports = %v, want [9090 15020]", ports)
-	}
-}
-
-func TestInherentExcludedInboundPortsRejectsBadAnnotation(t *testing.T) {
-	for _, raw := range []string{"http", "0", "70000"} {
-		pod := &corev1.Pod{
-			ObjectMeta: metav1.ObjectMeta{
-				Annotations: map[string]string{InherentExcludeInboundPortsAnnotation: raw},
-			},
-		}
-		if _, err := InherentExcludedInboundPorts(pod); err == nil {
-			t.Fatalf("annotation %q returned nil error", raw)
-		}
-	}
-}
-
-func TestInherentExcludedInboundPortsWithoutInboundContainer(t *testing.T) {
-	pod := &corev1.Pod{
-		Spec: corev1.PodSpec{
-			Containers: []corev1.Container{{
-				Name:  "app",
-				Ports: []corev1.ContainerPort{{ContainerPort: 9080}, {ContainerPort: 15080}},
-			}},
-		},
-	}
-
-	ports, err := InherentExcludedInboundPorts(pod)
-	if err != nil {
-		t.Fatalf("InherentExcludedInboundPorts() failed: %v", err)
-	}
-	// Without a rendered listener only the well-known inbound port is meshed.
-	if len(ports) != 1 || ports[0] != 9080 {
-		t.Fatalf("excluded ports = %v, want [9080]", ports)
 	}
 }

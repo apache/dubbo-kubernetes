@@ -2,8 +2,8 @@
 
 moviepage / details / reviews(v1,v2,v3) / ratings 六个服务，应用代码本身是裸 HTTP、监听 9080，不依赖任何 Dubbo SDK。
 
-这组清单不含任何网格专用字段，作为普通 Kubernetes 应用可以独立部署。开启注入后，
-注入器会把探针端口改写到 sidecar 上，无需改动清单。
+这组清单不含任何网格专用字段，只作为普通 Kubernetes 应用运行。应用接入 Inherent
+需要原生消费注入的 xDS bootstrap；仅给命名空间加注入标签不会把裸 HTTP 应用变成网格应用。
 
 ### 构建镜像
 

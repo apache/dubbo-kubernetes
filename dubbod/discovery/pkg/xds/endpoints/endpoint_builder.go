@@ -409,7 +409,7 @@ func (b *EndpointBuilder) eastWestGatewayForCluster(endpointCluster cluster.ID, 
 
 func (b *EndpointBuilder) endpointPort(ep *model.DubboEndpoint) uint32 {
 	if b.useGRPCInboundEndpointPort() {
-		return inject.InherentGRPCInboundPort
+		return inject.InherentGatewayInboundPort
 	}
 	return ep.EndpointPort
 }

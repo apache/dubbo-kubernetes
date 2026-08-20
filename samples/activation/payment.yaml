@@ -46,9 +46,6 @@ spec:
       labels:
         app: payment
     spec:
-      # Long enough for dxproxy's two-phase drain: 5s failing readiness so the
-      # EndpointSlice drops this pod, then up to 25s draining connections.
-      terminationGracePeriodSeconds: 40
       containers:
         - name: payment
           image: docker.io/kdubbo/examples-payment:latest
@@ -57,9 +54,7 @@ spec:
           readinessProbe:
             httpGet:
               path: /healthz
-              # CNI redirects 8080 once the pod is injected, so the probe goes
-              # to the inbound listener rather than straight at the app.
-              port: 15080
+              port: 8080
             periodSeconds: 2
           resources:
             requests:

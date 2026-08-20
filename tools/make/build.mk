@@ -15,10 +15,9 @@
 
 # Binary name -> main package mapping. Adding a binary is one line here plus
 # appending it to BINARIES.
-BINARIES            := dubboctl dubbod dubbo-cni
+BINARIES            := dubboctl dubbod
 main_path_dubboctl  := dubboctl/main.go
 main_path_dubbod    := dubbod/discovery/cmd/main.go
-main_path_dubbo-cni := cni/main.go
 
 ##@ Build
 

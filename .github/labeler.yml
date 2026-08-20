@@ -51,12 +51,6 @@ python:
   - changed-files:
       - any-glob-to-any-file: '**/*.py'
 
-cni:
-  - changed-files:
-      - any-glob-to-any-file:
-          - 'cni/**'
-          - 'pkg/cni/**'
-
 dubboctl:
   - changed-files:
       - any-glob-to-any-file:

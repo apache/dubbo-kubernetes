@@ -13,10 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-{{- $defaults := .Values._internal_default_values_not_set | default dict }}
-{{- $image := coalesce .Values.image $defaults.image (printf "ghcr.io/apache/dubbo-kubernetes/dubbod:%s" .Chart.AppVersion) }}
 {{- $injectorValues := deepCopy (omit .Values "_internal_default_values_not_set") }}
-{{- $_ := set $injectorValues "image" $image }}
 apiVersion: v1
 kind: ConfigMap
 metadata:

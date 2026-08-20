@@ -4,7 +4,7 @@ The charts in this directory are the **single source of truth** for every
 supported install path:
 
 - `base`: cluster-wide resources (CRDs). Install first.
-- `dubbod`: the dubbod control plane (and optional CNI DaemonSet).
+- `dubbod`: the dubbod control plane and proxyless application injector.
 
 Both install paths render exactly these charts:
 

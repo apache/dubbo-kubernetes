@@ -34,10 +34,6 @@ spec:
       labels:
         app: order-consumer
     spec:
-      # The inbound sidecar drains in two phases (5s endpoint withdrawal, then
-      # up to 25s for in-flight connections). Anything below 30s here lets
-      # kubelet send SIGKILL mid-drain.
-      terminationGracePeriodSeconds: 40
       containers:
         - name: consumer
           # Replace with your own consumer image.

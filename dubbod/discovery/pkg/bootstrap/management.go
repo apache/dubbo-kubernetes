@@ -66,8 +66,8 @@ type managementOverview struct {
 	Services    []managementService        `json:"services"`
 	Instances   []managementDubbodInstance `json:"instances"`
 	DataPlane   []managementWorkload       `json:"dataPlane"`
-	// Total running pods per namespace that a sidecar is expected in, so the
-	// console can show "5/6 injected" when one pod predates the label.
+	// Total running pods per namespace considered for proxyless bootstrap
+	// injection, so the console can show the configured ratio.
 	DataPlanePods    map[string]int             `json:"dataPlanePods,omitempty"`
 	Routes           []managementRoute          `json:"routes"`
 	XDSClients       []managementXDSClient      `json:"xdsClients"`
@@ -75,35 +75,32 @@ type managementOverview struct {
 	UpdatedAt        time.Time                  `json:"updatedAt"`
 }
 
-// managementWorkload is one injected data plane pod, joined with the xDS stream it
+// managementWorkload is one injected application pod, joined with the xDS stream it
 // holds open against this control plane (if any).
 type managementWorkload struct {
-	Name           string     `json:"name"`
-	Namespace      string     `json:"namespace"`
-	IP             string     `json:"ip,omitempty"`
-	Phase          string     `json:"phase"`
-	Ready          bool       `json:"ready"`
-	SidecarReady   bool       `json:"sidecarReady"`
-	ServiceAccount string     `json:"serviceAccount,omitempty"`
-	Image          string     `json:"image,omitempty"`
-	Inbound        string     `json:"inbound,omitempty"`
-	Upstream       string     `json:"upstream,omitempty"`
-	XDSAddress     string     `json:"xdsAddress,omitempty"`
-	Restarts       int32      `json:"restarts"`
-	MTLSModes      []string   `json:"mtlsModes,omitempty"`
-	CertExpiresAt  *time.Time `json:"certExpiresAt,omitempty"`
-	CertRootActive bool       `json:"certRootActive"`
-	ConfigError    string     `json:"configError,omitempty"`
-	Connected      bool       `json:"connected"`
-	NodeID         string     `json:"nodeId,omitempty"`
-	NodeType       string     `json:"nodeType,omitempty"`
-	ConnectedAt    *time.Time `json:"connectedAt,omitempty"`
-	Watched        []string   `json:"watched,omitempty"`
+	Name             string     `json:"name"`
+	Namespace        string     `json:"namespace"`
+	IP               string     `json:"ip,omitempty"`
+	Phase            string     `json:"phase"`
+	Ready            bool       `json:"ready"`
+	ApplicationReady bool       `json:"applicationReady"`
+	ServiceAccount   string     `json:"serviceAccount,omitempty"`
+	Image            string     `json:"image,omitempty"`
+	XDSAddress       string     `json:"xdsAddress,omitempty"`
+	Restarts         int32      `json:"restarts"`
+	MTLSModes        []string   `json:"mtlsModes,omitempty"`
+	CertExpiresAt    *time.Time `json:"certExpiresAt,omitempty"`
+	CertRootActive   bool       `json:"certRootActive"`
+	ConfigError      string     `json:"configError,omitempty"`
+	Connected        bool       `json:"connected"`
+	NodeID           string     `json:"nodeId,omitempty"`
+	NodeType         string     `json:"nodeType,omitempty"`
+	ConnectedAt      *time.Time `json:"connectedAt,omitempty"`
+	Watched          []string   `json:"watched,omitempty"`
 }
 
-// managementXDSClient is one live ADS stream. Only proxies that actually open a stream
-// appear here — the inbound sidecar reads certificates off disk and never
-// connects, so its absence is expected rather than a fault.
+// managementXDSClient is one live ADS stream opened directly by an application
+// or managed gateway.
 type managementXDSClient struct {
 	NodeID      string    `json:"nodeId"`
 	NodeType    string    `json:"nodeType,omitempty"`
@@ -651,8 +648,8 @@ const (
 	managementGatewayNameValue = "dxgate"
 	managementGatewaySelector  = managementGatewayNameLabel + "=" + managementGatewayNameValue + ",app.kubernetes.io/managed-by=dubbod"
 
-	// What the inbound sidecar enforces when no PeerAuthentication applies.
-	grpcInboundFallbackMTLSMode = "PERMISSIVE"
+	// What the native application runtime uses when no PeerAuthentication applies.
+	inherentInboundFallbackMTLSMode = "PERMISSIVE"
 )
 
 func (s *Server) buildManagementDubbodInstances() []managementDubbodInstance {
@@ -773,47 +770,15 @@ func (s *Server) managementXDSClientsByIP() map[string]managementWorkload {
 	return byIP
 }
 
-// managementSidecarContainer returns the dxproxy inbound sidecar in a pod, or nil when
-// the pod is not part of the data plane.
-func managementSidecarContainer(pod corev1.Pod) *corev1.Container {
+// managementApplicationContainer returns the application container configured
+// to consume the injected xDS bootstrap directly.
+func managementApplicationContainer(pod corev1.Pod) *corev1.Container {
 	for i := range pod.Spec.Containers {
-		if pod.Spec.Containers[i].Name == inject.InherentGRPCInboundContainerName {
+		if managementContainerEnv(pod.Spec.Containers[i], "GRPC_XDS_BOOTSTRAP") != "" {
 			return &pod.Spec.Containers[i]
 		}
 	}
 	return nil
-}
-
-// managementSidecarAddresses reads the listener and upstream dxproxy was started with.
-// The sidecar takes both as `--listen`/`--upstream` flags, so the running
-// configuration is readable from the pod spec without contacting the pod.
-func managementSidecarAddresses(container corev1.Container) (inbound, upstream string) {
-	args := container.Args
-	for i := 0; i < len(args); i++ {
-		var flag, value string
-		if eq := strings.Index(args[i], "="); eq > 0 {
-			flag, value = args[i][:eq], args[i][eq+1:]
-		} else if i+1 < len(args) {
-			flag, value = args[i], args[i+1]
-		} else {
-			continue
-		}
-		switch flag {
-		case "--listen", "-listen":
-			inbound = value
-		case "--upstream", "-upstream":
-			upstream = value
-		}
-	}
-	if inbound == "" {
-		for _, port := range container.Ports {
-			if port.ContainerPort > 0 {
-				inbound = ":" + strconv.Itoa(int(port.ContainerPort))
-				break
-			}
-		}
-	}
-	return inbound, upstream
 }
 
 func managementContainerEnv(container corev1.Container, name string) string {
@@ -844,10 +809,8 @@ func (s *Server) managementActiveRootCert() []byte {
 	return authority.GetCAKeyCertBundle().GetRootCertPem()
 }
 
-// managementWorkloadSecretState reads the per-workload secret dubbod itself generates.
-// That secret holds the exact runtime config and certificate the sidecar is
-// running with, so the mTLS mode and certificate expiry reported here are what
-// is actually in force — not a restatement of the policy dubbod intended.
+// managementWorkloadSecretState reads the per-workload secret dubbod generates.
+// The application consumes this runtime config and certificate directly.
 func (s *Server) managementWorkloadSecretState(ctx context.Context, pod corev1.Pod, activeRoot []byte) (modes []string, expiresAt *time.Time, rootActive bool, problem string) {
 	name := inject.InherentGRPCSecretNameForMeta(pod.ObjectMeta)
 	secret, err := s.kubeClient.Kube().CoreV1().Secrets(pod.Namespace).Get(ctx, name, metav1.GetOptions{})
@@ -900,9 +863,9 @@ func (s *Server) managementWorkloadSecretState(ctx context.Context, pod corev1.P
 	return modes, expiresAt, rootActive, problem
 }
 
-// buildManagementDataPlane lists the pods carrying the Inherent gRPC sidecar and joins
-// each to its ADS stream. Gateway pods are excluded — they are reported
-// separately as the external data plane.
+// buildManagementDataPlane lists proxyless applications that consume the
+// injected bootstrap directly and joins each to its ADS stream. Gateway pods
+// are reported separately as the external data plane.
 func (s *Server) buildManagementDataPlane() ([]managementWorkload, map[string]int) {
 	workloads := make([]managementWorkload, 0)
 	candidates := make(map[string]int)
@@ -930,34 +893,31 @@ func (s *Server) buildManagementDataPlane() ([]managementWorkload, map[string]in
 		}
 		candidates[pod.Namespace]++
 
-		sidecar := managementSidecarContainer(pod)
-		if sidecar == nil {
+		application := managementApplicationContainer(pod)
+		if application == nil {
 			continue
 		}
 
-		sidecarReady := false
+		applicationReady := false
 		for _, status := range pod.Status.ContainerStatuses {
-			if status.Name == sidecar.Name {
-				sidecarReady = status.Ready
+			if status.Name == application.Name {
+				applicationReady = status.Ready
 			}
 		}
 
-		inbound, upstream := managementSidecarAddresses(*sidecar)
 		workload := managementWorkload{
-			Name:           pod.Name,
-			Namespace:      pod.Namespace,
-			IP:             pod.Status.PodIP,
-			Phase:          string(pod.Status.Phase),
-			Ready:          podReady(pod),
-			SidecarReady:   sidecarReady,
-			ServiceAccount: pod.Spec.ServiceAccountName,
-			Image:          sidecar.Image,
-			Inbound:        inbound,
-			Upstream:       upstream,
-			XDSAddress:     managementContainerEnv(*sidecar, "XDS_ADDRESS"),
+			Name:             pod.Name,
+			Namespace:        pod.Namespace,
+			IP:               pod.Status.PodIP,
+			Phase:            string(pod.Status.Phase),
+			Ready:            podReady(pod),
+			ApplicationReady: applicationReady,
+			ServiceAccount:   pod.Spec.ServiceAccountName,
+			Image:            application.Image,
+			XDSAddress:       managementContainerEnv(*application, "XDS_ADDRESS"),
 		}
 		for _, status := range pod.Status.ContainerStatuses {
-			if status.Name == sidecar.Name {
+			if status.Name == application.Name {
 				workload.Restarts = status.RestartCount
 			}
 		}
@@ -1237,16 +1197,13 @@ func (s *Server) buildManagementServices() []managementService {
 	return items
 }
 
-// managementServiceMTLSMode resolves the inbound mTLS mode callers of this service will
-// meet. When no PeerAuthentication selects the workload the effective mode is
-// UNKNOWN, and the sidecar falls back to PERMISSIVE
-// (cmd/app/grpc_inbound.go effectiveMTLSMode) — reporting that fallback rather
-// than "strict" keeps the console from claiming an encryption guarantee the data
-// plane is not making.
+// managementServiceMTLSMode resolves the inbound mTLS mode callers of this
+// service meet. When no PeerAuthentication selects the workload, the native
+// runtime falls back to PERMISSIVE.
 func (s *Server) managementServiceMTLSMode(service *discoverymodel.Service) (mode string, fromPolicy bool) {
 	push := s.environment.PushContext()
 	if push == nil || push.AuthenticationPolicies == nil {
-		return grpcInboundFallbackMTLSMode, false
+		return inherentInboundFallbackMTLSMode, false
 	}
 
 	strongest := discoverymodel.MTLSUnknown
@@ -1273,7 +1230,7 @@ func (s *Server) managementServiceMTLSMode(service *discoverymodel.Service) (mod
 	case discoverymodel.MTLSStrict:
 		return "STRICT", true
 	}
-	return grpcInboundFallbackMTLSMode, false
+	return inherentInboundFallbackMTLSMode, false
 }
 
 func (s *Server) countConfigs(kind config.GroupVersionKind) int {

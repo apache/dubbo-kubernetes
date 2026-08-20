@@ -42,19 +42,9 @@ RUN --mount=type=cache,target=/go/pkg/mod \
     -o /out/dubbod \
     ./dubbod/discovery/cmd/main.go
 
-RUN --mount=type=cache,target=/go/pkg/mod \
-    --mount=type=cache,target=/root/.cache/go-build \
-    go build -v -trimpath \
-    -ldflags="-s -w -X github.com/apache/dubbo-kubernetes/pkg/version.gitTag=${GIT_VERSION}" \
-    -o /out/dubbo-cni \
-    ./cni/main.go
-
 FROM alpine:3.22
 
-RUN apk add --no-cache ipset iptables
-
 COPY --from=builder /out/dubbod /usr/local/bin/dubbod
-COPY --from=builder /out/dubbo-cni /usr/local/bin/dubbo-cni
 
 USER 65532:65532
 ENTRYPOINT ["/usr/local/bin/dubbod"]
