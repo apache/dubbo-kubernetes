@@ -39,10 +39,6 @@ import (
 	"github.com/apache/dubbo-kubernetes/pkg/log"
 )
 
-const (
-	ProxyContainerName = "dubbo-proxy"
-)
-
 type InjectionPolicy string
 
 const (
@@ -80,10 +76,7 @@ type TemplateData struct {
 	Spec                      corev1.PodSpec
 	ProxyConfig               *meshv1alpha1.ProxyConfig
 	MeshConfig                *meshv1alpha1.MeshConfig
-	Values                    map[string]any
 	Revision                  string
-	NativeSidecars            bool
-	ProxyImage                string
 	CompliancePolicy          string
 	TracingDisabled           bool
 	TracingOTLPEndpoint       string
@@ -119,9 +112,7 @@ func RunTemplate(params InjectionParameters) (mergedPod *corev1.Pod, templatePod
 		Spec:                      strippedPod.Spec,
 		ProxyConfig:               params.proxyConfig,
 		MeshConfig:                meshConfig,
-		Values:                    params.valuesConfig.asMap,
 		Revision:                  params.revision,
-		ProxyImage:                getProxyImage(params.valuesConfig.asMap, "kdubbo/dubbod:debug"),
 		CompliancePolicy:          common_features.CompliancePolicy,
 		TracingDisabled:           params.telemetry.Configured && params.telemetry.Disabled(),
 		TracingOTLPEndpoint:       tracingOTLPEndpoint(params.telemetry),
@@ -208,18 +199,6 @@ func knownTemplates(t Templates) []string {
 	return keys
 }
 
-func getProxyImage(values map[string]any, defaultImage string) string {
-	if values == nil {
-		return defaultImage
-	}
-
-	if image, ok := values["image"].(string); ok && image != "" {
-		return image
-	}
-
-	return defaultImage
-}
-
 func selectTemplates(params InjectionParameters) []string {
 	if a, f := params.pod.Annotations[annotation.OrgApacheDubboInjectTemplates.Name]; f {
 		names := []string{}
@@ -243,16 +222,6 @@ func parseDryTemplate(tmplStr string, funcMap map[string]any) (*template.Templat
 	}
 
 	return t, nil
-}
-
-func overwriteClusterInfo(pod *corev1.Pod, params InjectionParameters) {
-	c := FindProxy(pod)
-	if c == nil {
-		return
-	}
-	if len(params.proxyEnvs) > 0 {
-		updateClusterEnvs(c, params.proxyEnvs)
-	}
 }
 
 func updateClusterEnvs(container *corev1.Container, newKVs map[string]string) {

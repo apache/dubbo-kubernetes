@@ -405,79 +405,6 @@ func TestGenerateManifestEastWestGatewayConfig(t *testing.T) {
 	}
 }
 
-func TestGenerateManifestCNIUsesFixedConfiguration(t *testing.T) {
-	manifests, _, err := GenerateManifest(nil, []string{"values.image=kdubbo/dubbod:cni-test"}, nil, nil)
-	if err != nil {
-		t.Fatalf("GenerateManifest() error = %v", err)
-	}
-	if !hasManifest(manifests, "DaemonSet", "dubbo-cni-node") {
-		t.Fatal("dubbo-cni-node not rendered by default")
-	}
-
-	daemonSet := findManifest(t, manifests, "DaemonSet", "dubbo-cni-node")
-	containers, ok, err := unstructured.NestedSlice(daemonSet.Object, "spec", "template", "spec", "containers")
-	if err != nil || !ok || len(containers) == 0 {
-		t.Fatalf("daemonset containers missing: ok=%v err=%v", ok, err)
-	}
-	installer := containers[0].(map[string]interface{})
-	image, _, _ := unstructured.NestedString(installer, "image")
-	if image != "kdubbo/dubbod:cni-test" {
-		t.Fatalf("CNI installer image = %q, want kdubbo/dubbod:cni-test", image)
-	}
-	args, ok, err := unstructured.NestedStringSlice(installer, "args")
-	if err != nil || !ok {
-		t.Fatalf("installer args missing: ok=%v err=%v", ok, err)
-	}
-	for _, want := range []string{
-		"--bin-dir=/opt/cni/bin",
-		"--conf-dir=/etc/cni/net.d",
-		"--state-dir=/var/run/dubbo-cni",
-		"--grpc-inbound-port=15080",
-		"--ipset-path=ipset",
-		"--refresh-interval=1m",
-	} {
-		if !containsString(args, want) {
-			t.Fatalf("installer args missing %q: %v", want, args)
-		}
-	}
-	volumes, ok, err := unstructured.NestedSlice(daemonSet.Object, "spec", "template", "spec", "volumes")
-	if err != nil || !ok {
-		t.Fatalf("daemonset volumes missing: ok=%v err=%v", ok, err)
-	}
-	for _, want := range []string{"/opt/cni/bin", "/etc/cni/net.d", "/var/run/dubbo-cni"} {
-		if !hasHostPathVolume(volumes, want) {
-			t.Fatalf("daemonset missing hostPath volume %s", want)
-		}
-	}
-
-	deployment := findManifest(t, manifests, "Deployment", "dubbod")
-	deploymentContainers, ok, err := unstructured.NestedSlice(deployment.Object, "spec", "template", "spec", "containers")
-	if err != nil || !ok || len(deploymentContainers) == 0 {
-		t.Fatalf("deployment containers missing: ok=%v err=%v", ok, err)
-	}
-	deploymentImage, _, _ := unstructured.NestedString(deploymentContainers[0].(map[string]interface{}), "image")
-	if deploymentImage != "kdubbo/dubbod:cni-test" {
-		t.Fatalf("dubbod image = %q, want shared top-level image", deploymentImage)
-	}
-
-	valuesConfigMap := findManifest(t, manifests, "ConfigMap", "values")
-	mergedValues, _, _ := unstructured.NestedString(valuesConfigMap.Object, "data", "merged-values")
-	for _, removed := range []string{"global:", "inherent:"} {
-		if strings.Contains(mergedValues, removed) {
-			t.Fatalf("merged values retained removed key %q:\n%s", removed, mergedValues)
-		}
-	}
-	if !strings.Contains(mergedValues, `image: "kdubbo/dubbod:cni-test"`) {
-		t.Fatalf("merged values missing top-level image:\n%s", mergedValues)
-	}
-
-	injectorConfigMap := findManifest(t, manifests, "ConfigMap", "dubbo-inherent-injector")
-	injectorValues, _, _ := unstructured.NestedString(injectorConfigMap.Object, "data", "values")
-	if strings.Contains(injectorValues, "global:") || strings.Contains(injectorValues, "inherent:") {
-		t.Fatalf("injector values retained removed nesting:\n%s", injectorValues)
-	}
-}
-
 func TestGenerateManifestSetOverridesHelmValues(t *testing.T) {
 	manifests, _, err := GenerateManifest(nil, []string{
 		"values.global.management.port=26081",
@@ -680,29 +607,6 @@ func hasContainerPort(ports []interface{}, name string, number int64) bool {
 		gotName, _, _ := unstructured.NestedString(p, "name")
 		gotNumber, _, _ := unstructured.NestedInt64(p, "containerPort")
 		if gotName == name && gotNumber == number {
-			return true
-		}
-	}
-	return false
-}
-
-func containsString(items []string, want string) bool {
-	for _, item := range items {
-		if item == want {
-			return true
-		}
-	}
-	return false
-}
-
-func hasHostPathVolume(volumes []interface{}, path string) bool {
-	for _, item := range volumes {
-		volume, ok := item.(map[string]interface{})
-		if !ok {
-			continue
-		}
-		got, _, _ := unstructured.NestedString(volume, "hostPath", "path")
-		if got == path {
 			return true
 		}
 	}

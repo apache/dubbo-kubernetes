@@ -124,7 +124,7 @@ message Values {
   // 1 is distinguishable from an unset field.
   google.protobuf.Int32Value replicaCount = 3;
 
-  // Shared image for dubbod, the injector, and the fixed CNI runtime.
+  // Control-plane image used by dubbod and its admission webhook.
   string image = 4;
 }
 

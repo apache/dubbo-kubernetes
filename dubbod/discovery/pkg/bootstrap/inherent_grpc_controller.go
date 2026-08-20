@@ -878,7 +878,7 @@ func runtimeWorkloadAuthorizationPolicies(
 			}
 		}
 		// JWT claim constraints are enforced by dxgate. Never weaken them into
-		// an unconstrained L4 workload rule in dxproxy.
+		// an unconstrained native workload rule.
 		if len(spec.GetRules()) > 0 && len(policy.Rules) == 0 {
 			continue
 		}

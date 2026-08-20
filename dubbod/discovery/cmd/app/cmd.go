@@ -37,7 +37,6 @@ const (
 	executeLogScope      = "setup"
 	waitLogScope         = "wait"
 	grpcOutboundLogScope = "grpc-outbound"
-	grpcInboundLogScope  = "grpc-inbound"
 )
 
 func NewRootCommand() *cobra.Command {
@@ -62,7 +61,6 @@ func NewRootCommand() *cobra.Command {
 	cmd.AddFlags(rootCmd)
 	rootCmd.AddCommand(waitCmd)
 	rootCmd.AddCommand(newGRPCOutboundCommand())
-	rootCmd.AddCommand(newGRPCInboundCommand())
 
 	return rootCmd
 }

@@ -614,7 +614,7 @@ type Values struct {
 	// topology spread are added automatically above one. Wrapped so an explicit
 	// 1 is distinguishable from an unset field.
 	ReplicaCount *wrapperspb.Int32Value `protobuf:"bytes,3,opt,name=replicaCount,proto3" json:"replicaCount,omitempty"`
-	// Shared image for dubbod, the injector, and the fixed CNI runtime.
+	// Control-plane image used by dubbod and its admission webhook.
 	Image         string `protobuf:"bytes,4,opt,name=image,proto3" json:"image,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache

@@ -44,15 +44,6 @@ func TestIsInjectedPod(t *testing.T) {
 			want: true,
 		},
 		{
-			name: "grpc-inbound container",
-			pod: corev1.Pod{
-				Spec: corev1.PodSpec{
-					Containers: []corev1.Container{{Name: inject.InherentGRPCInboundContainerName}},
-				},
-			},
-			want: true,
-		},
-		{
 			name: "inherent env",
 			pod: corev1.Pod{
 				Spec: corev1.PodSpec{
@@ -95,14 +86,13 @@ func TestPrintInjectedPods(t *testing.T) {
 		},
 		Spec: corev1.PodSpec{
 			NodeName:   "node-a",
-			Containers: []corev1.Container{{Name: "app"}, {Name: inject.InherentGRPCInboundContainerName}},
+			Containers: []corev1.Container{{Name: "app"}},
 		},
 		Status: corev1.PodStatus{
 			Phase: corev1.PodRunning,
 			PodIP: "10.0.0.7",
 			ContainerStatuses: []corev1.ContainerStatus{
 				{Name: "app", Ready: true, RestartCount: 1},
-				{Name: inject.InherentGRPCInboundContainerName, Ready: true},
 			},
 		},
 	}
@@ -112,7 +102,7 @@ func TestPrintInjectedPods(t *testing.T) {
 		t.Fatalf("printInjectedPods() returned error: %v", err)
 	}
 	got := out.String()
-	for _, want := range []string{"NAMESPACE", "app-1", "2/2", "Running", "10.0.0.7", inject.InherentGRPCTemplateName} {
+	for _, want := range []string{"NAMESPACE", "app-1", "1/1", "Running", "10.0.0.7", inject.InherentGRPCTemplateName} {
 		if !strings.Contains(got, want) {
 			t.Fatalf("output %q missing %q", got, want)
 		}

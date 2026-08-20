@@ -20,7 +20,7 @@ Dubbo’s control plane provides an abstraction layer over the underlying cluste
 Dubbo component composition:
 
 - **dubbod** — Dubbo xDS control plane. It provides service discovery, configuration and certificate issuance.
-- **dxproxy** — Dubbo Inherent inbound mTLS proxy. It runs beside the workload to accept mesh traffic and forward it locally; outbound routing remains SDK-native.
+- **Application runtime** — The original workload consumes the injected xDS bootstrap and policies natively; no proxy container is added.
 - **dxgate** — Dubbo delegated gateway for Gateway API. It consumes routing configuration from dubbod over xDS and proxies north-south traffic into the mesh.
 
 ## Repositories
@@ -40,8 +40,6 @@ Projects are distributed across the code directory repositories:
 - [operator](./operator). — Provides user friendly options for operating the service mesh.
 
 - [dxgate](https://github.com/kdubbo/dxgate) — Provides the delegated gateway that serves Gateway API traffic at the mesh edge.
-
-- [dxproxy](https://github.com/kdubbo/dxproxy) — Provides the Inherent inbound mTLS proxy that accepts mesh traffic on the workload's behalf.
 
 - [gui](https://github.com/kdubbo/gui) — Provides the console that aggregates the management API across discovered control planes.
 

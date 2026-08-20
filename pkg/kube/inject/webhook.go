@@ -154,10 +154,10 @@ func NewValuesConfig(v string) (ValuesConfig, error) {
 	return c, nil
 }
 
-func (wh *Webhook) updateConfig(sidecarConfig *Config, valuesConfig string) error {
+func (wh *Webhook) updateConfig(injectionConfig *Config, valuesConfig string) error {
 	wh.mu.Lock()
 	defer wh.mu.Unlock()
-	wh.Config = sidecarConfig
+	wh.Config = injectionConfig
 	vc, err := NewValuesConfig(valuesConfig)
 	if err != nil {
 		return fmt.Errorf("failed to create new values config: %v", err)
@@ -404,7 +404,6 @@ func postProcessPod(pod *corev1.Pod, injectedPod corev1.Pod, req InjectionParame
 	}
 
 	removeTemplateOnlyContainers(pod, injectedPod, req.pod)
-	overwriteClusterInfo(pod, req)
 
 	if shouldInjectInherentGRPC(req) {
 		// Add Inherent gRPC env and shared bootstrap/cert volume to application containers.
@@ -412,10 +411,6 @@ func postProcessPod(pod *corev1.Pod, injectedPod corev1.Pod, req InjectionParame
 		if err := addApplicationContainerConfig(pod, req); err != nil {
 			return err
 		}
-	}
-
-	if err := reorderPod(pod, req); err != nil {
-		return err
 	}
 
 	return nil
@@ -510,9 +505,6 @@ func addApplicationContainerConfig(pod *corev1.Pod, req InjectionParameters) err
 	}
 	for i := range pod.Spec.Containers {
 		container := &pod.Spec.Containers[i]
-		if container.Name == "dubbo-proxy" || container.Name == "dubbo-validation" {
-			continue
-		}
 
 		container.Env = ensureEnvVar(container.Env, corev1.EnvVar{
 			Name:  "GRPC_XDS_BOOTSTRAP",
@@ -690,13 +682,6 @@ func shouldInjectInherentGRPC(req InjectionParameters) bool {
 		}
 	}
 	return false
-}
-
-func reorderPod(pod *corev1.Pod, req InjectionParameters) error {
-	// Proxy container should be last to ensure `kubectl exec` and similar commands
-	// continue to default to the user's container
-	pod.Spec.Containers = modifyContainers(pod.Spec.Containers, ProxyContainerName, MoveLast)
-	return nil
 }
 
 func createPatch(pod *corev1.Pod, original []byte) ([]byte, error) {

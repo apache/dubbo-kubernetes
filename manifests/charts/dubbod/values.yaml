@@ -23,8 +23,8 @@ _internal_default_values_not_set:
   # automatically. Set to 1 only for local development.
   replicaCount: 2
 
-  # Shared image for dubbod, the injector, and the fixed CNI runtime. An empty
-  # value resolves to ghcr.io/apache/dubbo-kubernetes/dubbod:<Chart.appVersion>.
+  # Control-plane image. An empty value resolves to
+  # ghcr.io/apache/dubbo-kubernetes/dubbod:<Chart.appVersion>.
   image: ""
 
   proxy:
@@ -37,7 +37,7 @@ _internal_default_values_not_set:
 
   gateway:
     # Image used by managed Gateway deployments. Keep it independently
-    # configurable from dubbod/CNI so a gateway can be rolled independently.
+    # configurable from dubbod so a gateway can be rolled independently.
     image: "kdubbo/dxgate:latest"
     # Individual Gateways can override this with the
     # gateway.dubbo.apache.org/replicas annotation.

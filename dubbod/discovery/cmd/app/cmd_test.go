@@ -32,7 +32,7 @@ func TestRootCommandRegistersRenamedCommands(t *testing.T) {
 		commands[command.Name()] = true
 	}
 
-	for _, name := range []string{"execute", "grpc-outbound", "grpc-inbound"} {
+	for _, name := range []string{"execute", "grpc-outbound"} {
 		if !commands[name] {
 			t.Fatalf("expected command %q to be registered; commands=%v", name, commands)
 		}
@@ -47,7 +47,7 @@ func TestRootCommandRegistersRenamedCommands(t *testing.T) {
 func TestCommandsSetLogScopes(t *testing.T) {
 	defer func() {
 		log.SetDefaultScope("log")
-		for _, name := range []string{"log", executeLogScope, waitLogScope, grpcOutboundLogScope, grpcInboundLogScope} {
+		for _, name := range []string{"log", executeLogScope, waitLogScope, grpcOutboundLogScope} {
 			if scope := log.FindScope(name); scope != nil {
 				scope.SetOutput(os.Stderr)
 			}
@@ -62,7 +62,6 @@ func TestCommandsSetLogScopes(t *testing.T) {
 		{command: "execute", scope: "setup"},
 		{command: "wait", scope: "wait"},
 		{command: "grpc-outbound", scope: "grpc-outbound"},
-		{command: "grpc-inbound", scope: "grpc-inbound"},
 	} {
 		t.Run(tt.command, func(t *testing.T) {
 			var out bytes.Buffer

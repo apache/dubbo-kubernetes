@@ -107,9 +107,6 @@ func isInjectedPod(pod corev1.Pod) bool {
 		return true
 	}
 	for _, container := range allContainers(pod) {
-		if container.Name == inject.InherentGRPCInboundContainerName {
-			return true
-		}
 		for _, env := range container.Env {
 			switch env.Name {
 			case "GRPC_XDS_BOOTSTRAP", inject.InherentGRPCConfigEnvName, inject.InherentXDSAddressEnvName:

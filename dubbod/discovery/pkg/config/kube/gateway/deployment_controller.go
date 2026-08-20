@@ -1476,7 +1476,7 @@ func gatewayServiceTargetPort(gw gateway.Gateway) intstr.IntOrString {
 	if port, ok := positiveIntAnnotation(gw, serviceTargetPortAnnotation); ok {
 		return intstr.FromInt(port)
 	}
-	return intstr.FromInt(inject.InherentGRPCInboundPort)
+	return intstr.FromInt(inject.InherentGatewayInboundPort)
 }
 
 func gatewayServiceNodePort(gw gateway.Gateway) int32 {

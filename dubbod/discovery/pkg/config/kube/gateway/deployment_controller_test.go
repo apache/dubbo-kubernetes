@@ -749,8 +749,13 @@ func TestKubeGatewayTemplateRendersDxgateResources(t *testing.T) {
 	if !strings.Contains(rendered[4], "app.kubernetes.io/instance: public-dubbo") {
 		t.Fatalf("deployment did not render stable dxgate instance label:\n%s", rendered[4])
 	}
+	if !strings.Contains(rendered[4], "DXGATE_HTTP_ADDR") ||
+		!strings.Contains(rendered[4], "value: 0.0.0.0:15080") ||
+		!strings.Contains(rendered[4], "containerPort: 15080") {
+		t.Fatalf("deployment did not bind dxgate to the managed gateway targetPort:\n%s", rendered[4])
+	}
 	if !strings.Contains(rendered[5], "targetPort: 15080") {
-		t.Fatalf("service did not target grpc-inbound port:\n%s", rendered[5])
+		t.Fatalf("service did not target the managed gateway listener:\n%s", rendered[5])
 	}
 	if !strings.Contains(rendered[5], `inherent.dubbo.apache.org/inject: "false"`) {
 		t.Fatalf("service did not opt out of inherent targetPort rewriting:\n%s", rendered[5])

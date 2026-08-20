@@ -30,7 +30,7 @@ spec:
   ports:
     - name: grpc
       port: 8080
-      targetPort: 15080
+      targetPort: 8080
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -85,8 +85,8 @@ spec:
 apiVersion: security.dubbo.apache.org/v1alpha3
 kind: PeerAuthentication
 metadata:
-  name: strict
+  name: permissive
   namespace: e2e
 spec:
   mtls:
-    mode: STRICT
+    mode: PERMISSIVE

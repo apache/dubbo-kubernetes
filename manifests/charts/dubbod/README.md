@@ -20,13 +20,13 @@ Release `0.4.3` predates packaged chart assets; the commands above apply to
 releases produced by the current release workflow.
 
 The packaged chart defaults to
-`ghcr.io/apache/dubbo-kubernetes/dubbod:${VERSION}`. Override the shared
-control-plane/CNI image when using a mirror or a locally loaded image:
+`ghcr.io/apache/dubbo-kubernetes/dubbod:${VERSION}`. Override the control-plane
+image when using a mirror or a locally loaded image:
 
 ```bash
 helm upgrade --install dubbod ./dubbod-${VERSION}.tgz \
   --namespace dubbo-system \
-  --set-string global.inherent.cni.image=registry.example.com/dubbod:${VERSION}
+  --set-string image=registry.example.com/dubbod:${VERSION}
 ```
 
 ## Uninstalling the Chart
