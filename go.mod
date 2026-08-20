@@ -57,7 +57,7 @@ require (
 	golang.org/x/time v0.15.0
 	gomodules.xyz/jsonpatch/v2 v2.5.0
 	google.golang.org/grpc v1.82.1
-	google.golang.org/protobuf v1.36.11
+	google.golang.org/protobuf v1.36.12
 	helm.sh/helm/v3 v3.18.6
 	k8s.io/api v0.34.1
 	k8s.io/apiextensions-apiserver v0.34.1
