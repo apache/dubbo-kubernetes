@@ -15,7 +15,7 @@
 
 module github.com/apache/dubbo-kubernetes
 
-go 1.25.12
+go 1.25.13
 
 require (
 	k8s.io/apimachinery v0.34.1
