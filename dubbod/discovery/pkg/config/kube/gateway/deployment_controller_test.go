@@ -856,6 +856,11 @@ func TestResolveGatewayObservabilityTelemetryHierarchy(t *testing.T) {
 				Providers:                []*apitelemetry.Tracing_TracingProvider{{Name: "localtrace"}},
 				Tags:                     []*apitelemetry.Tracing_Tag{{Name: "foo", Value: "bar"}},
 				RandomSamplingPercentage: wrapperspb.Double(100),
+			}}, Logging: []*apitelemetry.Logging{{
+				Providers: []*apitelemetry.Logging_LoggingProvider{{Name: telemetryconfig.OTELLogProvider}},
+				Match:     &apitelemetry.Logging_Match{Mode: apitelemetry.Logging_Match_SERVER},
+				Filter:    &apitelemetry.Logging_Filter{Expression: "response.code >= 500"},
+				Tags:      []*apitelemetry.Logging_Tag{{Name: "environment", Value: "test"}},
 			}}},
 		},
 		{
@@ -879,6 +884,12 @@ func TestResolveGatewayObservabilityTelemetryHierarchy(t *testing.T) {
 	}
 	if cfg.OtelTags != `{"userId":"unknown"}` {
 		t.Fatalf("otel tags = %q", cfg.OtelTags)
+	}
+	if cfg.OtelLogsEndpoint != "http://opentelemetry-collector.dubbo-system.svc:4317" ||
+		cfg.AccessLog != "true" || cfg.AccessLogMode != "SERVER" ||
+		cfg.AccessLogFilter != "response.code >= 500" ||
+		cfg.AccessLogTags != `{"environment":"test"}` {
+		t.Fatalf("access logging = %#v", cfg)
 	}
 	resources = append(resources, telemetryconfig.Resource{
 		Name: "workload-override", Namespace: "app", CreationTimestamp: time.Unix(3, 0),

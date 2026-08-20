@@ -424,11 +424,15 @@ func (d *DeploymentController) configureGateway(log *dubbolog.Logger, gw gateway
 		ClusterID:           string(d.clusterID),
 		DomainSuffix:        d.domainSuffix(),
 		OtelEndpoint:        observability.OtelEndpoint,
+		OtelLogsEndpoint:    observability.OtelLogsEndpoint,
 		OtelServiceName:     observability.OtelServiceName,
 		OtelSampling:        observability.OtelSampling,
 		OtelTags:            observability.OtelTags,
 		AccessLog:           observability.AccessLog,
 		AccessLogFormat:     observability.AccessLogFormat,
+		AccessLogMode:       observability.AccessLogMode,
+		AccessLogFilter:     observability.AccessLogFilter,
+		AccessLogTags:       observability.AccessLogTags,
 
 		ActivationControlPlane: d.activationControlPlane(),
 		ActivationHoldTimeout:  features.ActivationHoldTimeout,
@@ -506,11 +510,15 @@ type TemplateInput struct {
 	ClusterID           string
 	DomainSuffix        string
 	OtelEndpoint        string
+	OtelLogsEndpoint    string
 	OtelServiceName     string
 	OtelSampling        string
 	OtelTags            string
 	AccessLog           string
 	AccessLogFormat     string
+	AccessLogMode       string
+	AccessLogFilter     string
+	AccessLogTags       string
 	// ActivationControlPlane is the address a gateway reports pending requests
 	// to so that scaled-to-zero targets get activated. Empty turns the feature
 	// off in the data plane; the gateway then fails such a request outright, as
@@ -520,12 +528,16 @@ type TemplateInput struct {
 }
 
 type gatewayObservabilityConfig struct {
-	OtelEndpoint    string
-	OtelServiceName string
-	OtelSampling    string
-	OtelTags        string
-	AccessLog       string
-	AccessLogFormat string
+	OtelEndpoint     string
+	OtelLogsEndpoint string
+	OtelServiceName  string
+	OtelSampling     string
+	OtelTags         string
+	AccessLog        string
+	AccessLogFormat  string
+	AccessLogMode    string
+	AccessLogFilter  string
+	AccessLogTags    string
 }
 
 // observabilityConfigForGateway resolves the meshlevel, namespace, and
@@ -553,6 +565,30 @@ func resolveGatewayObservability(gw gateway.Gateway, meshNamespace string, resou
 	}
 	if effective.Configured && !effective.Disabled() {
 		cfg.OtelEndpoint = telemetryconfig.ProviderEndpoint(effective.Provider(), meshNamespace)
+	}
+	for _, logging := range effective.Logging {
+		mode := logging.Mode.String()
+		if mode == "MODE_UNSPECIFIED" {
+			mode = "CLIENT_AND_SERVER"
+		}
+		if mode != "SERVER" && mode != "CLIENT_AND_SERVER" {
+			continue
+		}
+		cfg.AccessLog = strconv.FormatBool(!logging.Disabled)
+		cfg.AccessLogMode = mode
+		cfg.AccessLogFilter = logging.FilterExpression
+		tags := make(map[string]string, len(logging.Tags))
+		for _, tag := range logging.Tags {
+			tags[tag.Name] = tag.Value
+		}
+		if len(tags) > 0 {
+			data, _ := json.Marshal(tags)
+			cfg.AccessLogTags = string(data)
+		}
+		if len(logging.Providers) > 0 && !logging.Disabled {
+			cfg.OtelLogsEndpoint = telemetryconfig.ProviderEndpoint(logging.Providers[0], meshNamespace)
+		}
+		break
 	}
 	return cfg
 }

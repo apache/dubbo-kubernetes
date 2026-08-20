@@ -139,6 +139,42 @@ func TestResolveMetricsRulesOverride(t *testing.T) {
 	}
 }
 
+func TestResolveLoggingOverride(t *testing.T) {
+	resources := []Resource{
+		{
+			Name: "mesh-default", Namespace: "dubbo-system",
+			Spec: &api.Telemetry{Logging: []*api.Logging{{
+				Providers: []*api.Logging_LoggingProvider{{Name: OTELLogProvider}},
+				Tags:      []*api.Logging_Tag{{Name: "mesh", Value: "default"}},
+			}}},
+		},
+		{
+			Name: "workload-override", Namespace: "myapp",
+			Spec: &api.Telemetry{
+				Selector: &typeapi.WorkloadSelector{MatchLabels: map[string]string{"app": "frontend"}},
+				Logging: []*api.Logging{{
+					Providers: []*api.Logging_LoggingProvider{{Name: OTELLogProvider}},
+					Match:     &api.Logging_Match{Mode: api.Logging_Match_SERVER},
+					Filter:    &api.Logging_Filter{Expression: "response.code >= 500"},
+					Tags:      []*api.Logging_Tag{{Name: "environment", Value: "test"}},
+				}},
+			},
+		},
+	}
+
+	got := Resolve(resources, "dubbo-system", "myapp", map[string]string{"app": "frontend"})
+	if !got.LoggingConfigured || len(got.Logging) != 1 {
+		t.Fatalf("logging = %#v", got.Logging)
+	}
+	rule := got.Logging[0]
+	if len(rule.Providers) != 1 || rule.Providers[0] != OTELLogProvider ||
+		rule.Mode != api.Logging_Match_SERVER ||
+		rule.FilterExpression != "response.code >= 500" ||
+		len(rule.Tags) != 1 || rule.Tags[0] != (Tag{Name: "environment", Value: "test"}) {
+		t.Fatalf("logging rule = %#v", rule)
+	}
+}
+
 func TestMeshlevelSelectorIsIgnored(t *testing.T) {
 	resources := []Resource{{
 		Name: "invalid", Namespace: "dubbo-system",
@@ -156,5 +192,8 @@ func TestMeshlevelSelectorIsIgnored(t *testing.T) {
 func TestProviderEndpoint(t *testing.T) {
 	if got, want := ProviderEndpoint("localtrace", "dubbo-system"), "http://tracing.dubbo-system.svc:4317"; got != want {
 		t.Fatalf("endpoint = %q, want %q", got, want)
+	}
+	if got, want := ProviderEndpoint("otel", "dubbo-system"), "http://opentelemetry-collector.dubbo-system.svc:4317"; got != want {
+		t.Fatalf("logging endpoint = %q, want %q", got, want)
 	}
 }

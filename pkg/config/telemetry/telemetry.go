@@ -33,6 +33,7 @@ import (
 const (
 	LocalTraceProvider = "localtrace"
 	PrometheusProvider = "prometheus"
+	OTELLogProvider    = "otel"
 	OTLPPort           = 4317
 )
 
@@ -59,6 +60,14 @@ type MetricRule struct {
 	Tags   []MetricTagOverride
 }
 
+type LoggingRule struct {
+	Providers        []string
+	Disabled         bool
+	Mode             api.Logging_Match_Mode
+	FilterExpression string
+	Tags             []Tag
+}
+
 type EffectiveTracing struct {
 	Configured               bool
 	Providers                []string
@@ -69,6 +78,8 @@ type EffectiveTracing struct {
 	MetricProviders          []string
 	EnableMetrics            *bool
 	MetricRules              []MetricRule
+	LoggingConfigured        bool
+	Logging                  []LoggingRule
 }
 
 func ResourcesFromConfigs(configs []config.Config) []Resource {
@@ -163,6 +174,29 @@ func matches(selector, labels map[string]string) bool {
 }
 
 func apply(result *EffectiveTracing, spec *api.Telemetry) {
+	if len(spec.GetLogging()) > 0 {
+		result.LoggingConfigured = true
+		result.Logging = make([]LoggingRule, 0, len(spec.GetLogging()))
+		for _, logging := range spec.GetLogging() {
+			if logging == nil {
+				continue
+			}
+			effective := LoggingRule{
+				Disabled:         logging.GetDisabled().GetValue(),
+				Mode:             logging.GetMatch().GetMode(),
+				FilterExpression: logging.GetFilter().GetExpression(),
+				Providers:        make([]string, 0, len(logging.GetProviders())),
+				Tags:             make([]Tag, 0, len(logging.GetTags())),
+			}
+			for _, provider := range logging.GetProviders() {
+				effective.Providers = append(effective.Providers, provider.GetName())
+			}
+			for _, tag := range logging.GetTags() {
+				effective.Tags = append(effective.Tags, Tag{Name: tag.GetName(), Value: tag.GetValue()})
+			}
+			result.Logging = append(result.Logging, effective)
+		}
+	}
 	for _, metrics := range spec.GetMetrics() {
 		if metrics == nil {
 			continue
@@ -299,6 +333,9 @@ func ProviderEndpoint(provider, meshNamespace string) string {
 	service := strings.TrimSpace(provider)
 	if strings.EqualFold(service, LocalTraceProvider) {
 		service = "tracing"
+	}
+	if strings.EqualFold(service, OTELLogProvider) {
+		service = "opentelemetry-collector"
 	}
 	if service == "" {
 		return ""
