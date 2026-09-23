@@ -13,27 +13,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# Prow-style slash commands for issues and pull requests:
-#
-#   /assign [@user ...]    assign the issue/PR (self-assign needs no permission;
-#                          assigning others requires write access)
-#   /unassign [@user ...]  remove assignees
-#   /lgtm                  (PR only) only an approver in the root OWNERS file
-#                          can record Maintainer Approval and squash merge.
-#                          CI remains informational and does not block it.
-#   /lgtm cancel           remove the `lgtm` label and reset approval
-#   /close                 close the issue/PR (author or write access)
-#   /reopen                reopen the issue/PR (author or write access)
-#   /retest                (PR only, write access) re-run failed workflow runs
-#                          for the PR head commit
-#
-# Bot identity: if the BOT_APP_ID / BOT_APP_PRIVATE_KEY secrets are configured
-# (a GitHub App whose avatar is the Apache Dubbo logo, registered through ASF
-# INFRA), all replies and merges are performed as that App, so comments show
-# the Apache logo. Without them the workflow falls back to the built-in
-# GITHUB_TOKEN and appears as github-actions[bot] — the avatar of the built-in
-# token cannot be customized.
-
 name: Slash Commands
 
 on:

@@ -34,19 +34,15 @@ Projects are distributed across the code directory repositories:
 
 - [client-go](https://github.com/dubml/client-go). — Defines the Kubernetes clients automatically generated for Dubbo control plane resources.
 
-- [dubboctl](https://github.com/dubml/dubboctl). — Provides dubboctl command line tools for control plane management and other operations.
-
 - [dubbod](https://github.com/dubml/dubbod) — The main code directory for the Dubbo control plane.
+
+- [dubboctl](https://github.com/dubml/dubboctl). — Provides dubboctl command line tools for control plane management and other operations.
 
 - [operator](https://github.com/dubml/operator). — Provides user friendly options for operating the service mesh.
 
 - [transit](https://github.com/dubml/transit) — Provides the delegated gateway that serves Gateway API traffic at the mesh edge.
 
 - [gui](https://github.com/dubml/gui) — Provides the console that aggregates the management API across discovered control planes.
-
-## Contributing
-
-Refer to [CONTRIBUTING.md](./CONTRIBUTING.md)
 
 ## License
 

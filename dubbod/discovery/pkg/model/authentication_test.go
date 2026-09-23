@@ -76,7 +76,7 @@ func TestRequestAuthenticationSelectorMatchesWorkload(t *testing.T) {
 			Selector: newWorkloadSelector("app", "httpbin"),
 			JwtRules: []*security.JWTRule{{
 				Issuer:  "testing@secure.dubbo.apache.org",
-				JwksUri: "tools/jwt/samples/jwks.json",
+				JwksUri: "tools/jwt/examples/jwks.json",
 			}},
 		},
 	}})

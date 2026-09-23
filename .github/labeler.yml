@@ -54,7 +54,6 @@ python:
 dubboctl:
   - changed-files:
       - any-glob-to-any-file:
-          - 'cli/**'
           - 'dubboctl/**'
 
 dubbod:
@@ -104,7 +103,7 @@ networking:
 
 samples:
   - changed-files:
-      - any-glob-to-any-file: 'samples/**'
+      - any-glob-to-any-file: 'examples/**'
 
 build:
   - changed-files:

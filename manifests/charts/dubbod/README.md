@@ -2,31 +2,21 @@
 
 This chart installs the Dubbod deployment.
 
-## Installing a Versioned Release
+## Setup
 
 ```bash
-# Select a release whose Assets include the packaged charts.
-VERSION="<version>"
-kubectl create namespace dubbo-system
-helm upgrade --install dubbo-base \
-  "https://github.com/apache/dubbo-kubernetes/releases/download/${VERSION}/base-${VERSION}.tgz" \
-  --namespace dubbo-system
-helm upgrade --install dubbod \
-  "https://github.com/apache/dubbo-kubernetes/releases/download/${VERSION}/dubbod-${VERSION}.tgz" \
-  --namespace dubbo-system
+helm repo add dubbo https://charts.dubbo.apache.org
+helm repo update
 ```
+See [helm repo](https://helm.sh/docs/helm/helm_repo/) for command documentation.
 
-Release `0.4.3` predates packaged chart assets; the commands above apply to
-releases produced by the current release workflow.
+## Installing the Chart
 
-The packaged chart defaults to
-`ghcr.io/apache/dubbo-kubernetes/dubbod:${VERSION}`. Override the control-plane
-image when using a mirror or a locally loaded image:
+To install the chart with the release name dubbo:
 
 ```bash
-helm upgrade --install dubbod ./dubbod-${VERSION}.tgz \
-  --namespace dubbo-system \
-  --set-string image=registry.example.com/dubbod:${VERSION}
+kubectl create namespace dubbo-system
+helm install base dubbo/base --namespace dubbo-system
 ```
 
 ## Uninstalling the Chart
@@ -34,5 +24,5 @@ helm upgrade --install dubbod ./dubbod-${VERSION}.tgz \
 To uninstall/delete the dubbo deployment:
 
 ```bash
-helm delete dubbod --namespace dubbo-system
+helm delete dubbo --namespace dubbo-system
 ```
