@@ -34,7 +34,7 @@ concurrency:
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 env:
-  GOLANGCI_LINT_VERSION: v2.6.2
+  GOLANGCI_LINT_VERSION: v2.9.0
   # Must match PROTOC_VERSION in tools/make/common.mk: protoc stamps its own
   # version into every generated file, so a different one here rewrites them
   # all and make check-generate can never pass.
