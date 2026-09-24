@@ -2,7 +2,7 @@
 
 This chart installs an Dubbo Base deployment.
 
-## Setup Repo Info
+## Setup
 
 ```bash
 helm repo add dubbo https://charts.dubbo.apache.org

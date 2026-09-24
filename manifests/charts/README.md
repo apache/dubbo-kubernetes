@@ -1,22 +1,7 @@
 # Dubbo Helm Charts
 
-The charts in this directory are the **single source of truth** for every
+The charts in this directory are the source for every
 supported install path:
 
-- `base`: cluster-wide resources (CRDs). Install first.
-- `dubbod`: the dubbod control plane and proxyless application injector.
-
-Both install paths render exactly these charts:
-
-1. **Helm**: `helm install` the charts directly (see each chart's README).
-2. **dubboctl install**: the CLI embeds this directory and renders it locally,
-   layered with a profile from `manifests/profiles`.
-
-Any manifest change must be made here; do not fork rendered output elsewhere.
-CI lints and renders both charts on every PR (`make lint-helm`), and the kind
-smoke test installs them end-to-end (`make test-e2e`).
-
-Every numeric release packages both charts with the release version and uploads
-the archives plus SHA-256 checksums to the matching GitHub Release. The dubbod
-chart's `appVersion` selects the same versioned
-`ghcr.io/apache/dubbo-kubernetes/dubbod` image by default.
+- base: cluster-wide resources (CRDs). Install first.
+- dubbod: the dubbo control plane.

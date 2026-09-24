@@ -23,7 +23,7 @@ GIT_VERSION ?= $(shell git describe --tags --always --dirty 2>/dev/null || echo 
 BIN_DIR     ?= bin
 
 GOTESTFLAGS           ?= -race
-GOLANGCI_LINT_VERSION ?= v2.6.2
+GOLANGCI_LINT_VERSION ?= v2.9.0
 
 # Code generation. protoc-gen-go must match the google.golang.org/protobuf in
 # go.mod, and protoc must match the version already recorded in the generated
