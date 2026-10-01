@@ -191,7 +191,7 @@ func TestPushStatusJSONIncludesOperationalSummary(t *testing.T) {
 	push.PushVersion = "v1"
 	env.SetPushContext(push)
 
-	server := NewDiscoveryServer(env, nil, nil)
+	server := NewDiscoveryServer(env, nil)
 	con := &Connection{proxy: inherentConnectionProxy("svc-7.app.svc.cluster.local")}
 	server.adsClients["inherent-1"] = con
 	server.InboundUpdates.Store(3)

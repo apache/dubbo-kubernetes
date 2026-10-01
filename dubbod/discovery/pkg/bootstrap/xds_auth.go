@@ -51,19 +51,10 @@ func (s *Server) authorizeXDSWorkload(proxy *model.Proxy, identities []string) e
 }
 
 func (s *Server) xdsWorkloadController(proxy *model.Proxy) *inherentGRPCWorkloadController {
-	controller := s.inherentGRPCWorkloadController
 	if proxy.Metadata.ClusterID != s.clusterID {
-		controller = nil
-		if s.inherentGRPCRemoteControllers != nil {
-			for _, remote := range s.inherentGRPCRemoteControllers.All() {
-				if remote.controller != nil && remote.controller.client.ClusterID() == proxy.Metadata.ClusterID {
-					controller = remote.controller
-					break
-				}
-			}
-		}
+		return nil
 	}
-	return controller
+	return s.inherentGRPCWorkloadController
 }
 
 func authorizeXDSPod(proxy *model.Proxy, identities []string, pod *corev1.Pod, trustDomains []string) error {

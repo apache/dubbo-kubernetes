@@ -197,8 +197,6 @@ func (s *Server) initConfigSources(args *DubboArgs) (err error) {
 				log.Infof("Started Kubernetes configSource %s", configSource.Address)
 			} else {
 				log.Infof("Not implemented, ignore: %v", configSource.Address)
-				// TODO: handle k8s:// scheme for remote cluster. Use same mechanism as service registry,
-				// using the cluster name as key to match a secret.
 			}
 		default:
 			log.Infof("Ignoring unsupported config source: %v", configSource.Address)

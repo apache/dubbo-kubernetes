@@ -56,7 +56,6 @@ type LeaderElection struct {
 	// Criteria to determine leader priority.
 	revision     string
 	perRevision  bool
-	remote       bool
 	useLeaseLock bool
 	cycle        *atomic.Int32
 	electionID   string
@@ -69,7 +68,7 @@ type LeaderElection struct {
 	leaderMu     sync.Mutex
 }
 
-func newLeaderElection(namespace, name, electionID, revision string, perRevision bool, remote bool, leaseLock bool, client kube.Client) *LeaderElection {
+func newLeaderElection(namespace, name, electionID, revision string, perRevision bool, leaseLock bool, client kube.Client) *LeaderElection {
 	if revision == "" {
 		revision = "default"
 	}
@@ -91,7 +90,6 @@ func newLeaderElection(namespace, name, electionID, revision string, perRevision
 		perRevision:  perRevision,
 		useLeaseLock: leaseLock,
 		enabled:      features.EnableLeaderElection,
-		remote:       remote,
 		// Default to a 30s ttl. Overridable for tests
 		ttl:   time.Second * 30,
 		cycle: atomic.NewInt32(0),
@@ -100,16 +98,12 @@ func newLeaderElection(namespace, name, electionID, revision string, perRevision
 }
 
 func NewLeaderElection(namespace, name, electionID, revision string, client kube.Client) *LeaderElection {
-	return newLeaderElection(namespace, name, electionID, revision, false, false, false, client)
-}
-
-func NewLeaderElectionMulticluster(namespace, name, electionID, revision string, remote bool, client kube.Client) *LeaderElection {
-	return newLeaderElection(namespace, name, electionID, revision, false, remote, false, client)
+	return newLeaderElection(namespace, name, electionID, revision, false, false, client)
 }
 
 func NewPerRevisionLeaderElection(namespace, name, electionID, revision string, client kube.Client) *LeaderElection {
 	// PerRevision is new, so always use the more modern lease lock
-	return newLeaderElection(namespace, name, electionID, revision, true, false, true, client)
+	return newLeaderElection(namespace, name, electionID, revision, true, true, client)
 }
 
 func (l *LeaderElection) create() (*k8sleaderelection.LeaderElector, error) {
@@ -144,7 +138,6 @@ func (l *LeaderElection) create() (*k8sleaderelection.LeaderElector, error) {
 	}
 
 	key := l.revision
-	// TODO remote
 	var lock k8sresourcelock.Interface = &k8sresourcelock.ConfigMapLock{
 		ConfigMapMeta: metav1.ObjectMeta{Namespace: l.namespace, Name: l.electionID},
 		Client:        l.client.CoreV1(),

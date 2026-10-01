@@ -19,6 +19,8 @@ package cluster
 import (
 	"cmp"
 	"fmt"
+	"strings"
+
 	"github.com/apache/dubbo-kubernetes/dubboctl/pkg/cli"
 	"github.com/apache/dubbo-kubernetes/operator/pkg/manifest"
 	"github.com/apache/dubbo-kubernetes/operator/pkg/render"
@@ -27,7 +29,6 @@ import (
 	"github.com/apache/dubbo-kubernetes/pkg/slices"
 	"github.com/spf13/cobra"
 	"sigs.k8s.io/yaml"
-	"strings"
 )
 
 type manifestGenerateArgs struct {
@@ -155,10 +156,6 @@ func objectKindOrder(m manifest.Manifest) int {
 		// Create the pods after we've created other things they might be waiting for
 	case "extensions/Deployment", "apps/Deployment":
 		return 1000
-
-		// Autoscalers typically act on a deployment
-	case "autoscaling/HorizontalPodAutoscaler":
-		return 1001
 
 		// Create services late - after pods have been started
 	case "/Service":

@@ -49,14 +49,12 @@ type ConfigSnapshot struct {
 	// When enabled, this controller is responsible for translating Kubernetes
 	// Gateway API resources into internal Dubbo resources during push.
 	GatewayAPIController   GatewayController
-	clusterLocalHosts      ClusterLocalHosts
 	exportToDefaults       exportToDefaults
 	ServiceIndex           serviceIndex
 	httpRouteIndex         httpRouteIndex
 	transitServiceIndex    transitServiceIndex
 	backendTLSPolicyIndex  backendTLSPolicyIndex
 	faultInjectionIndex    faultInjectionPolicyIndex
-	serviceActivationIndex serviceActivationPolicyIndex
 	serviceAccounts        map[serviceAccountKey][]string
 	AuthenticationPolicies *AuthenticationPolicies
 }
@@ -95,21 +93,12 @@ type BackendTLSSettings struct {
 	SNI string
 }
 
-const ActivationGatewayServiceName = "transit-gateway"
-
-type serviceActivationPolicyIndex struct {
-	services map[string][]string
-}
-
 func NewConfigSnapshot() *ConfigSnapshot {
 	return &ConfigSnapshot{
 		ServiceIndex:          newServiceIndex(),
 		transitServiceIndex:   transitServiceIndex{byNamespace: map[string]map[string]config.Config{}},
 		backendTLSPolicyIndex: backendTLSPolicyIndex{serviceTLS: map[string]BackendTLSSettings{}},
-		serviceActivationIndex: serviceActivationPolicyIndex{
-			services: map[string][]string{},
-		},
-		serviceAccounts: map[serviceAccountKey][]string{},
+		serviceAccounts:       map[serviceAccountKey][]string{},
 	}
 }
 
@@ -148,12 +137,9 @@ func (ps *ConfigSnapshot) Initialize(env *Environment, oldSnapshot *ConfigSnapsh
 
 	if change == nil || oldSnapshot == nil || !oldSnapshot.InitDone.Load() || change.Forced {
 		ps.createNewContext(env)
-		ps.applyServiceActivationPolicyUpdates(change)
 	} else {
 		ps.updateContext(env, oldSnapshot, change)
 	}
-
-	ps.clusterLocalHosts = env.ClusterLocal().GetClusterLocalHosts()
 
 	ps.InitDone.Store(true)
 }
@@ -322,15 +308,11 @@ func (ps *ConfigSnapshot) createNewContext(env *Environment) {
 	ps.initTransitServices(env)
 	ps.initBackendTLSPolicies(env)
 	ps.initFaultInjectionPolicies(env)
-	ps.initServiceActivationPolicies(env)
 	ps.initAuthenticationPolicies(env)
 }
 
 func (ps *ConfigSnapshot) updateContext(env *Environment, oldSnapshot *ConfigSnapshot, change *ConfigChange) {
-	// A Service may appear after a policy in the same informer burst. Rebuild
-	// the registry on the explicit Service event even when the total count was
-	// already visible through env.Services(); otherwise one HA replica can keep
-	// an activation RDS snapshot that permanently omits the new backend.
+	// Rebuild the registry when Services or ServiceEntries change.
 	servicesChanged := change != nil &&
 		(len(change.AddressesUpdated) > 0 ||
 			HasConfigsOfKind(change.ConfigsUpdated, kind.Service) ||
@@ -402,9 +384,6 @@ func (ps *ConfigSnapshot) updateContext(env *Environment, oldSnapshot *ConfigSna
 	} else {
 		ps.faultInjectionIndex = oldSnapshot.faultInjectionIndex
 	}
-
-	ps.serviceActivationIndex = copyServiceActivationPolicyIndex(oldSnapshot.serviceActivationIndex)
-	ps.applyServiceActivationPolicyUpdates(change)
 
 	authnPoliciesChanged := change != nil && (change.Full || authPolicyKindsChanged(change.ConfigsUpdated))
 	if authnPoliciesChanged || oldSnapshot == nil || oldSnapshot.AuthenticationPolicies == nil {
@@ -771,145 +750,6 @@ func backendTLSPolicyServiceKey(namespace, name string) string {
 // is sorted and already expanded with trust domain aliases.
 func (ps *ConfigSnapshot) ServiceAccounts(hostname host.Name, namespace string) []string {
 	return ps.serviceAccounts[serviceAccountKey{hostname: hostname, namespace: namespace}]
-}
-
-// ServiceActivationEnabled reports whether a structurally valid policy targets
-// this Service. The live ActivatorReady condition cannot gate routing: the first
-// cold request is what makes an Activator report demand for this target.
-func (ps *ConfigSnapshot) ServiceActivationEnabled(namespace, name string) bool {
-	if ps == nil {
-		return false
-	}
-	_, found := ps.serviceActivationIndex.services[backendTLSPolicyServiceKey(namespace, name)]
-	return found
-}
-
-// ActivationGatewayService returns the dedicated namespace-local Activator.
-func (ps *ConfigSnapshot) ActivationGatewayService(namespace string) *Service {
-	if ps == nil {
-		return nil
-	}
-	for _, namespaces := range ps.ServiceIndex.HostnameAndNamespace {
-		if svc := namespaces[namespace]; svc != nil && svc.Attributes.Name == ActivationGatewayServiceName {
-			return svc
-		}
-	}
-	return nil
-}
-
-// ActivationGatewaySANs is stable across cold/hot EDS transitions. Keeping the
-// backend and Activator identities in one CDS validation context avoids a TLS
-// verification window while the endpoint assignment changes.
-func (ps *ConfigSnapshot) ActivationGatewaySANs(namespace string) []string {
-	if ps == nil || ps.Mesh == nil || namespace == "" {
-		return nil
-	}
-	identities := sets.New(spiffe.MustGenSpiffeURI(ps.Mesh, namespace, ActivationGatewayServiceName))
-	return sets.SortedList(spiffe.ExpandWithTrustDomains(identities, ps.Mesh.TrustDomainAliases))
-}
-
-// ActivationBackendSANs returns the backend identities declared by the policy.
-// Unlike endpoint-derived identities, these remain available when dubbod starts
-// while the target has zero endpoints.
-func (ps *ConfigSnapshot) ActivationBackendSANs(namespace, name string) []string {
-	if ps == nil || ps.Mesh == nil || namespace == "" {
-		return nil
-	}
-	accounts, found := ps.serviceActivationIndex.services[backendTLSPolicyServiceKey(namespace, name)]
-	if !found {
-		return nil
-	}
-	identities := sets.New[string]()
-	for _, account := range accounts {
-		account = strings.TrimSpace(account)
-		if account == "" {
-			continue
-		}
-		if strings.HasPrefix(account, "spiffe://") {
-			identities.Insert(account)
-			continue
-		}
-		generated := sets.New(spiffe.MustGenSpiffeURI(ps.Mesh, namespace, account))
-		identities.InsertAll(sets.SortedList(
-			spiffe.ExpandWithTrustDomains(generated, ps.Mesh.TrustDomainAliases),
-		)...)
-	}
-	return sets.SortedList(identities)
-}
-
-func (ps *ConfigSnapshot) ActivatedServices(namespace string) []*Service {
-	if ps == nil {
-		return nil
-	}
-	out := make([]*Service, 0)
-	for _, namespaces := range ps.ServiceIndex.HostnameAndNamespace {
-		svc := namespaces[namespace]
-		if svc != nil && ps.ServiceActivationEnabled(namespace, svc.Attributes.Name) {
-			out = append(out, svc)
-		}
-	}
-	return SortServicesByCreationTime(out)
-}
-
-func (ps *ConfigSnapshot) initServiceActivationPolicies(env *Environment) {
-	ps.serviceActivationIndex = serviceActivationPolicyIndex{services: map[string][]string{}}
-	if env == nil {
-		return
-	}
-	configs := sortConfigByCreationTime(env.List(gvk.ServiceActivationPolicy, NamespaceAll))
-	for _, cfg := range configs {
-		ps.upsertServiceActivationPolicy(cfg)
-	}
-	log.Debugf("activation policy index rebuilt: configs=%d services=%d", len(configs), len(ps.serviceActivationIndex.services))
-}
-
-func copyServiceActivationPolicyIndex(in serviceActivationPolicyIndex) serviceActivationPolicyIndex {
-	out := serviceActivationPolicyIndex{services: make(map[string][]string, len(in.services))}
-	for key, accounts := range in.services {
-		out.services[key] = append([]string(nil), accounts...)
-	}
-	return out
-}
-
-func (ps *ConfigSnapshot) applyServiceActivationPolicyUpdates(change *ConfigChange) {
-	if change == nil {
-		return
-	}
-	for _, update := range change.ServiceActivationPolicyUpdates {
-		if update.Previous.Spec != nil {
-			ps.deleteServiceActivationPolicy(update.Previous)
-		}
-		if update.Deleted {
-			ps.deleteServiceActivationPolicy(update.Config)
-			continue
-		}
-		ps.upsertServiceActivationPolicy(update.Config)
-	}
-}
-
-func (ps *ConfigSnapshot) deleteServiceActivationPolicy(cfg config.Config) {
-	spec, ok := cfg.Spec.(*networking.ServiceActivationPolicy)
-	if ok && spec != nil && spec.GetTargetRef() != nil {
-		delete(ps.serviceActivationIndex.services,
-			backendTLSPolicyServiceKey(cfg.Namespace, spec.GetTargetRef().GetName()))
-	}
-}
-
-func (ps *ConfigSnapshot) upsertServiceActivationPolicy(cfg config.Config) {
-	spec, ok := cfg.Spec.(*networking.ServiceActivationPolicy)
-	if !ok || spec == nil || spec.GetTargetRef() == nil || spec.GetAutoscalerRef() == nil {
-		return
-	}
-	target := spec.GetTargetRef()
-	if strings.TrimSpace(target.GetName()) == "" ||
-		(target.GetKind() != "" && !strings.EqualFold(target.GetKind(), "Service")) ||
-		strings.TrimSpace(target.GetGroup()) != "" ||
-		strings.TrimSpace(spec.GetAutoscalerRef().GetName()) == "" ||
-		len(spec.GetBackendServiceAccounts()) == 0 {
-		return
-	}
-	ps.serviceActivationIndex.services[backendTLSPolicyServiceKey(cfg.Namespace, target.GetName())] =
-		append([]string(nil), spec.GetBackendServiceAccounts()...)
 }
 
 func (ps *ConfigSnapshot) initServiceAccounts(env *Environment, services []*Service) {

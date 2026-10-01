@@ -133,7 +133,7 @@ func newInherentXDSTestServer(t *testing.T) (*DiscoveryServer, *Connection, *fak
 	push.InitContext(env, nil, nil)
 	env.SetPushContext(push)
 
-	server := NewDiscoveryServer(env, nil, nil)
+	server := NewDiscoveryServer(env, nil)
 	server.Authenticators = []security.Authenticator{testAuthenticator{identities: []string{"spiffe://cluster.local/ns/app/sa/default"}}}
 	server.Authorize = allowTestWorkload
 	server.Generators = map[string]model.XdsResourceGenerator{

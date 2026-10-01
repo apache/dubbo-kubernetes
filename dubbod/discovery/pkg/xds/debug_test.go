@@ -60,7 +60,7 @@ func TestEndpointzReportsVMEndpointState(t *testing.T) {
 	}}, false)
 
 	recorder := httptest.NewRecorder()
-	NewDiscoveryServer(env, nil, nil).endpointz(recorder, httptest.NewRequest("GET", "/debug/endpointz", nil))
+	NewDiscoveryServer(env, nil).endpointz(recorder, httptest.NewRequest("GET", "/debug/endpointz", nil))
 	if recorder.Code != 200 {
 		t.Fatalf("status code = %d, want 200", recorder.Code)
 	}

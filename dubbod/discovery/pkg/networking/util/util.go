@@ -84,17 +84,22 @@ func DelimitedStatsPrefix(statPrefix string) string {
 }
 
 // ByteCount returns a human readable byte format
-// Inspired by https://yourbasic.org/golang/formatting-byte-size-to-human-readable-format/
 func ByteCount(b int) string {
-	const unit = 1000
-	if b < unit {
-		return fmt.Sprintf("%dB", b)
+	scales := [...]struct {
+		minimum int64
+		unit    string
+	}{
+		{1_000_000_000_000_000_000, "E"},
+		{1_000_000_000_000_000, "P"},
+		{1_000_000_000_000, "T"},
+		{1_000_000_000, "G"},
+		{1_000_000, "M"},
+		{1_000, "k"},
 	}
-	div, exp := int64(unit), 0
-	for n := b / unit; n >= unit; n /= unit {
-		div *= unit
-		exp++
+	for _, scale := range scales {
+		if int64(b) >= scale.minimum {
+			return fmt.Sprintf("%.1f%sB", float64(b)/float64(scale.minimum), scale.unit)
+		}
 	}
-	return fmt.Sprintf("%.1f%cB",
-		float64(b)/float64(div), "kMGTPE"[exp])
+	return fmt.Sprintf("%dB", b)
 }

@@ -23,7 +23,6 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
-	"net"
 	"net/url"
 	"sort"
 	"strconv"
@@ -75,14 +74,12 @@ type classInfo struct {
 	addressType            gateway.AddressType
 }
 
-const defaultTransitGatewayName = "transit-gateway"
+const legacyTransitGatewayName = "transit-gateway"
 
 const (
-	eastWestGatewayAnnotation   = "gateway.dubbo.apache.org/eastwest"
 	serviceTypeAnnotation       = "gateway.dubbo.apache.org/service-type"
 	serviceTargetPortAnnotation = "gateway.dubbo.apache.org/target-port"
 	serviceNodePortAnnotation   = "gateway.dubbo.apache.org/node-port"
-	xdsAddressAnnotation        = "gateway.dubbo.apache.org/xds-address"
 	accessLogAnnotation         = "gateway.dubbo.apache.org/access-log"
 	accessLogFormatAnnotation   = "gateway.dubbo.apache.org/access-log-format"
 	replicasAnnotation          = "gateway.dubbo.apache.org/replicas"
@@ -392,7 +389,6 @@ func (d *DeploymentController) configureGateway(log *dubbolog.Logger, gw gateway
 	log.Infof("reconciling")
 
 	defaultName := getDefaultName(gw.Name, &gw.Spec, gi.disableNameSuffix)
-	legacyName := getLegacyDefaultName(gw.Name, &gw.Spec, gi.disableNameSuffix)
 	serviceType := serviceTypeForGateway(gw, gi.defaultServiceType)
 
 	// Extract service ports from Gateway listeners
@@ -434,9 +430,6 @@ func (d *DeploymentController) configureGateway(log *dubbolog.Logger, gw gateway
 		AccessLogMode:       observability.AccessLogMode,
 		AccessLogFilter:     observability.AccessLogFilter,
 		AccessLogTags:       observability.AccessLogTags,
-
-		ActivationControlPlane: d.activationControlPlane(),
-		ActivationHoldTimeout:  features.ActivationHoldTimeout,
 	}
 
 	log.Infof("desired transit deployment=%s/%s gatewayClass=%s serviceType=%s ports=%s image=%s",
@@ -463,27 +456,17 @@ func (d *DeploymentController) configureGateway(log *dubbolog.Logger, gw gateway
 		}
 	}
 
-	if err := d.cleanupLegacyGatewayResources(
-		context.TODO(),
-		log,
-		gw.Namespace,
-		legacyName,
-		defaultName,
-		gw.Name,
-	); err != nil {
-		log.Warnf("failed cleaning up legacy transit resources %s/%s: %v", gw.Namespace, legacyName, err)
-	}
-	if defaultName != defaultTransitGatewayName {
+	if defaultName != legacyTransitGatewayName {
 		if err := d.cleanupLegacyGatewayResources(
 			context.TODO(),
 			log,
 			gw.Namespace,
-			defaultTransitGatewayName,
+			legacyTransitGatewayName,
 			defaultName,
 			gw.Name,
 		); err != nil {
 			log.Warnf("failed cleaning up fixed-name transit resources %s/%s: %v",
-				gw.Namespace, defaultTransitGatewayName, err)
+				gw.Namespace, legacyTransitGatewayName, err)
 		}
 	}
 
@@ -520,12 +503,6 @@ type TemplateInput struct {
 	AccessLogMode       string
 	AccessLogFilter     string
 	AccessLogTags       string
-	// ActivationControlPlane is the address a gateway reports pending requests
-	// to so that scaled-to-zero targets get activated. Empty turns the feature
-	// off in the data plane; the gateway then fails such a request outright, as
-	// it did before activation existed.
-	ActivationControlPlane string
-	ActivationHoldTimeout  int
 }
 
 type gatewayObservabilityConfig struct {
@@ -708,24 +685,6 @@ type transitSecret struct {
 	PrivateKeyPEM       string `json:"private_key_pem" yaml:"private_key_pem"`
 }
 
-// activationControlPlane resolves the headless Service that fans out to every
-// dubbod replica.
-//
-// It must not be the load-balanced Service: KEDA polls whichever replica its
-// query lands on, so demand delivered to only one replica would leave the
-// request waiting on a scale-up the polled replica never hears about. Resolving
-// the headless name yields one address per pod, and the gateway reports to all
-// of them.
-func (d *DeploymentController) activationControlPlane() string {
-	if features.ActivationDemandPort == 0 {
-		return ""
-	}
-	return net.JoinHostPort(
-		fmt.Sprintf("dubbod-activation-replicas.%s.svc.%s", d.systemNamespace, d.domainSuffix()),
-		strconv.Itoa(features.ActivationDemandPort),
-	)
-}
-
 func (d *DeploymentController) domainSuffix() string {
 	if d.env != nil && d.env.DomainSuffix != "" {
 		return d.env.DomainSuffix
@@ -739,9 +698,6 @@ func (d *DeploymentController) buildTransitBootstrapConfig(gw gateway.Gateway, s
 		systemNamespace = constants.DubboSystemNamespace
 	}
 	xdsAddress := fmt.Sprintf("https://dubbod.%s.svc:26012", systemNamespace)
-	if gw.Annotations[xdsAddressAnnotation] != "" {
-		xdsAddress = gw.Annotations[xdsAddressAnnotation]
-	}
 	return buildTransitBootstrapConfig(
 		xdsAddress,
 		transitListenerNames(gw.Namespace, serviceName, d.domainSuffix(), ports),
@@ -1460,16 +1416,6 @@ func IsManaged(gw *gateway.GatewaySpec) bool {
 }
 
 func getDefaultName(name string, kgw *gateway.GatewaySpec, disableNameSuffix bool) string {
-	// Keep the canonical Activator Service stable: inherent cold EDS points at
-	// this namespace-local name. Every other Gateway needs its own resources or
-	// two Gateway reconciles overwrite the same Deployment, Service and config.
-	if name == defaultTransitGatewayName {
-		return defaultTransitGatewayName
-	}
-	return getLegacyDefaultName(name, kgw, disableNameSuffix)
-}
-
-func getLegacyDefaultName(name string, kgw *gateway.GatewaySpec, disableNameSuffix bool) string {
 	if disableNameSuffix {
 		return name
 	}

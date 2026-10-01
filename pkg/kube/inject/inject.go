@@ -20,7 +20,6 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"sort"
 	"strings"
 	"text/template"
 
@@ -222,27 +221,6 @@ func parseDryTemplate(tmplStr string, funcMap map[string]any) (*template.Templat
 	}
 
 	return t, nil
-}
-
-func updateClusterEnvs(container *corev1.Container, newKVs map[string]string) {
-	envVars := make([]corev1.EnvVar, 0)
-
-	for _, env := range container.Env {
-		if _, found := newKVs[env.Name]; !found {
-			envVars = append(envVars, env)
-		}
-	}
-
-	keys := make([]string, 0, len(newKVs))
-	for key := range newKVs {
-		keys = append(keys, key)
-	}
-	sort.Strings(keys)
-	for _, key := range keys {
-		val := newKVs[key]
-		envVars = append(envVars, corev1.EnvVar{Name: key, Value: val, ValueFrom: nil})
-	}
-	container.Env = envVars
 }
 
 func stripPod(req InjectionParameters) *corev1.Pod {

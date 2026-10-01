@@ -39,7 +39,6 @@ import (
 	"github.com/apache/dubbo-kubernetes/pkg/config/schema/gvk"
 	telemetryconfig "github.com/apache/dubbo-kubernetes/pkg/config/telemetry"
 	"github.com/apache/dubbo-kubernetes/pkg/kube"
-	"github.com/apache/dubbo-kubernetes/pkg/kube/multicluster"
 	"github.com/apache/dubbo-kubernetes/pkg/util/protomarshal"
 	meshv1alpha1 "github.com/dubml/api/mesh/v1alpha1"
 	"gomodules.xyz/jsonpatch/v2"
@@ -76,12 +75,11 @@ type Webhook struct {
 }
 
 type WebhookParameters struct {
-	Watcher      Watcher
-	Port         int
-	Env          *model.Environment
-	Mux          *http.ServeMux
-	Revision     string
-	MultiCluster multicluster.ComponentBuilder
+	Watcher  Watcher
+	Port     int
+	Env      *model.Environment
+	Mux      *http.ServeMux
+	Revision string
 }
 
 type ValuesConfig struct {
@@ -102,7 +100,6 @@ type InjectionParameters struct {
 	proxyConfig         *meshv1alpha1.ProxyConfig
 	valuesConfig        ValuesConfig
 	revision            string
-	proxyEnvs           map[string]string
 	telemetry           telemetryconfig.EffectiveTracing
 	injectedAnnotations map[string]string
 }
@@ -128,7 +125,6 @@ func NewWebhook(p WebhookParameters) (*Webhook, error) {
 	}
 
 	p.Mux.HandleFunc("/inject", wh.serveInject)
-	p.Mux.HandleFunc("/inject/", wh.serveInject)
 
 	p.Env.Watcher.AddMeshHandler(func() {
 		wh.mu.Lock()
@@ -297,7 +293,6 @@ func (wh *Webhook) injectPod(ar *kube.AdmissionReview, path string) *kube.Admiss
 		proxyConfig:         proxyConfig,
 		valuesConfig:        wh.valuesConfig,
 		injectedAnnotations: wh.Config.InjectedAnnotations,
-		proxyEnvs:           parseInjectEnvs(path),
 		telemetry:           effectiveTelemetry,
 		revision:            wh.revision,
 	}
@@ -608,9 +603,6 @@ func addApplicationContainerConfig(pod *corev1.Pod, req InjectionParameters) err
 				FieldRef: &corev1.ObjectFieldSelector{FieldPath: "status.hostIP"},
 			},
 		})
-		if len(req.proxyEnvs) > 0 {
-			updateClusterEnvs(container, req.proxyEnvs)
-		}
 
 		hasProxyVolumeMount := false
 		for _, vm := range container.VolumeMounts {
@@ -757,53 +749,6 @@ func patchHandleUnmarshal(j []byte, unmarshal func(data []byte, v any) error) (m
 		return nil, mergepatch.ErrBadJSONDoc
 	}
 	return m, nil
-}
-
-func parseInjectEnvs(path string) map[string]string {
-	path = strings.TrimSuffix(path, "/")
-	res := func(path string) []string {
-		parts := strings.SplitN(path, "/", 3)
-		var newRes []string
-		if len(parts) == 3 { // If length is less than 3, then the path is simply "/inject".
-			if strings.HasPrefix(parts[2], ":ENV:") {
-				// Deprecated, not recommended.
-				//    Note that this syntax fails validation when used to set injectionPath (i.e., service.path in mwh).
-				//    It doesn't fail validation when used to set injectionURL, however. K8s bug maybe?
-				pairs := strings.Split(parts[2], ":ENV:")
-				for i := 1; i < len(pairs); i++ { // skip the first part, it is a nil
-					pair := strings.SplitN(pairs[i], "=", 2)
-					// The first part is the variable name which can not be empty
-					// the second part is the variable value which can be empty but has to exist
-					// for example, aaa=bbb, aaa= are valid, but =aaa or = are not valid, the
-					// invalid ones will be ignored.
-					if len(pair[0]) > 0 && len(pair) == 2 {
-						newRes = append(newRes, pair...)
-					}
-				}
-				return newRes
-			}
-			newRes = strings.Split(parts[2], "/")
-		}
-		for i, value := range newRes {
-			if i%2 != 0 {
-				// Replace --slash-- with / in values.
-				newRes[i] = strings.ReplaceAll(value, "--slash--", "/")
-			}
-		}
-		return newRes
-	}(path)
-	newEnvs := make(map[string]string)
-
-	for i := 0; i < len(res); i += 2 {
-		k := res[i]
-		if i == len(res)-1 { // ignore the last key without value
-			webhookLog.Warnf("Add number of inject env entries, ignore the last key %s\n", k)
-			break
-		}
-		newEnvs[k] = res[i+1]
-	}
-
-	return newEnvs
 }
 
 func init() {

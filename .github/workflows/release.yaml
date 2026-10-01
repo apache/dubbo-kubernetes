@@ -116,10 +116,11 @@ jobs:
           DIRNAME="dubboctl-${VERSION}"
           mkdir -p "${DIRNAME}/bin"
           cp build/dubboctl/dubboctl "${DIRNAME}/bin"
-          cp build/dubboctl/README.md build/dubboctl/LICENSE "${DIRNAME}"
+          cp build/dubboctl/README.md "${DIRNAME}"
+          go run ./tools/licenses -binary dubboctl -goos "${{ matrix.goos }}" -goarch "${{ matrix.goarch }}" -out "${DIRNAME}"
           ls -Rlh "${DIRNAME}"
           if [ "${{ matrix.goos }}" = "windows" ]; then
-            zip -r "${FILENAME}.zip" "${DIRNAME}/bin"
+            zip -r "${FILENAME}.zip" "${DIRNAME}"
             echo "name=${FILENAME}.zip" >> "$GITHUB_OUTPUT"
           else
             tar -czvf "${FILENAME}.tar.gz" "${DIRNAME}"
@@ -134,7 +135,8 @@ jobs:
           DIRNAME="dubbo-${VERSION}"
           mkdir -p "${DIRNAME}/bin"
           cp build/dubboctl/dubboctl "${DIRNAME}/bin/"
-          cp build/README.md build/LICENSE "${DIRNAME}"
+          cp build/README.md "${DIRNAME}"
+          go run ./tools/licenses -binary dubboctl -goos "${{ matrix.goos }}" -goarch "${{ matrix.goarch }}" -out "${DIRNAME}"
           cp -r build/samples "${DIRNAME}"
           ls -Rlh "${DIRNAME}"
           if [ "${{ matrix.goos }}" = "windows" ]; then
@@ -266,9 +268,6 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-
-      - name: Install Helm
-        run: tools/ci/install-helm.sh v3.16.4
 
       - name: Lint, package, and verify charts
         env:

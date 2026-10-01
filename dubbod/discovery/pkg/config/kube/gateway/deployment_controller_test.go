@@ -424,42 +424,6 @@ func TestManagedGatewayRequiresSecureADS(t *testing.T) {
 	}
 }
 
-func TestDeploymentControllerBuildTransitBootstrapConfigUsesXDSAddressAnnotation(t *testing.T) {
-	controller := &DeploymentController{
-		clusterID:       "remote",
-		systemNamespace: "dubbo-system",
-	}
-	raw, _, err := controller.buildTransitBootstrapConfig(gatewayv1.Gateway{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "eastwest",
-			Namespace: "dubbo-system",
-			Annotations: map[string]string{
-				xdsAddressAnnotation: "https://dubbod.remote.example:32012",
-			},
-		},
-	}, "transit-gateway", []corev1.ServicePort{{Name: "http-eastwest", Port: 15443, TargetPort: intstr.FromInt(15080)}})
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	var cfg transitBootstrapConfig
-	if err := json.Unmarshal([]byte(raw), &cfg); err != nil {
-		t.Fatal(err)
-	}
-	if cfg.XDSAddress != "https://dubbod.remote.example:32012" {
-		t.Fatalf("xdsAddress = %q, want annotation", cfg.XDSAddress)
-	}
-	if cfg.ClusterID != "remote" {
-		t.Fatalf("clusterID = %q, want remote", cfg.ClusterID)
-	}
-	if diff := cmp.Diff(
-		[]string{"xds.dubbo.apache.org/grpc/lds/inbound/0.0.0.0:15080"},
-		cfg.ListenerNames,
-	); diff != "" {
-		t.Fatalf("listener names (-want +got):\n%s", diff)
-	}
-}
-
 func TestExtractServicePortsTargetsGRPCInbound(t *testing.T) {
 	gw := gatewayv1.Gateway{
 		Spec: gatewayv1.GatewaySpec{
@@ -476,33 +440,6 @@ func TestExtractServicePortsTargetsGRPCInbound(t *testing.T) {
 	}
 	if ports[0].Name != "http" || ports[0].Port != 8080 || ports[0].TargetPort.IntValue() != 15080 {
 		t.Fatalf("unexpected http service port: %#v", ports[0])
-	}
-}
-
-func TestExtractServicePortsTargetsGRPCInboundForEastWestGateway(t *testing.T) {
-	gw := gatewayv1.Gateway{
-		ObjectMeta: metav1.ObjectMeta{
-			Annotations: map[string]string{
-				eastWestGatewayAnnotation: "true",
-				serviceNodePortAnnotation: "32443",
-			},
-		},
-		Spec: gatewayv1.GatewaySpec{
-			Listeners: []gatewayv1.Listener{
-				{Name: "http-eastwest", Protocol: gatewayv1.HTTPProtocolType, Port: 15443},
-			},
-		},
-	}
-
-	ports := extractServicePorts(gw)
-	if len(ports) != 1 {
-		t.Fatalf("ports = %d, want 1", len(ports))
-	}
-	if ports[0].TargetPort.IntValue() != 15080 {
-		t.Fatalf("targetPort = %s, want 15080", ports[0].TargetPort.String())
-	}
-	if ports[0].NodePort != 32443 {
-		t.Fatalf("nodePort = %d, want 32443", ports[0].NodePort)
 	}
 }
 
@@ -629,10 +566,10 @@ func TestObservabilityConfigForGatewayInvalidAccessLogAnnotationsFallBack(t *tes
 	}
 }
 
-func TestGetDefaultNameKeepsCanonicalActivatorAndIsolatesOtherGateways(t *testing.T) {
+func TestGetDefaultNameIsolatesGateways(t *testing.T) {
 	spec := &gatewayv1.GatewaySpec{GatewayClassName: "dubbo"}
-	if got := getDefaultName("transit-gateway", spec, false); got != "transit-gateway" {
-		t.Fatalf("canonical name = %q, want transit-gateway", got)
+	if got := getDefaultName("transit-gateway", spec, false); got != "transit-gateway-dubbo" {
+		t.Fatalf("derived name = %q, want transit-gateway-dubbo", got)
 	}
 	if got := getDefaultName("public", spec, false); got != "public-dubbo" {
 		t.Fatalf("derived name = %q, want public-dubbo", got)
@@ -652,13 +589,6 @@ func TestManagedGatewayResourceCleanupRequiresMatchingGateway(t *testing.T) {
 	}
 	if isManagedGatewayResourceFor(labels, "transit-gateway") {
 		t.Fatal("cleanup would delete another Gateway's resources")
-	}
-}
-
-func TestGetLegacyDefaultNameKeepsOldGatewayDerivedName(t *testing.T) {
-	spec := &gatewayv1.GatewaySpec{GatewayClassName: "dubbo"}
-	if got := getLegacyDefaultName("httpbin-gateway", spec, false); got != "httpbin-gateway-dubbo" {
-		t.Fatalf("legacy default name = %q, want httpbin-gateway-dubbo", got)
 	}
 }
 
@@ -911,82 +841,5 @@ func TestResolveGatewayObservabilityTelemetryHierarchy(t *testing.T) {
 	})
 	if cfg := resolveGatewayObservability(gw, "dubbo-system", resources); cfg.OtelEndpoint != "" {
 		t.Fatalf("otel endpoint = %q, want empty when workload disables reporting", cfg.OtelEndpoint)
-	}
-}
-
-func TestActivationControlPlaneResolvesHeadlessService(t *testing.T) {
-	controller := &DeploymentController{systemNamespace: "dubbo-system"}
-	got := controller.activationControlPlane()
-	// The headless name, not the load-balanced one: KEDA polls a single replica,
-	// so demand that reached only one replica would be invisible to it.
-	want := "dubbod-activation-replicas.dubbo-system.svc.cluster.local:26030"
-	if got != want {
-		t.Fatalf("activation control plane = %q, want %q", got, want)
-	}
-}
-
-func TestKubeGatewayTemplateRendersActivationEnv(t *testing.T) {
-	templatePath := filepath.Join("..", "..", "..", "..", "..", "..", "manifests", "charts", "dubbod", "files", "kube-gateway.yaml")
-	raw, err := os.ReadFile(templatePath)
-	if err != nil {
-		t.Fatal(err)
-	}
-	templates, err := inject.ParseTemplates(inject.RawTemplates{"gateway": string(raw)})
-	if err != nil {
-		t.Fatal(err)
-	}
-	controller := &DeploymentController{
-		injectConfig: func() inject.Config {
-			return inject.Config{Templates: templates}
-		},
-	}
-	baseInput := func() TemplateInput {
-		return TemplateInput{
-			Gateway: &gatewayv1.Gateway{
-				ObjectMeta: metav1.ObjectMeta{Name: "public", Namespace: "app"},
-			},
-			DeploymentName:  "public-dubbo",
-			ServiceAccount:  "public-dubbo",
-			Ports:           []corev1.ServicePort{{Name: "http", Port: 80, TargetPort: intstr.FromInt(15080)}},
-			ServiceType:     corev1.ServiceTypeLoadBalancer,
-			Revision:        "default",
-			TransitImage:    "dubml/transit:test",
-			SystemNamespace: "dubbo-system",
-			ClusterID:       "Kubernetes",
-			DomainSuffix:    "cluster.local",
-			AccessLog:       "true",
-			AccessLogFormat: "text",
-		}
-	}
-
-	input := baseInput()
-	input.ActivationControlPlane = "dubbod-activation-replicas.dubbo-system.svc.cluster.local:26030"
-	input.ActivationHoldTimeout = 30
-	rendered, err := controller.render("gateway", input)
-	if err != nil {
-		t.Fatal(err)
-	}
-	deployment := rendered[4]
-	if !strings.Contains(deployment, "TRANSIT_ACTIVATION_CONTROL_PLANE") ||
-		!strings.Contains(deployment, "dubbod-activation-replicas.dubbo-system.svc.cluster.local:26030") {
-		t.Fatalf("deployment did not render the activation control plane:\n%s", deployment)
-	}
-	if !strings.Contains(deployment, `name: TRANSIT_ACTIVATION_HOLD_TIMEOUT`) ||
-		!strings.Contains(deployment, `value: "30"`) {
-		t.Fatalf("deployment did not render the activation hold timeout:\n%s", deployment)
-	}
-	// POD_NAME is what tells one gateway replica's report from another's; without
-	// it every replica would overwrite the same entry in the control plane.
-	if !strings.Contains(deployment, "name: POD_NAME") {
-		t.Fatalf("deployment must inject POD_NAME for reports to be attributable:\n%s", deployment)
-	}
-
-	// Activation off must leave the gateway exactly as it was before.
-	off, err := controller.render("gateway", baseInput())
-	if err != nil {
-		t.Fatal(err)
-	}
-	if strings.Contains(off[4], "TRANSIT_ACTIVATION") {
-		t.Fatalf("activation env leaked into a gateway with activation disabled:\n%s", off[4])
 	}
 }

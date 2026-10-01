@@ -181,15 +181,6 @@ spec:
         - name: TRANSIT_ACCESS_LOG_TAGS
           value: {{ .AccessLogTags | quote }}
 {{- end }}
-{{- if .ActivationControlPlane }}
-        # On-demand activation. Absent, the gateway fails a request for a
-        # scaled-to-zero backend immediately, which is the behaviour every
-        # gateway had before activation existed.
-        - name: TRANSIT_ACTIVATION_CONTROL_PLANE
-          value: {{ .ActivationControlPlane | quote }}
-        - name: TRANSIT_ACTIVATION_HOLD_TIMEOUT
-          value: {{ .ActivationHoldTimeout | quote }}
-{{- end }}
         - name: POD_NAME
           valueFrom:
             fieldRef:

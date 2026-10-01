@@ -13,10 +13,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# Thin entrypoint; the real targets live in tools/make/*.mk.
+# Thin entrypoint; the real targets live in the root-level .mk files.
 # Run `make help` for the full target list.
 
-include tools/make/common.mk
-include tools/make/build.mk
-include tools/make/test.mk
-include tools/make/lint.mk
+include common.mk
+include build.mk
+include lint.mk

@@ -39,7 +39,6 @@ import (
 	"github.com/apache/dubbo-kubernetes/pkg/kube/controllers"
 	"github.com/apache/dubbo-kubernetes/pkg/kube/inject"
 	"github.com/apache/dubbo-kubernetes/pkg/kube/kclient"
-	"github.com/apache/dubbo-kubernetes/pkg/kube/multicluster"
 	"github.com/apache/dubbo-kubernetes/pkg/log"
 	pkgmodel "github.com/apache/dubbo-kubernetes/pkg/model"
 	"github.com/apache/dubbo-kubernetes/pkg/spiffe"
@@ -89,21 +88,6 @@ type inherentGRPCWorkloadController struct {
 	nextRotation  time.Time
 }
 
-type inherentGRPCClusterController struct {
-	controller *inherentGRPCWorkloadController
-	stop       chan struct{}
-}
-
-func (c *inherentGRPCClusterController) Close() {
-	if c.stop != nil {
-		close(c.stop)
-	}
-}
-
-func (c *inherentGRPCClusterController) HasSynced() bool {
-	return c.controller == nil || c.controller.HasSynced()
-}
-
 func (s *Server) initInherentGRPCWorkloads() error {
 	if s.kubeClient == nil {
 		return nil
@@ -111,30 +95,8 @@ func (s *Server) initInherentGRPCWorkloads() error {
 
 	controller := newInherentGRPCWorkloadController(s, s.kubeClient)
 	s.inherentGRPCWorkloadController = controller
-	if s.multiclusterController != nil {
-		s.inherentGRPCRemoteControllers = multicluster.BuildMultiClusterComponent(s.multiclusterController,
-			func(cluster *multicluster.Cluster) *inherentGRPCClusterController {
-				if cluster.ID == s.clusterID {
-					return &inherentGRPCClusterController{}
-				}
-				remote := newInherentGRPCWorkloadController(s, cluster.Client)
-				wrapped := &inherentGRPCClusterController{
-					controller: remote,
-					stop:       make(chan struct{}),
-				}
-				go remote.Run(wrapped.stop)
-				return wrapped
-			})
-	}
 	s.environment.AddConfigHandler(func(change *discoverymodel.ConfigChange) {
 		controller.handleRuntimeConfigUpdate(change)
-		if s.inherentGRPCRemoteControllers != nil {
-			for _, remote := range s.inherentGRPCRemoteControllers.All() {
-				if remote.controller != nil {
-					remote.controller.handleRuntimeConfigUpdate(change)
-				}
-			}
-		}
 	})
 
 	s.addStartFunc(inherentGRPCControllerName, func(stop <-chan struct{}) error {
@@ -148,7 +110,7 @@ func (s *Server) inherentGRPCWorkloadsSynced() bool {
 	if s.inherentGRPCWorkloadController != nil && !s.inherentGRPCWorkloadController.HasSynced() {
 		return false
 	}
-	return s.inherentGRPCRemoteControllers == nil || s.inherentGRPCRemoteControllers.HasSynced()
+	return true
 }
 
 func newInherentGRPCWorkloadController(s *Server, client kubelib.Client) *inherentGRPCWorkloadController {
@@ -632,8 +594,6 @@ func reusableWorkloadCertificate(secret *corev1.Secret, activeRootCert []byte) (
 }
 
 func (c *inherentGRPCWorkloadController) buildWorkloadContext(pod *corev1.Pod) (*inherentGRPCWorkloadContext, error) {
-	pod = c.latestPodForWorkloadContext(pod)
-
 	trustDomain := constants.DefaultClusterLocalDomain
 	if meshCfg := c.server.environment.Mesh(); meshCfg != nil && meshCfg.GetTrustDomain() != "" {
 		trustDomain = meshCfg.GetTrustDomain()
@@ -656,9 +616,12 @@ func (c *inherentGRPCWorkloadController) buildWorkloadContext(pod *corev1.Pod) (
 	if podIP == "" {
 		podIP = "0.0.0.0"
 	}
-	clusterID := podEnvValue(pod, "DUBBO_META_CLUSTER_ID", constants.DefaultClusterName)
-	discoveryAddress := podEnvValue(pod, inject.InherentXDSAddressEnvName, proxyConfig.GetDiscoveryAddress())
-	caAddress := podEnvValue(pod, "CA_ADDRESS", discoveryAddress)
+	clusterID := string(c.server.clusterID)
+	if clusterID == "" {
+		clusterID = constants.DefaultClusterName
+	}
+	discoveryAddress := proxyConfig.GetDiscoveryAddress()
+	caAddress := discoveryAddress
 	proxyConfig = proto.Clone(proxyConfig).(*meshv1alpha1.ProxyConfig)
 	proxyConfig.DiscoveryAddress = discoveryAddress
 
@@ -701,46 +664,6 @@ func (c *inherentGRPCWorkloadController) buildWorkloadContext(pod *corev1.Pod) (
 		discoveryAddress: discoveryAddress,
 		caAddress:        caAddress,
 	}, nil
-}
-
-func (c *inherentGRPCWorkloadController) latestPodForWorkloadContext(pod *corev1.Pod) *corev1.Pod {
-	if pod == nil || c.client == nil || hasConcretePodEnv(pod, "DUBBO_META_CLUSTER_ID") || hasConcretePodEnv(pod, inject.InherentXDSAddressEnvName) {
-		return pod
-	}
-	latest, err := c.client.Kube().CoreV1().Pods(pod.Namespace).Get(context.Background(), pod.Name, metav1.GetOptions{})
-	if err != nil {
-		inherentGRPCLog.Warnf("failed to refresh pod before building workload context: %s/%s: %v", pod.Namespace, pod.Name, err)
-		return pod
-	}
-	return latest
-}
-
-func hasConcretePodEnv(pod *corev1.Pod, name string) bool {
-	if pod == nil {
-		return false
-	}
-	for _, container := range pod.Spec.Containers {
-		for _, env := range container.Env {
-			if env.Name == name && env.Value != "" && env.ValueFrom == nil {
-				return true
-			}
-		}
-	}
-	return false
-}
-
-func podEnvValue(pod *corev1.Pod, name, fallback string) string {
-	if pod == nil {
-		return fallback
-	}
-	for _, container := range pod.Spec.Containers {
-		for _, env := range container.Env {
-			if env.Name == name && env.Value != "" && env.ValueFrom == nil {
-				return env.Value
-			}
-		}
-	}
-	return fallback
 }
 
 func buildBootstrapJSON(workload *inherentGRPCWorkloadContext) ([]byte, error) {

@@ -55,6 +55,7 @@ header:
     # License and notice files
     - 'LICENSE'
     - 'NOTICE'
+    - 'licenses/**'
     
     # Test data
     - '**/testdata/**'

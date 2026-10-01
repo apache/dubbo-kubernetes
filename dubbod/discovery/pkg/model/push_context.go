@@ -22,7 +22,6 @@ import (
 	"time"
 
 	"github.com/apache/dubbo-kubernetes/pkg/cluster"
-	"github.com/apache/dubbo-kubernetes/pkg/config"
 	"github.com/apache/dubbo-kubernetes/pkg/config/schema/kind"
 	"github.com/apache/dubbo-kubernetes/pkg/util/sets"
 	"github.com/apache/dubbo-kubernetes/pkg/xds"
@@ -54,21 +53,14 @@ type PushContext struct {
 }
 
 type PushRequest struct {
-	Reason                         ReasonStats
-	ConfigsUpdated                 sets.Set[ConfigKey]
-	ServiceActivationPolicyUpdates map[ConfigKey]ServiceActivationPolicyUpdate
-	AddressesUpdated               sets.Set[string]
-	Forced                         bool
-	Full                           bool
-	Push                           *PushContext
-	Start                          time.Time
-	Delta                          ResourceDelta
-}
-
-type ServiceActivationPolicyUpdate struct {
-	Config   config.Config
-	Previous config.Config
-	Deleted  bool
+	Reason           ReasonStats
+	ConfigsUpdated   sets.Set[ConfigKey]
+	AddressesUpdated sets.Set[string]
+	Forced           bool
+	Full             bool
+	Push             *PushContext
+	Start            time.Time
+	Delta            ResourceDelta
 }
 
 type XDSUpdater interface {
@@ -187,18 +179,6 @@ func (pr *PushRequest) Merge(other *PushRequest) *PushRequest {
 	} else {
 		pr.AddressesUpdated.Merge(other.AddressesUpdated)
 	}
-	if len(other.ServiceActivationPolicyUpdates) > 0 {
-		if pr.ServiceActivationPolicyUpdates == nil {
-			pr.ServiceActivationPolicyUpdates = make(map[ConfigKey]ServiceActivationPolicyUpdate)
-		}
-		for key, update := range other.ServiceActivationPolicyUpdates {
-			if existing, found := pr.ServiceActivationPolicyUpdates[key]; found &&
-				existing.Previous.Spec != nil {
-				update.Previous = existing.Previous
-			}
-			pr.ServiceActivationPolicyUpdates[key] = update
-		}
-	}
 
 	pr.Delta = mergeResourceDelta(pr.Delta, other.Delta)
 
@@ -246,12 +226,6 @@ func (pr *PushRequest) Copy() *PushRequest {
 	}
 	if pr.AddressesUpdated != nil {
 		out.AddressesUpdated = pr.AddressesUpdated.Copy()
-	}
-	if pr.ServiceActivationPolicyUpdates != nil {
-		out.ServiceActivationPolicyUpdates = make(map[ConfigKey]ServiceActivationPolicyUpdate, len(pr.ServiceActivationPolicyUpdates))
-		for key, update := range pr.ServiceActivationPolicyUpdates {
-			out.ServiceActivationPolicyUpdates[key] = update
-		}
 	}
 	out.Delta = copyResourceDelta(pr.Delta)
 	return &out
@@ -321,12 +295,11 @@ func (req *PushRequest) ConfigChange() *ConfigChange {
 		return nil
 	}
 	return &ConfigChange{
-		ConfigsUpdated:                 req.ConfigsUpdated,
-		ServiceActivationPolicyUpdates: req.ServiceActivationPolicyUpdates,
-		AddressesUpdated:               req.AddressesUpdated,
-		Full:                           req.Full,
-		Forced:                         req.Forced,
-		EndpointsChanged:               req.Reason.Has(EndpointUpdate) || req.Reason.Has(HeadlessEndpointUpdate),
-		Global:                         req.Reason.Has(GlobalUpdate),
+		ConfigsUpdated:   req.ConfigsUpdated,
+		AddressesUpdated: req.AddressesUpdated,
+		Full:             req.Full,
+		Forced:           req.Forced,
+		EndpointsChanged: req.Reason.Has(EndpointUpdate) || req.Reason.Has(HeadlessEndpointUpdate),
+		Global:           req.Reason.Has(GlobalUpdate),
 	}
 }

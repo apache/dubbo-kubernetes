@@ -14,7 +14,6 @@ import (
 	apigithubcomapachedubbokubernetesapitelemetryv1alpha3 "github.com/dubml/client-go/pkg/apis/telemetry/v1alpha3"
 	k8sioapiadmissionregistrationv1 "k8s.io/api/admissionregistration/v1"
 	k8sioapiappsv1 "k8s.io/api/apps/v1"
-	k8sioapiautoscalingv2 "k8s.io/api/autoscaling/v2"
 	k8sioapicoordinationv1 "k8s.io/api/coordination/v1"
 	k8sioapicorev1 "k8s.io/api/core/v1"
 	k8sioapidiscoveryv1 "k8s.io/api/discovery/v1"
@@ -56,8 +55,6 @@ func getGvk(obj any) (config.GroupVersionKind, bool) {
 		return gvk.GatewayClass, true
 	case *sigsk8siogatewayapiapisv1.HTTPRoute:
 		return gvk.HTTPRoute, true
-	case *k8sioapiautoscalingv2.HorizontalPodAutoscaler:
-		return gvk.HorizontalPodAutoscaler, true
 	case *sigsk8siogatewayapiapisv1.Gateway:
 		return gvk.KubernetesGateway, true
 	case *k8sioapicoordinationv1.Lease:
@@ -90,10 +87,6 @@ func getGvk(obj any) (config.GroupVersionKind, bool) {
 		return gvk.Service, true
 	case *k8sioapicorev1.ServiceAccount:
 		return gvk.ServiceAccount, true
-	case *githubcomdubmlapinetworkingv1alpha3.ServiceActivationPolicy:
-		return gvk.ServiceActivationPolicy, true
-	case *apigithubcomapachedubbokubernetesapinetworkingv1alpha3.ServiceActivationPolicy:
-		return gvk.ServiceActivationPolicy, true
 	case *githubcomdubmlapinetworkingv1alpha3.ServiceEntry:
 		return gvk.ServiceEntry, true
 	case *apigithubcomapachedubbokubernetesapinetworkingv1alpha3.ServiceEntry:

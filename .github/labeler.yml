@@ -85,13 +85,12 @@ performance:
       - any-glob-to-any-file:
           - '**/*benchmark*'
           - '**/benchmark/**'
-          - '.github/workflows/benchmark.yml'
 
 security:
   - changed-files:
       - any-glob-to-any-file:
           - '**/security/**'
-          - 'tools/govulncheck.py'
+          - 'tools/ci/govulncheck.py'
           - '.github/workflows/security.yml'
 
 networking:
@@ -109,7 +108,9 @@ build:
   - changed-files:
       - any-glob-to-any-file:
           - 'Makefile'
-          - 'tools/make/**'
+          - 'build.mk'
+          - 'common.mk'
+          - 'lint.mk'
           - 'tools/ci/**'
           - '**/Dockerfile*'
           - '**/dockerfile*'

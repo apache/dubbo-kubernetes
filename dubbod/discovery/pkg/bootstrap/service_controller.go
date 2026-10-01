@@ -19,12 +19,12 @@ package bootstrap
 import (
 	"fmt"
 
-	"github.com/apache/dubbo-kubernetes/pkg/log"
-
+	"github.com/apache/dubbo-kubernetes/dubbod/discovery/pkg/leaderelection"
 	"github.com/apache/dubbo-kubernetes/dubbod/discovery/pkg/serviceregistry/aggregate"
 	kubecontroller "github.com/apache/dubbo-kubernetes/dubbod/discovery/pkg/serviceregistry/kube/controller"
 	"github.com/apache/dubbo-kubernetes/dubbod/discovery/pkg/serviceregistry/provider"
 	"github.com/apache/dubbo-kubernetes/dubbod/discovery/pkg/serviceregistry/serviceentry"
+	"github.com/apache/dubbo-kubernetes/pkg/log"
 	"github.com/apache/dubbo-kubernetes/pkg/util/sets"
 )
 
@@ -75,15 +75,25 @@ func (s *Server) initKubeRegistry(args *DubboArgs) (err error) {
 	args.RegistryOptions.KubeOptions.XDSUpdater = s.XDSServer
 	args.RegistryOptions.KubeOptions.MeshWatcher = s.environment.Watcher
 	args.RegistryOptions.KubeOptions.SystemNamespace = args.Namespace
-	args.RegistryOptions.KubeOptions.ServiceController = s.ServiceController()
-	kubecontroller.NewMulticluster(args.PodName,
-		args.RegistryOptions.KubeOptions,
-		s.dubbodCertBundleWatcher,
-		args.Revision,
-		s.shouldStartNsController(),
-		s.environment.ClusterLocal(),
-		s.server,
-		s.multiclusterController)
+	if s.kubeClient == nil {
+		return fmt.Errorf("Kubernetes service registry requires a Kubernetes client")
+	}
+	registry := kubecontroller.NewController(s.kubeClient, args.RegistryOptions.KubeOptions)
+	s.ServiceController().AddRegistryAndRun(registry, s.internalStop)
+	if s.shouldStartNsController() {
+		s.server.RunComponentAsyncAndWait("namespace controller", func(stop <-chan struct{}) error {
+			election := leaderelection.NewLeaderElection(args.Namespace, args.PodName,
+				leaderelection.NamespaceController, args.Revision, s.kubeClient)
+			election.AddRunFunction(func(leaderStop <-chan struct{}) {
+				controller := kubecontroller.NewNamespaceController(s.kubeClient, s.dubbodCertBundleWatcher)
+				// Start informers created after leadership is acquired for the server lifetime.
+				s.kubeClient.RunAndWait(stop)
+				controller.Run(leaderStop)
+			})
+			election.Run(stop)
+			return nil
+		})
+	}
 	return
 }
 

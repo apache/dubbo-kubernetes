@@ -125,10 +125,10 @@ func TestAnalyzeHighAvailabilityAcceptsHealthyControlPlane(t *testing.T) {
 	}
 }
 
-func TestAnalyzeHighAvailabilityIgnoresScaledDownAndUnrelatedWorkloads(t *testing.T) {
+func TestAnalyzeHighAvailabilityIgnoresDisabledAndUnrelatedWorkloads(t *testing.T) {
 	zero := int32(0)
-	scaledDown := controlPlaneDeployment(1)
-	scaledDown.Spec.Replicas = &zero
+	disabled := controlPlaneDeployment(1)
+	disabled.Spec.Replicas = &zero
 
 	unrelated := appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{Name: "httpbin", Namespace: "backend"},
@@ -140,7 +140,7 @@ func TestAnalyzeHighAvailabilityIgnoresScaledDownAndUnrelatedWorkloads(t *testin
 		},
 	}
 
-	msgs := analyzeHighAvailability([]appsv1.Deployment{scaledDown, unrelated}, nil, nil)
+	msgs := analyzeHighAvailability([]appsv1.Deployment{disabled, unrelated}, nil, nil)
 	if len(msgs) != 0 {
 		t.Fatalf("expected no messages, got:\n%v", msgs)
 	}

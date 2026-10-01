@@ -135,16 +135,6 @@ resources:
     proto: "k8s.io.api.coordination.v1.LeaseSpec"
     protoPackage: "k8s.io/api/coordination/v1"
 
-  - kind: "HorizontalPodAutoscaler"
-    plural: "horizontalpodautoscalers"
-    group: "autoscaling"
-    version: "v2"
-    builtin: true
-    proto: "k8s.io.api.autoscaling.v2.HorizontalPodAutoscalerSpec"
-    protoPackage: "k8s.io/api/autoscaling/v2"
-    statusProto: "k8s.io.api.autoscaling.v2.HorizontalPodAutoscalerStatus"
-    statusProtoPackage: "k8s.io/api/autoscaling/v2"
-
   - kind: "PodDisruptionBudget"
     plural: "poddisruptionbudgets"
     group: "policy"
@@ -247,15 +237,6 @@ resources:
     proto: "dubbo.networking.v1alpha3.TransitService"
     protoPackage: "github.com/dubml/api/networking/v1alpha3"
     validate: "validation.ValidateTransitService"
-    statusProto: "dubbo.meta.v1alpha1.DubboStatus"
-    statusProtoPackage: "github.com/dubml/api/meta/v1alpha1"
-
-  - kind: ServiceActivationPolicy
-    plural: "serviceactivationpolicies"
-    group: "networking.dubbo.apache.org"
-    version: "v1alpha3"
-    proto: "dubbo.networking.v1alpha3.ServiceActivationPolicy"
-    protoPackage: "github.com/dubml/api/networking/v1alpha3"
     statusProto: "dubbo.meta.v1alpha1.DubboStatus"
     statusProtoPackage: "github.com/dubml/api/meta/v1alpha1"
 

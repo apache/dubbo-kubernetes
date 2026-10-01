@@ -42,8 +42,6 @@ Projects are distributed across the code directory repositories:
 
 - [transit](https://github.com/dubml/transit) — Provides the delegated gateway that serves Gateway API traffic at the mesh edge.
 
-- [gui](https://github.com/dubml/gui) — Provides the console that aggregates the management API across discovered control planes.
-
 ## License
 
 Apache License 2.0, see [LICENSE](https://github.com/apache/dubbo-kubernetes/blob/master/LICENSE).

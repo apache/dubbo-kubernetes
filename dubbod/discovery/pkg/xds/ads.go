@@ -173,10 +173,6 @@ func (s *DiscoveryServer) initConnection(node *core.Node, con *Connection, ident
 		return err
 	}
 
-	if alias, exists := s.ClusterAliases[proxy.Metadata.ClusterID]; exists {
-		proxy.Metadata.ClusterID = alias
-	}
-
 	proxy.LastPushContext = s.globalPushContext()
 	con.SetID(connectionID(proxy.ID))
 	con.node = node

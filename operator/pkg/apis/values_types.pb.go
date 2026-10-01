@@ -82,55 +82,6 @@ func (x *ManagementConfig) GetPort() int64 {
 	return 0
 }
 
-type ActivationConfig struct {
-	state protoimpl.MessageState `protogen:"open.v1"`
-	// gRPC port serving KEDA's external scaler contract. Zero disables it.
-	//
-	// Wrapped so an explicit 0 is distinguishable from an unset field: a bare
-	// int64 drops its zero value, which would make the off switch unreachable
-	// through the operator API.
-	Port          *wrapperspb.Int64Value `protobuf:"bytes,1,opt,name=port,proto3" json:"port,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *ActivationConfig) Reset() {
-	*x = ActivationConfig{}
-	mi := &file_values_types_proto_msgTypes[1]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *ActivationConfig) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*ActivationConfig) ProtoMessage() {}
-
-func (x *ActivationConfig) ProtoReflect() protoreflect.Message {
-	mi := &file_values_types_proto_msgTypes[1]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use ActivationConfig.ProtoReflect.Descriptor instead.
-func (*ActivationConfig) Descriptor() ([]byte, []int) {
-	return file_values_types_proto_rawDescGZIP(), []int{1}
-}
-
-func (x *ActivationConfig) GetPort() *wrapperspb.Int64Value {
-	if x != nil {
-		return x.Port
-	}
-	return nil
-}
-
 type ProxyConfig struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	ClusterDomain string                 `protobuf:"bytes,1,opt,name=clusterDomain,proto3" json:"clusterDomain,omitempty"`
@@ -140,7 +91,7 @@ type ProxyConfig struct {
 
 func (x *ProxyConfig) Reset() {
 	*x = ProxyConfig{}
-	mi := &file_values_types_proto_msgTypes[2]
+	mi := &file_values_types_proto_msgTypes[1]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -152,7 +103,7 @@ func (x *ProxyConfig) String() string {
 func (*ProxyConfig) ProtoMessage() {}
 
 func (x *ProxyConfig) ProtoReflect() protoreflect.Message {
-	mi := &file_values_types_proto_msgTypes[2]
+	mi := &file_values_types_proto_msgTypes[1]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -165,7 +116,7 @@ func (x *ProxyConfig) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ProxyConfig.ProtoReflect.Descriptor instead.
 func (*ProxyConfig) Descriptor() ([]byte, []int) {
-	return file_values_types_proto_rawDescGZIP(), []int{2}
+	return file_values_types_proto_rawDescGZIP(), []int{1}
 }
 
 func (x *ProxyConfig) GetClusterDomain() string {
@@ -186,7 +137,7 @@ type GatewayConfig struct {
 
 func (x *GatewayConfig) Reset() {
 	*x = GatewayConfig{}
-	mi := &file_values_types_proto_msgTypes[3]
+	mi := &file_values_types_proto_msgTypes[2]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -198,7 +149,7 @@ func (x *GatewayConfig) String() string {
 func (*GatewayConfig) ProtoMessage() {}
 
 func (x *GatewayConfig) ProtoReflect() protoreflect.Message {
-	mi := &file_values_types_proto_msgTypes[3]
+	mi := &file_values_types_proto_msgTypes[2]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -211,7 +162,7 @@ func (x *GatewayConfig) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GatewayConfig.ProtoReflect.Descriptor instead.
 func (*GatewayConfig) Descriptor() ([]byte, []int) {
-	return file_values_types_proto_rawDescGZIP(), []int{3}
+	return file_values_types_proto_rawDescGZIP(), []int{2}
 }
 
 func (x *GatewayConfig) GetReplicaCount() *wrapperspb.Int32Value {
@@ -227,19 +178,14 @@ type GlobalConfig struct {
 	StatusPort       int64                  `protobuf:"varint,2,opt,name=statusPort,proto3" json:"statusPort,omitempty"`
 	Management       *ManagementConfig      `protobuf:"bytes,3,opt,name=management,proto3" json:"management,omitempty"`
 	ConfigValidation bool                   `protobuf:"varint,4,opt,name=configValidation,proto3" json:"configValidation,omitempty"`
-	Multicluster     *MulticlusterConfig    `protobuf:"bytes,5,opt,name=multicluster,proto3" json:"multicluster,omitempty"`
 	Gateway          *GatewayConfig         `protobuf:"bytes,7,opt,name=gateway,proto3" json:"gateway,omitempty"`
-	// Field numbers are part of the wire format, so two branches must never
-	// claim the same one: 7 already belongs to gateway, and reusing it would
-	// produce a proto that compiles while silently reinterpreting data.
-	Activation    *ActivationConfig `protobuf:"bytes,8,opt,name=activation,proto3" json:"activation,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	unknownFields    protoimpl.UnknownFields
+	sizeCache        protoimpl.SizeCache
 }
 
 func (x *GlobalConfig) Reset() {
 	*x = GlobalConfig{}
-	mi := &file_values_types_proto_msgTypes[4]
+	mi := &file_values_types_proto_msgTypes[3]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -251,7 +197,7 @@ func (x *GlobalConfig) String() string {
 func (*GlobalConfig) ProtoMessage() {}
 
 func (x *GlobalConfig) ProtoReflect() protoreflect.Message {
-	mi := &file_values_types_proto_msgTypes[4]
+	mi := &file_values_types_proto_msgTypes[3]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -264,7 +210,7 @@ func (x *GlobalConfig) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GlobalConfig.ProtoReflect.Descriptor instead.
 func (*GlobalConfig) Descriptor() ([]byte, []int) {
-	return file_values_types_proto_rawDescGZIP(), []int{4}
+	return file_values_types_proto_rawDescGZIP(), []int{3}
 }
 
 func (x *GlobalConfig) GetProxy() *ProxyConfig {
@@ -295,311 +241,9 @@ func (x *GlobalConfig) GetConfigValidation() bool {
 	return false
 }
 
-func (x *GlobalConfig) GetMulticluster() *MulticlusterConfig {
-	if x != nil {
-		return x.Multicluster
-	}
-	return nil
-}
-
 func (x *GlobalConfig) GetGateway() *GatewayConfig {
 	if x != nil {
 		return x.Gateway
-	}
-	return nil
-}
-
-func (x *GlobalConfig) GetActivation() *ActivationConfig {
-	if x != nil {
-		return x.Activation
-	}
-	return nil
-}
-
-type RemoteAccessConfig struct {
-	state            protoimpl.MessageState `protogen:"open.v1"`
-	Enabled          bool                   `protobuf:"varint,1,opt,name=enabled,proto3" json:"enabled,omitempty"`
-	ServiceType      string                 `protobuf:"bytes,2,opt,name=serviceType,proto3" json:"serviceType,omitempty"`
-	XdsPort          int64                  `protobuf:"varint,3,opt,name=xdsPort,proto3" json:"xdsPort,omitempty"`
-	WebhookPort      int64                  `protobuf:"varint,4,opt,name=webhookPort,proto3" json:"webhookPort,omitempty"`
-	CertificateHosts []string               `protobuf:"bytes,5,rep,name=certificateHosts,proto3" json:"certificateHosts,omitempty"`
-	GrpcPort         int64                  `protobuf:"varint,6,opt,name=grpcPort,proto3" json:"grpcPort,omitempty"`
-	unknownFields    protoimpl.UnknownFields
-	sizeCache        protoimpl.SizeCache
-}
-
-func (x *RemoteAccessConfig) Reset() {
-	*x = RemoteAccessConfig{}
-	mi := &file_values_types_proto_msgTypes[5]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *RemoteAccessConfig) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*RemoteAccessConfig) ProtoMessage() {}
-
-func (x *RemoteAccessConfig) ProtoReflect() protoreflect.Message {
-	mi := &file_values_types_proto_msgTypes[5]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use RemoteAccessConfig.ProtoReflect.Descriptor instead.
-func (*RemoteAccessConfig) Descriptor() ([]byte, []int) {
-	return file_values_types_proto_rawDescGZIP(), []int{5}
-}
-
-func (x *RemoteAccessConfig) GetEnabled() bool {
-	if x != nil {
-		return x.Enabled
-	}
-	return false
-}
-
-func (x *RemoteAccessConfig) GetServiceType() string {
-	if x != nil {
-		return x.ServiceType
-	}
-	return ""
-}
-
-func (x *RemoteAccessConfig) GetXdsPort() int64 {
-	if x != nil {
-		return x.XdsPort
-	}
-	return 0
-}
-
-func (x *RemoteAccessConfig) GetWebhookPort() int64 {
-	if x != nil {
-		return x.WebhookPort
-	}
-	return 0
-}
-
-func (x *RemoteAccessConfig) GetCertificateHosts() []string {
-	if x != nil {
-		return x.CertificateHosts
-	}
-	return nil
-}
-
-func (x *RemoteAccessConfig) GetGrpcPort() int64 {
-	if x != nil {
-		return x.GrpcPort
-	}
-	return 0
-}
-
-type EastWestGatewayEndpoint struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	ClusterName   string                 `protobuf:"bytes,1,opt,name=clusterName,proto3" json:"clusterName,omitempty"`
-	Address       string                 `protobuf:"bytes,2,opt,name=address,proto3" json:"address,omitempty"`
-	Port          int64                  `protobuf:"varint,3,opt,name=port,proto3" json:"port,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *EastWestGatewayEndpoint) Reset() {
-	*x = EastWestGatewayEndpoint{}
-	mi := &file_values_types_proto_msgTypes[6]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *EastWestGatewayEndpoint) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*EastWestGatewayEndpoint) ProtoMessage() {}
-
-func (x *EastWestGatewayEndpoint) ProtoReflect() protoreflect.Message {
-	mi := &file_values_types_proto_msgTypes[6]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use EastWestGatewayEndpoint.ProtoReflect.Descriptor instead.
-func (*EastWestGatewayEndpoint) Descriptor() ([]byte, []int) {
-	return file_values_types_proto_rawDescGZIP(), []int{6}
-}
-
-func (x *EastWestGatewayEndpoint) GetClusterName() string {
-	if x != nil {
-		return x.ClusterName
-	}
-	return ""
-}
-
-func (x *EastWestGatewayEndpoint) GetAddress() string {
-	if x != nil {
-		return x.Address
-	}
-	return ""
-}
-
-func (x *EastWestGatewayEndpoint) GetPort() int64 {
-	if x != nil {
-		return x.Port
-	}
-	return 0
-}
-
-type EastWestGatewayConfig struct {
-	state         protoimpl.MessageState     `protogen:"open.v1"`
-	Enabled       bool                       `protobuf:"varint,1,opt,name=enabled,proto3" json:"enabled,omitempty"`
-	ServiceType   string                     `protobuf:"bytes,2,opt,name=serviceType,proto3" json:"serviceType,omitempty"`
-	Port          int64                      `protobuf:"varint,3,opt,name=port,proto3" json:"port,omitempty"`
-	TargetPort    int64                      `protobuf:"varint,4,opt,name=targetPort,proto3" json:"targetPort,omitempty"`
-	NodePort      int64                      `protobuf:"varint,5,opt,name=nodePort,proto3" json:"nodePort,omitempty"`
-	Gateways      []*EastWestGatewayEndpoint `protobuf:"bytes,6,rep,name=gateways,proto3" json:"gateways,omitempty"`
-	XdsAddress    string                     `protobuf:"bytes,7,opt,name=xdsAddress,proto3" json:"xdsAddress,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *EastWestGatewayConfig) Reset() {
-	*x = EastWestGatewayConfig{}
-	mi := &file_values_types_proto_msgTypes[7]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *EastWestGatewayConfig) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*EastWestGatewayConfig) ProtoMessage() {}
-
-func (x *EastWestGatewayConfig) ProtoReflect() protoreflect.Message {
-	mi := &file_values_types_proto_msgTypes[7]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use EastWestGatewayConfig.ProtoReflect.Descriptor instead.
-func (*EastWestGatewayConfig) Descriptor() ([]byte, []int) {
-	return file_values_types_proto_rawDescGZIP(), []int{7}
-}
-
-func (x *EastWestGatewayConfig) GetEnabled() bool {
-	if x != nil {
-		return x.Enabled
-	}
-	return false
-}
-
-func (x *EastWestGatewayConfig) GetServiceType() string {
-	if x != nil {
-		return x.ServiceType
-	}
-	return ""
-}
-
-func (x *EastWestGatewayConfig) GetPort() int64 {
-	if x != nil {
-		return x.Port
-	}
-	return 0
-}
-
-func (x *EastWestGatewayConfig) GetTargetPort() int64 {
-	if x != nil {
-		return x.TargetPort
-	}
-	return 0
-}
-
-func (x *EastWestGatewayConfig) GetNodePort() int64 {
-	if x != nil {
-		return x.NodePort
-	}
-	return 0
-}
-
-func (x *EastWestGatewayConfig) GetGateways() []*EastWestGatewayEndpoint {
-	if x != nil {
-		return x.Gateways
-	}
-	return nil
-}
-
-func (x *EastWestGatewayConfig) GetXdsAddress() string {
-	if x != nil {
-		return x.XdsAddress
-	}
-	return ""
-}
-
-type MulticlusterConfig struct {
-	state           protoimpl.MessageState `protogen:"open.v1"`
-	RemoteAccess    *RemoteAccessConfig    `protobuf:"bytes,1,opt,name=remoteAccess,proto3" json:"remoteAccess,omitempty"`
-	EastWestGateway *EastWestGatewayConfig `protobuf:"bytes,2,opt,name=eastWestGateway,proto3" json:"eastWestGateway,omitempty"`
-	unknownFields   protoimpl.UnknownFields
-	sizeCache       protoimpl.SizeCache
-}
-
-func (x *MulticlusterConfig) Reset() {
-	*x = MulticlusterConfig{}
-	mi := &file_values_types_proto_msgTypes[8]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *MulticlusterConfig) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*MulticlusterConfig) ProtoMessage() {}
-
-func (x *MulticlusterConfig) ProtoReflect() protoreflect.Message {
-	mi := &file_values_types_proto_msgTypes[8]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use MulticlusterConfig.ProtoReflect.Descriptor instead.
-func (*MulticlusterConfig) Descriptor() ([]byte, []int) {
-	return file_values_types_proto_rawDescGZIP(), []int{8}
-}
-
-func (x *MulticlusterConfig) GetRemoteAccess() *RemoteAccessConfig {
-	if x != nil {
-		return x.RemoteAccess
-	}
-	return nil
-}
-
-func (x *MulticlusterConfig) GetEastWestGateway() *EastWestGatewayConfig {
-	if x != nil {
-		return x.EastWestGateway
 	}
 	return nil
 }
@@ -622,7 +266,7 @@ type Values struct {
 
 func (x *Values) Reset() {
 	*x = Values{}
-	mi := &file_values_types_proto_msgTypes[9]
+	mi := &file_values_types_proto_msgTypes[4]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -634,7 +278,7 @@ func (x *Values) String() string {
 func (*Values) ProtoMessage() {}
 
 func (x *Values) ProtoReflect() protoreflect.Message {
-	mi := &file_values_types_proto_msgTypes[9]
+	mi := &file_values_types_proto_msgTypes[4]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -647,7 +291,7 @@ func (x *Values) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Values.ProtoReflect.Descriptor instead.
 func (*Values) Descriptor() ([]byte, []int) {
-	return file_values_types_proto_rawDescGZIP(), []int{9}
+	return file_values_types_proto_rawDescGZIP(), []int{4}
 }
 
 func (x *Values) GetGlobal() *GlobalConfig {
@@ -698,7 +342,7 @@ type IntOrString struct {
 
 func (x *IntOrString) Reset() {
 	*x = IntOrString{}
-	mi := &file_values_types_proto_msgTypes[10]
+	mi := &file_values_types_proto_msgTypes[5]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -710,7 +354,7 @@ func (x *IntOrString) String() string {
 func (*IntOrString) ProtoMessage() {}
 
 func (x *IntOrString) ProtoReflect() protoreflect.Message {
-	mi := &file_values_types_proto_msgTypes[10]
+	mi := &file_values_types_proto_msgTypes[5]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -723,7 +367,7 @@ func (x *IntOrString) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use IntOrString.ProtoReflect.Descriptor instead.
 func (*IntOrString) Descriptor() ([]byte, []int) {
-	return file_values_types_proto_rawDescGZIP(), []int{10}
+	return file_values_types_proto_rawDescGZIP(), []int{5}
 }
 
 func (x *IntOrString) GetType() int64 {
@@ -753,13 +397,11 @@ const file_values_types_proto_rawDesc = "" +
 	"\n" +
 	"\x12values_types.proto\x12\x17dubbo.operator.v1alpha1\x1a\x1egoogle/protobuf/wrappers.proto\"&\n" +
 	"\x10ManagementConfig\x12\x12\n" +
-	"\x04port\x18\x01 \x01(\x03R\x04port\"C\n" +
-	"\x10ActivationConfig\x12/\n" +
-	"\x04port\x18\x01 \x01(\v2\x1b.google.protobuf.Int64ValueR\x04port\"3\n" +
+	"\x04port\x18\x01 \x01(\x03R\x04port\"3\n" +
 	"\vProxyConfig\x12$\n" +
 	"\rclusterDomain\x18\x01 \x01(\tR\rclusterDomain\"P\n" +
 	"\rGatewayConfig\x12?\n" +
-	"\freplicaCount\x18\x01 \x01(\v2\x1b.google.protobuf.Int32ValueR\freplicaCount\"\xc5\x03\n" +
+	"\freplicaCount\x18\x01 \x01(\v2\x1b.google.protobuf.Int32ValueR\freplicaCount\"\xb5\x02\n" +
 	"\fGlobalConfig\x12:\n" +
 	"\x05proxy\x18\x01 \x01(\v2$.dubbo.operator.v1alpha1.ProxyConfigR\x05proxy\x12\x1e\n" +
 	"\n" +
@@ -768,38 +410,8 @@ const file_values_types_proto_rawDesc = "" +
 	"\n" +
 	"management\x18\x03 \x01(\v2).dubbo.operator.v1alpha1.ManagementConfigR\n" +
 	"management\x12*\n" +
-	"\x10configValidation\x18\x04 \x01(\bR\x10configValidation\x12O\n" +
-	"\fmulticluster\x18\x05 \x01(\v2+.dubbo.operator.v1alpha1.MulticlusterConfigR\fmulticluster\x12@\n" +
-	"\agateway\x18\a \x01(\v2&.dubbo.operator.v1alpha1.GatewayConfigR\agateway\x12I\n" +
-	"\n" +
-	"activation\x18\b \x01(\v2).dubbo.operator.v1alpha1.ActivationConfigR\n" +
-	"activationJ\x04\b\x06\x10\a\"\xd4\x01\n" +
-	"\x12RemoteAccessConfig\x12\x18\n" +
-	"\aenabled\x18\x01 \x01(\bR\aenabled\x12 \n" +
-	"\vserviceType\x18\x02 \x01(\tR\vserviceType\x12\x18\n" +
-	"\axdsPort\x18\x03 \x01(\x03R\axdsPort\x12 \n" +
-	"\vwebhookPort\x18\x04 \x01(\x03R\vwebhookPort\x12*\n" +
-	"\x10certificateHosts\x18\x05 \x03(\tR\x10certificateHosts\x12\x1a\n" +
-	"\bgrpcPort\x18\x06 \x01(\x03R\bgrpcPort\"i\n" +
-	"\x17EastWestGatewayEndpoint\x12 \n" +
-	"\vclusterName\x18\x01 \x01(\tR\vclusterName\x12\x18\n" +
-	"\aaddress\x18\x02 \x01(\tR\aaddress\x12\x12\n" +
-	"\x04port\x18\x03 \x01(\x03R\x04port\"\x91\x02\n" +
-	"\x15EastWestGatewayConfig\x12\x18\n" +
-	"\aenabled\x18\x01 \x01(\bR\aenabled\x12 \n" +
-	"\vserviceType\x18\x02 \x01(\tR\vserviceType\x12\x12\n" +
-	"\x04port\x18\x03 \x01(\x03R\x04port\x12\x1e\n" +
-	"\n" +
-	"targetPort\x18\x04 \x01(\x03R\n" +
-	"targetPort\x12\x1a\n" +
-	"\bnodePort\x18\x05 \x01(\x03R\bnodePort\x12L\n" +
-	"\bgateways\x18\x06 \x03(\v20.dubbo.operator.v1alpha1.EastWestGatewayEndpointR\bgateways\x12\x1e\n" +
-	"\n" +
-	"xdsAddress\x18\a \x01(\tR\n" +
-	"xdsAddress\"\xbf\x01\n" +
-	"\x12MulticlusterConfig\x12O\n" +
-	"\fremoteAccess\x18\x01 \x01(\v2+.dubbo.operator.v1alpha1.RemoteAccessConfigR\fremoteAccess\x12X\n" +
-	"\x0feastWestGateway\x18\x02 \x01(\v2..dubbo.operator.v1alpha1.EastWestGatewayConfigR\x0feastWestGateway\"\xba\x01\n" +
+	"\x10configValidation\x18\x04 \x01(\bR\x10configValidation\x12@\n" +
+	"\agateway\x18\a \x01(\v2&.dubbo.operator.v1alpha1.GatewayConfigR\agatewayJ\x04\b\x05\x10\x06J\x04\b\x06\x10\aJ\x04\b\b\x10\t\"\xba\x01\n" +
 	"\x06Values\x12=\n" +
 	"\x06global\x18\x01 \x01(\v2%.dubbo.operator.v1alpha1.GlobalConfigR\x06global\x12\x1a\n" +
 	"\brevision\x18\x02 \x01(\tR\brevision\x12?\n" +
@@ -822,43 +434,31 @@ func file_values_types_proto_rawDescGZIP() []byte {
 	return file_values_types_proto_rawDescData
 }
 
-var file_values_types_proto_msgTypes = make([]protoimpl.MessageInfo, 11)
+var file_values_types_proto_msgTypes = make([]protoimpl.MessageInfo, 6)
 var file_values_types_proto_goTypes = []any{
-	(*ManagementConfig)(nil),        // 0: dubbo.operator.v1alpha1.ManagementConfig
-	(*ActivationConfig)(nil),        // 1: dubbo.operator.v1alpha1.ActivationConfig
-	(*ProxyConfig)(nil),             // 2: dubbo.operator.v1alpha1.ProxyConfig
-	(*GatewayConfig)(nil),           // 3: dubbo.operator.v1alpha1.GatewayConfig
-	(*GlobalConfig)(nil),            // 4: dubbo.operator.v1alpha1.GlobalConfig
-	(*RemoteAccessConfig)(nil),      // 5: dubbo.operator.v1alpha1.RemoteAccessConfig
-	(*EastWestGatewayEndpoint)(nil), // 6: dubbo.operator.v1alpha1.EastWestGatewayEndpoint
-	(*EastWestGatewayConfig)(nil),   // 7: dubbo.operator.v1alpha1.EastWestGatewayConfig
-	(*MulticlusterConfig)(nil),      // 8: dubbo.operator.v1alpha1.MulticlusterConfig
-	(*Values)(nil),                  // 9: dubbo.operator.v1alpha1.Values
-	(*IntOrString)(nil),             // 10: dubbo.operator.v1alpha1.IntOrString
-	(*wrapperspb.Int64Value)(nil),   // 11: google.protobuf.Int64Value
-	(*wrapperspb.Int32Value)(nil),   // 12: google.protobuf.Int32Value
-	(*wrapperspb.StringValue)(nil),  // 13: google.protobuf.StringValue
+	(*ManagementConfig)(nil),       // 0: dubbo.operator.v1alpha1.ManagementConfig
+	(*ProxyConfig)(nil),            // 1: dubbo.operator.v1alpha1.ProxyConfig
+	(*GatewayConfig)(nil),          // 2: dubbo.operator.v1alpha1.GatewayConfig
+	(*GlobalConfig)(nil),           // 3: dubbo.operator.v1alpha1.GlobalConfig
+	(*Values)(nil),                 // 4: dubbo.operator.v1alpha1.Values
+	(*IntOrString)(nil),            // 5: dubbo.operator.v1alpha1.IntOrString
+	(*wrapperspb.Int32Value)(nil),  // 6: google.protobuf.Int32Value
+	(*wrapperspb.StringValue)(nil), // 7: google.protobuf.StringValue
 }
 var file_values_types_proto_depIdxs = []int32{
-	11, // 0: dubbo.operator.v1alpha1.ActivationConfig.port:type_name -> google.protobuf.Int64Value
-	12, // 1: dubbo.operator.v1alpha1.GatewayConfig.replicaCount:type_name -> google.protobuf.Int32Value
-	2,  // 2: dubbo.operator.v1alpha1.GlobalConfig.proxy:type_name -> dubbo.operator.v1alpha1.ProxyConfig
-	0,  // 3: dubbo.operator.v1alpha1.GlobalConfig.management:type_name -> dubbo.operator.v1alpha1.ManagementConfig
-	8,  // 4: dubbo.operator.v1alpha1.GlobalConfig.multicluster:type_name -> dubbo.operator.v1alpha1.MulticlusterConfig
-	3,  // 5: dubbo.operator.v1alpha1.GlobalConfig.gateway:type_name -> dubbo.operator.v1alpha1.GatewayConfig
-	1,  // 6: dubbo.operator.v1alpha1.GlobalConfig.activation:type_name -> dubbo.operator.v1alpha1.ActivationConfig
-	6,  // 7: dubbo.operator.v1alpha1.EastWestGatewayConfig.gateways:type_name -> dubbo.operator.v1alpha1.EastWestGatewayEndpoint
-	5,  // 8: dubbo.operator.v1alpha1.MulticlusterConfig.remoteAccess:type_name -> dubbo.operator.v1alpha1.RemoteAccessConfig
-	7,  // 9: dubbo.operator.v1alpha1.MulticlusterConfig.eastWestGateway:type_name -> dubbo.operator.v1alpha1.EastWestGatewayConfig
-	4,  // 10: dubbo.operator.v1alpha1.Values.global:type_name -> dubbo.operator.v1alpha1.GlobalConfig
-	12, // 11: dubbo.operator.v1alpha1.Values.replicaCount:type_name -> google.protobuf.Int32Value
-	12, // 12: dubbo.operator.v1alpha1.IntOrString.intVal:type_name -> google.protobuf.Int32Value
-	13, // 13: dubbo.operator.v1alpha1.IntOrString.strVal:type_name -> google.protobuf.StringValue
-	14, // [14:14] is the sub-list for method output_type
-	14, // [14:14] is the sub-list for method input_type
-	14, // [14:14] is the sub-list for extension type_name
-	14, // [14:14] is the sub-list for extension extendee
-	0,  // [0:14] is the sub-list for field type_name
+	6, // 0: dubbo.operator.v1alpha1.GatewayConfig.replicaCount:type_name -> google.protobuf.Int32Value
+	1, // 1: dubbo.operator.v1alpha1.GlobalConfig.proxy:type_name -> dubbo.operator.v1alpha1.ProxyConfig
+	0, // 2: dubbo.operator.v1alpha1.GlobalConfig.management:type_name -> dubbo.operator.v1alpha1.ManagementConfig
+	2, // 3: dubbo.operator.v1alpha1.GlobalConfig.gateway:type_name -> dubbo.operator.v1alpha1.GatewayConfig
+	3, // 4: dubbo.operator.v1alpha1.Values.global:type_name -> dubbo.operator.v1alpha1.GlobalConfig
+	6, // 5: dubbo.operator.v1alpha1.Values.replicaCount:type_name -> google.protobuf.Int32Value
+	6, // 6: dubbo.operator.v1alpha1.IntOrString.intVal:type_name -> google.protobuf.Int32Value
+	7, // 7: dubbo.operator.v1alpha1.IntOrString.strVal:type_name -> google.protobuf.StringValue
+	8, // [8:8] is the sub-list for method output_type
+	8, // [8:8] is the sub-list for method input_type
+	8, // [8:8] is the sub-list for extension type_name
+	8, // [8:8] is the sub-list for extension extendee
+	0, // [0:8] is the sub-list for field type_name
 }
 
 func init() { file_values_types_proto_init() }
@@ -872,7 +472,7 @@ func file_values_types_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_values_types_proto_rawDesc), len(file_values_types_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   11,
+			NumMessages:   6,
 			NumExtensions: 0,
 			NumServices:   0,
 		},

@@ -1,0 +1,9 @@
+BSD-3-Clause terms for the following Go-derived files are retained in licenses/go/LICENSE.
+
+type_fields.go
+// Struct field handling is adapted from code in encoding/json:
+//
+// Copyright 2010 The Go Authors.  All rights reserved.
+// Use of this source code is governed by a BSD-style
+// license that can be found in the Go distribution.
+

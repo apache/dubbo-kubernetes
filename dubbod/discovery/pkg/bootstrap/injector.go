@@ -74,11 +74,10 @@ func (s *Server) initInjector(args *DubboArgs) (*inject.Webhook, error) {
 	log.Info("initializing Inherent injector")
 
 	parameters := inject.WebhookParameters{
-		Watcher:      watcher,
-		Env:          s.environment,
-		Mux:          s.httpsMux,
-		Revision:     args.Revision,
-		MultiCluster: s.multiclusterController,
+		Watcher:  watcher,
+		Env:      s.environment,
+		Mux:      s.httpsMux,
+		Revision: args.Revision,
 	}
 
 	wh, err := inject.NewWebhook(parameters)

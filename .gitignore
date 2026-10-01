@@ -33,8 +33,6 @@ target/
 .DS_Store
 Thumbs.db
 
-coverage.txt
-
 bin/
 build/
 vendor/

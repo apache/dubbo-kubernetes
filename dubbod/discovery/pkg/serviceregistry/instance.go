@@ -31,6 +31,6 @@ type Instance interface {
 	// Provider backing this service registry (i.e. Kubernetes etc.)
 	Provider() provider.ID
 
-	// Cluster for which the service registry applies. Only needed for multicluster systems.
+	// Cluster for which the service registry applies.
 	Cluster() cluster.ID
 }

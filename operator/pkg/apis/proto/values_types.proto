@@ -28,14 +28,6 @@ message ManagementConfig {
   int64 port = 1;
 }
 
-message ActivationConfig {
-  // gRPC port serving KEDA's external scaler contract. Zero disables it.
-  //
-  // Wrapped so an explicit 0 is distinguishable from an unset field: a bare
-  // int64 drops its zero value, which would make the off switch unreachable
-  // through the operator API.
-  google.protobuf.Int64Value port = 1;
-}
 
 message ProxyConfig {
   string clusterDomain = 1;
@@ -56,60 +48,13 @@ message GlobalConfig {
 
   bool configValidation = 4;
 
-  MulticlusterConfig multicluster = 5;
+  reserved 5;
 
   reserved 6;
 
   GatewayConfig gateway = 7;
 
-  // Field numbers are part of the wire format, so two branches must never
-  // claim the same one: 7 already belongs to gateway, and reusing it would
-  // produce a proto that compiles while silently reinterpreting data.
-  ActivationConfig activation = 8;
-}
-
-message RemoteAccessConfig {
-  bool enabled = 1;
-
-  string serviceType = 2;
-
-  int64 xdsPort = 3;
-
-  int64 webhookPort = 4;
-
-  repeated string certificateHosts = 5;
-
-  int64 grpcPort = 6;
-}
-
-message EastWestGatewayEndpoint {
-  string clusterName = 1;
-
-  string address = 2;
-
-  int64 port = 3;
-}
-
-message EastWestGatewayConfig {
-  bool enabled = 1;
-
-  string serviceType = 2;
-
-  int64 port = 3;
-
-  int64 targetPort = 4;
-
-  int64 nodePort = 5;
-
-  repeated EastWestGatewayEndpoint gateways = 6;
-
-  string xdsAddress = 7;
-}
-
-message MulticlusterConfig {
-  RemoteAccessConfig remoteAccess = 1;
-
-  EastWestGatewayConfig eastWestGateway = 2;
+  reserved 8;
 }
 
 message Values {

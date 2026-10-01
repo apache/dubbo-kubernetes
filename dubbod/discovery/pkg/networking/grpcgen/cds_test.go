@@ -23,49 +23,18 @@ import (
 	"github.com/apache/dubbo-kubernetes/pkg/config"
 	"github.com/apache/dubbo-kubernetes/pkg/config/host"
 	"github.com/apache/dubbo-kubernetes/pkg/config/schema/gvk"
-	networking "github.com/dubml/api/networking/v1alpha3"
 	security "github.com/dubml/api/security/v1alpha3"
 	cluster "github.com/dubml/xds-api/cluster/v1"
 	tlsv1 "github.com/dubml/xds-api/extensions/transport_sockets/tls/v1"
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 )
 
-func TestActivationPinsBackendAndActivatorSANsInOneCDSContext(t *testing.T) {
+func TestStrictPeerAuthenticationPinsBackendIdentity(t *testing.T) {
 	hostName := host.Name("payment.app.svc.cluster.local")
 	service := newRDSTestService("payment", "app", string(hostName), 8080)
 	backendSAN := "spiffe://cluster.local/ns/app/sa/payment"
+	service.ServiceAccounts = []string{backendSAN}
 	push := newRDSTestPushContext(t, []config.Config{
-		newActivationPolicyConfig("payment", "app", "payment"),
-	}, []*model.Service{service})
-
-	context := (&clusterBuilder{
-		push:     push,
-		hostname: hostName,
-		svc:      service,
-	}).buildUpstreamTLSContext(&cluster.Cluster{Name: "outbound|8080||" + string(hostName)})
-	got := context.GetCommonTlsContext().
-		GetCombinedValidationContext().
-		GetDefaultValidationContext().
-		GetMatchSubjectAltNames()
-
-	activatorSANs := push.ActivationGatewaySANs("app")
-	if len(activatorSANs) != 1 {
-		t.Fatalf("Activator SANs = %v, want one identity", activatorSANs)
-	}
-	if !contains(got, backendSAN) {
-		t.Fatalf("SAN pins = %v, want backend %q", got, backendSAN)
-	}
-	if !contains(got, activatorSANs[0]) {
-		t.Fatalf("SAN pins = %v, want Activator %q", got, activatorSANs[0])
-	}
-}
-
-func TestStrictPeerAuthenticationEmitsActivationSANPinnedMTLSCluster(t *testing.T) {
-	hostName := host.Name("payment.app.svc.cluster.local")
-	service := newRDSTestService("payment", "app", string(hostName), 8080)
-	backendSAN := "spiffe://cluster.local/ns/app/sa/payment"
-	push := newRDSTestPushContext(t, []config.Config{
-		newActivationPolicyConfig("payment", "app", "payment"),
 		{
 			Meta: config.Meta{
 				GroupVersionKind: gvk.PeerAuthentication,
@@ -103,8 +72,8 @@ func TestStrictPeerAuthenticationEmitsActivationSANPinnedMTLSCluster(t *testing.
 		GetCombinedValidationContext().
 		GetDefaultValidationContext().
 		GetMatchSubjectAltNames()
-	if !contains(got, backendSAN) || !contains(got, push.ActivationGatewaySANs("app")[0]) {
-		t.Fatalf("SAN pins = %v, want backend and Activator identities", got)
+	if len(got) != 1 || got[0] != backendSAN {
+		t.Fatalf("SAN pins = %v, want only the backend identity", got)
 	}
 }
 
@@ -166,26 +135,6 @@ func newBackendTLSPolicyConfig(name, namespace, serviceName, hostname string) co
 			Validation: gatewayv1.BackendTLSPolicyValidation{
 				WellKnownCACertificates: &wellKnown,
 				Hostname:                gatewayv1.PreciseHostname(hostname),
-			},
-		},
-	}
-}
-
-func newActivationPolicyConfig(name, namespace, serviceName string) config.Config {
-	return config.Config{
-		Meta: config.Meta{
-			GroupVersionKind: gvk.ServiceActivationPolicy,
-			Name:             name,
-			Namespace:        namespace,
-		},
-		Spec: &networking.ServiceActivationPolicy{
-			TargetRef: &networking.PolicyTargetReference{
-				Kind: "Service",
-				Name: serviceName,
-			},
-			AutoscalerRef: &networking.AutoscalerReference{Name: serviceName},
-			BackendServiceAccounts: []string{
-				"payment",
 			},
 		},
 	}

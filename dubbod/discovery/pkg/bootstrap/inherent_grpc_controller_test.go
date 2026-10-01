@@ -189,9 +189,9 @@ func TestBuildRuntimeConfigJSON(t *testing.T) {
 		podIP:            "10.0.0.1",
 		serviceAccount:   "nginx",
 		trustDomain:      "cluster.local",
-		clusterID:        "remote",
-		discoveryAddress: "192.168.15.164:32049",
-		caAddress:        "192.168.15.164:32049",
+		clusterID:        "Kubernetes",
+		discoveryAddress: "dubbod.dubbo-system.svc:26012",
+		caAddress:        "dubbod.dubbo-system.svc:26012",
 	}
 
 	effectiveTelemetry := telemetryconfig.EffectiveTracing{
@@ -376,47 +376,28 @@ func TestResolveInherentTelemetryForWorkload(t *testing.T) {
 	}
 }
 
-func TestBuildWorkloadContextUsesInjectedRemoteValues(t *testing.T) {
+func TestBuildWorkloadContextUsesLocalConfiguration(t *testing.T) {
+	env := discoverymodel.NewEnvironment()
+	meshConfig := mesh.DefaultMeshConfig()
+	meshConfig.DefaultConfig.DiscoveryAddress = "dubbod.dubbo-system.svc:26012"
+	env.Watcher = meshwatcher.ConfigAdapter(krt.NewStatic(&meshwatcher.MeshConfigResource{MeshConfig: meshConfig}, true))
 	controller := &inherentGRPCWorkloadController{
-		server: &Server{
-			environment: &discoverymodel.Environment{
-				DomainSuffix: constants.DefaultClusterLocalDomain,
-			},
-		},
+		server: &Server{environment: env, clusterID: "Kubernetes"},
 	}
 	pod := &corev1.Pod{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "nginx",
-			Namespace: "app",
-		},
-		Spec: corev1.PodSpec{
-			ServiceAccountName: "nginx",
-			Containers: []corev1.Container{{
-				Name: "app",
-				Env: []corev1.EnvVar{
-					{Name: "DUBBO_META_CLUSTER_ID", Value: "remote"},
-					{Name: inject.InherentXDSAddressEnvName, Value: "192.168.15.164:32049"},
-					{Name: "CA_ADDRESS", Value: "192.168.15.164:32049"},
-				},
-			}},
-		},
-		Status: corev1.PodStatus{
-			PodIP: "10.0.0.1",
-		},
+		ObjectMeta: metav1.ObjectMeta{Name: "nginx", Namespace: "app"},
+		Spec:       corev1.PodSpec{ServiceAccountName: "nginx"},
+		Status:     corev1.PodStatus{PodIP: "10.0.0.1"},
 	}
-
 	workload, err := controller.buildWorkloadContext(pod)
 	if err != nil {
 		t.Fatalf("buildWorkloadContext() failed: %v", err)
 	}
-	if workload.clusterID != "remote" {
-		t.Fatalf("clusterID = %q, want remote", workload.clusterID)
+	if workload.clusterID != "Kubernetes" {
+		t.Fatalf("clusterID = %q, want Kubernetes", workload.clusterID)
 	}
-	if workload.discoveryAddress != "192.168.15.164:32049" {
-		t.Fatalf("discoveryAddress = %q, want 192.168.15.164:32049", workload.discoveryAddress)
-	}
-	if workload.caAddress != "192.168.15.164:32049" {
-		t.Fatalf("caAddress = %q, want 192.168.15.164:32049", workload.caAddress)
+	if workload.discoveryAddress != meshConfig.DefaultConfig.DiscoveryAddress || workload.caAddress != workload.discoveryAddress {
+		t.Fatalf("workload addresses = %q/%q, want local discovery address", workload.discoveryAddress, workload.caAddress)
 	}
 }
 

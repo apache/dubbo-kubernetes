@@ -46,7 +46,6 @@ type DiscoveryServer struct {
 	Env                 *model.Environment
 	serverReady         atomic.Bool
 	DiscoveryStartTime  time.Time
-	ClusterAliases      map[cluster.ID]cluster.ID
 	pushQueue           *PushQueue
 	krtDebugger         *krt.DebugHandler
 	InboundUpdates      *atomic.Int64
@@ -71,7 +70,7 @@ type DebounceOptions struct {
 	enableEDSDebounce bool
 }
 
-func NewDiscoveryServer(env *model.Environment, clusterAliases map[string]string, debugger *krt.DebugHandler) *DiscoveryServer {
+func NewDiscoveryServer(env *model.Environment, debugger *krt.DebugHandler) *DiscoveryServer {
 	out := &DiscoveryServer{
 		Env:                 env,
 		Generators:          map[string]model.XdsResourceGenerator{},
@@ -90,11 +89,6 @@ func NewDiscoveryServer(env *model.Environment, clusterAliases map[string]string
 		adsClients:         map[string]*Connection{},
 		Cache:              env.Cache,
 		DiscoveryStartTime: processStartTime,
-	}
-
-	out.ClusterAliases = make(map[cluster.ID]cluster.ID)
-	for alias := range clusterAliases {
-		out.ClusterAliases[cluster.ID(alias)] = cluster.ID(clusterAliases[alias])
 	}
 
 	return out

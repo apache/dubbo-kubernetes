@@ -26,7 +26,6 @@ import (
 
 	"github.com/apache/dubbo-kubernetes/dubbod/discovery/pkg/model"
 	"github.com/apache/dubbo-kubernetes/dubbod/discovery/pkg/serviceregistry"
-	"github.com/apache/dubbo-kubernetes/dubbod/discovery/pkg/serviceregistry/aggregate"
 	"github.com/apache/dubbo-kubernetes/dubbod/discovery/pkg/serviceregistry/kube"
 	"github.com/apache/dubbo-kubernetes/dubbod/discovery/pkg/serviceregistry/provider"
 	"github.com/apache/dubbo-kubernetes/pkg/cluster"
@@ -62,7 +61,6 @@ type Controller struct {
 	servicesMap         map[host.Name]*model.Service
 	queue               queue.Instance
 	initialSyncTimedout *atomic.Bool
-	configCluster       bool
 	services            kclient.Client[*v1.Service]
 	endpoints           *endpointSliceController
 	podsClient          kclient.Client[*v1.Pod]
@@ -80,8 +78,6 @@ func NewController(kubeClient kubelib.Client, options Options) *Controller {
 		queue:               queue.NewQueueWithID(1*time.Second, string(options.ClusterID)),
 		servicesMap:         make(map[host.Name]*model.Service),
 		initialSyncTimedout: atomic.NewBool(false),
-
-		configCluster: options.ConfigCluster,
 	}
 
 	c.namespaces = kclient.New[*v1.Namespace](kubeClient)
@@ -132,13 +128,10 @@ type Options struct {
 	XDSUpdater         model.XDSUpdater
 	MeshWatcher        meshwatcher.WatcherCollection
 	ClusterID          cluster.ID
-	ClusterAliases     map[string]string
 	SystemNamespace    string
-	ServiceController  *aggregate.Controller
 	KrtDebugger        *krt.DebugHandler
 	SyncTimeout        time.Duration
 	Revision           string
-	ConfigCluster      bool
 }
 
 func (c *Controller) Services() []*model.Service {
@@ -317,7 +310,7 @@ func (c *Controller) onServiceEvent(pre, curr *v1.Service, event model.Event) er
 	log.Debugf("Handle event %s for service %s in namespace %s", event, curr.Name, curr.Namespace)
 
 	// Create the standard (cluster.local) service.
-	svcConv := kube.ConvertService(*curr, c.opts.DomainSuffix, c.Cluster(), c.meshWatcher.Mesh())
+	svcConv := kube.ConvertService(*curr, c.opts.DomainSuffix, c.meshWatcher.Mesh())
 
 	switch event {
 	case model.EventDelete:
