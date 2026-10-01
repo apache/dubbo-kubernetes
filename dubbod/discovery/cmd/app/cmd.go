@@ -112,9 +112,6 @@ func addFlags(c *cobra.Command) {
 		[]string{string(provider.Kubernetes)},
 		fmt.Sprintf("Comma separated list of platform service registries to read from (choose one or more from {%s})",
 			provider.Kubernetes))
-	c.PersistentFlags().StringVar(&serverArgs.RegistryOptions.ClusterRegistriesNamespace,
-		"clusterRegistriesNamespace", serverArgs.RegistryOptions.ClusterRegistriesNamespace,
-		"Namespace for ConfigMap which stores clusters configs")
 	c.PersistentFlags().StringVar(&serverArgs.RegistryOptions.KubeConfig,
 		"kubeconfig",
 		"",
@@ -139,10 +136,6 @@ func addFlags(c *cobra.Command) {
 		"managementAddr",
 		":26080",
 		"Management API HTTP address")
-	c.PersistentFlags().StringVar(&serverArgs.ServerOptions.ActivationAddr,
-		"activationAddr",
-		":26030",
-		"KEDA external scaler gRPC address for on-demand activation; empty disables it")
 	c.PersistentFlags().StringVar(&serverArgs.ServerOptions.HTTPSAddr,
 		"httpsAddr",
 		":26017",
@@ -169,8 +162,6 @@ func addFlags(c *cobra.Command) {
 	c.PersistentFlags().StringVar((*string)(&serverArgs.RegistryOptions.KubeOptions.ClusterID),
 		"clusterID", features.ClusterName,
 		"The ID of the cluster that this Dubbod instance resides")
-	c.PersistentFlags().StringToStringVar(&serverArgs.RegistryOptions.KubeOptions.ClusterAliases, "clusterAliases", map[string]string{},
-		"Alias names for clusters. Example: alias1=cluster1,alias2=cluster2")
 
 	serverArgs.IntrospectionOptions.AttachCobraFlags(c)
 

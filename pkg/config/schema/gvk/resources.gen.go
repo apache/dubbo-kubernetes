@@ -25,7 +25,6 @@ var (
 	GatewayClass_v1                = config.GroupVersionKind{Group: "gateway.networking.k8s.io", Version: "v1", Kind: "GatewayClass"}
 	HTTPRoute                      = config.GroupVersionKind{Group: "gateway.networking.k8s.io", Version: "v1", Kind: "HTTPRoute"}
 	HTTPRoute_v1                   = config.GroupVersionKind{Group: "gateway.networking.k8s.io", Version: "v1", Kind: "HTTPRoute"}
-	HorizontalPodAutoscaler        = config.GroupVersionKind{Group: "autoscaling", Version: "v2", Kind: "HorizontalPodAutoscaler"}
 	KubernetesGateway              = config.GroupVersionKind{Group: "gateway.networking.k8s.io", Version: "v1", Kind: "Gateway"}
 	KubernetesGateway_v1           = config.GroupVersionKind{Group: "gateway.networking.k8s.io", Version: "v1", Kind: "Gateway"}
 	Lease                          = config.GroupVersionKind{Group: "coordination.k8s.io", Version: "v1", Kind: "Lease"}
@@ -42,7 +41,6 @@ var (
 	Secret                         = config.GroupVersionKind{Group: "", Version: "v1", Kind: "Secret"}
 	Service                        = config.GroupVersionKind{Group: "", Version: "v1", Kind: "Service"}
 	ServiceAccount                 = config.GroupVersionKind{Group: "", Version: "v1", Kind: "ServiceAccount"}
-	ServiceActivationPolicy        = config.GroupVersionKind{Group: "networking.dubbo.apache.org", Version: "v1alpha3", Kind: "ServiceActivationPolicy"}
 	ServiceEntry                   = config.GroupVersionKind{Group: "networking.dubbo.apache.org", Version: "v1alpha3", Kind: "ServiceEntry"}
 	StatefulSet                    = config.GroupVersionKind{Group: "apps", Version: "v1", Kind: "StatefulSet"}
 	Telemetry                      = config.GroupVersionKind{Group: "telemetry.dubbo.apache.org", Version: "v1alpha3", Kind: "Telemetry"}
@@ -84,8 +82,6 @@ func ToGVR(g config.GroupVersionKind) (schema.GroupVersionResource, bool) {
 		return gvr.HTTPRoute, true
 	case HTTPRoute_v1:
 		return gvr.HTTPRoute_v1, true
-	case HorizontalPodAutoscaler:
-		return gvr.HorizontalPodAutoscaler, true
 	case KubernetesGateway:
 		return gvr.KubernetesGateway, true
 	case KubernetesGateway_v1:
@@ -118,8 +114,6 @@ func ToGVR(g config.GroupVersionKind) (schema.GroupVersionResource, bool) {
 		return gvr.Service, true
 	case ServiceAccount:
 		return gvr.ServiceAccount, true
-	case ServiceActivationPolicy:
-		return gvr.ServiceActivationPolicy, true
 	case ServiceEntry:
 		return gvr.ServiceEntry, true
 	case StatefulSet:
@@ -163,8 +157,6 @@ func MustToKind(g config.GroupVersionKind) kind.Kind {
 		return kind.GatewayClass
 	case HTTPRoute:
 		return kind.HTTPRoute
-	case HorizontalPodAutoscaler:
-		return kind.HorizontalPodAutoscaler
 	case KubernetesGateway:
 		return kind.KubernetesGateway
 	case Lease:
@@ -193,8 +185,6 @@ func MustToKind(g config.GroupVersionKind) kind.Kind {
 		return kind.Service
 	case ServiceAccount:
 		return kind.ServiceAccount
-	case ServiceActivationPolicy:
-		return kind.ServiceActivationPolicy
 	case ServiceEntry:
 		return kind.ServiceEntry
 	case StatefulSet:
@@ -249,8 +239,6 @@ func FromGVR(g schema.GroupVersionResource) (config.GroupVersionKind, bool) {
 		return GatewayClass, true
 	case gvr.HTTPRoute:
 		return HTTPRoute, true
-	case gvr.HorizontalPodAutoscaler:
-		return HorizontalPodAutoscaler, true
 	case gvr.KubernetesGateway:
 		return KubernetesGateway, true
 	case gvr.Lease:
@@ -279,8 +267,6 @@ func FromGVR(g schema.GroupVersionResource) (config.GroupVersionKind, bool) {
 		return Service, true
 	case gvr.ServiceAccount:
 		return ServiceAccount, true
-	case gvr.ServiceActivationPolicy:
-		return ServiceActivationPolicy, true
 	case gvr.ServiceEntry:
 		return ServiceEntry, true
 	case gvr.StatefulSet:

@@ -19,7 +19,6 @@ package kube
 import (
 	"github.com/apache/dubbo-kubernetes/dubbod/discovery/pkg/model"
 	"github.com/apache/dubbo-kubernetes/dubbod/discovery/pkg/serviceregistry/provider"
-	"github.com/apache/dubbo-kubernetes/pkg/cluster"
 	"github.com/apache/dubbo-kubernetes/pkg/config/constants"
 	"github.com/apache/dubbo-kubernetes/pkg/config/host"
 	"github.com/apache/dubbo-kubernetes/pkg/spiffe"
@@ -31,7 +30,7 @@ func ServiceHostname(name, namespace, domainSuffix string) host.Name {
 	return host.Name(name + "." + namespace + "." + "svc" + "." + domainSuffix) // Format: "%s.%s.svc.%s"
 }
 
-func ConvertService(svc corev1.Service, domainSuffix string, clusterID cluster.ID, mesh *meshv1alpha1.MeshConfig) *model.Service {
+func ConvertService(svc corev1.Service, domainSuffix string, mesh *meshv1alpha1.MeshConfig) *model.Service {
 	addrs := []string{constants.UnspecifiedIP}
 	resolution := model.ClientSideLB
 	externalName := ""
@@ -56,12 +55,8 @@ func ConvertService(svc corev1.Service, domainSuffix string, clusterID cluster.I
 	}
 
 	dubboService := &model.Service{
-		Hostname: ServiceHostname(svc.Name, svc.Namespace, domainSuffix),
-		ClusterVIPs: model.AddressMap{
-			Addresses: map[cluster.ID][]string{
-				clusterID: addrs,
-			},
-		},
+		Hostname:        ServiceHostname(svc.Name, svc.Namespace, domainSuffix),
+		Addresses:       addrs,
 		Ports:           ports,
 		DefaultAddress:  addrs[0],
 		Resolution:      resolution,

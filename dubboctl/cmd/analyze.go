@@ -185,7 +185,7 @@ func analyzeHighAvailability(deployments []appsv1.Deployment, budgets []policyv1
 			replicas = *deployment.Spec.Replicas
 		}
 		if replicas == 0 {
-			// Deliberately scaled to zero; availability is not the question.
+			// A disabled Deployment has no availability target.
 			continue
 		}
 		if replicas < 2 {

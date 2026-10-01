@@ -13,7 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-FROM --platform=$BUILDPLATFORM golang:1.26 AS builder
+FROM --platform=$BUILDPLATFORM golang:1.26.8 AS builder
 
 ARG TARGETOS
 ARG TARGETARCH
@@ -42,9 +42,16 @@ RUN --mount=type=cache,target=/go/pkg/mod \
     -o /out/dubbod \
     ./dubbod/discovery/cmd/main.go
 
+RUN --mount=type=cache,target=/go/pkg/mod \
+    --mount=type=cache,target=/root/.cache/go-build \
+    GOOS=$(go env GOHOSTOS) GOARCH=$(go env GOHOSTARCH) \
+    go run ./tools/licenses -binary dubbod \
+    -goos "${TARGETOS}" -goarch "${TARGETARCH}" -out /out/legal
+
 FROM alpine:3.22
 
 COPY --from=builder /out/dubbod /usr/local/bin/dubbod
+COPY --from=builder /out/legal /usr/share/dubbod/
 
 USER 65532:65532
 ENTRYPOINT ["/usr/local/bin/dubbod"]

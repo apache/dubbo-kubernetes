@@ -28,15 +28,13 @@ import (
 	"sync"
 	"time"
 
-	"github.com/apache/dubbo-kubernetes/dubbod/discovery/pkg/status"
-
-	"github.com/apache/dubbo-kubernetes/dubbod/discovery/pkg/activation"
 	"github.com/apache/dubbo-kubernetes/dubbod/discovery/pkg/features"
 	"github.com/apache/dubbo-kubernetes/dubbod/discovery/pkg/keycertbundle"
 	"github.com/apache/dubbo-kubernetes/dubbod/discovery/pkg/model"
 	"github.com/apache/dubbo-kubernetes/dubbod/discovery/pkg/server"
 	"github.com/apache/dubbo-kubernetes/dubbod/discovery/pkg/serviceregistry/aggregate"
 	"github.com/apache/dubbo-kubernetes/dubbod/discovery/pkg/serviceregistry/provider"
+	"github.com/apache/dubbo-kubernetes/dubbod/discovery/pkg/status"
 	"github.com/apache/dubbo-kubernetes/dubbod/discovery/pkg/xds"
 	"github.com/apache/dubbo-kubernetes/dubbod/security/pkg/pki/ca"
 	"github.com/apache/dubbo-kubernetes/dubbod/security/pkg/pki/ra"
@@ -54,7 +52,6 @@ import (
 	kubelib "github.com/apache/dubbo-kubernetes/pkg/kube"
 	"github.com/apache/dubbo-kubernetes/pkg/kube/inject"
 	"github.com/apache/dubbo-kubernetes/pkg/kube/kclient"
-	"github.com/apache/dubbo-kubernetes/pkg/kube/multicluster"
 	"github.com/apache/dubbo-kubernetes/pkg/kube/namespace"
 	"github.com/apache/dubbo-kubernetes/pkg/log"
 	sec_model "github.com/apache/dubbo-kubernetes/pkg/model"
@@ -101,8 +98,6 @@ type Server struct {
 	ConfigStores     []model.ConfigStoreController
 	configController model.ConfigStoreController
 
-	multiclusterController *multicluster.Controller
-
 	fileWatcher filewatcher.FileWatcher
 
 	internalStop     chan struct{}
@@ -128,9 +123,7 @@ type Server struct {
 
 	RWConfigStore                  model.ConfigStoreController
 	inherentGRPCWorkloadController *inherentGRPCWorkloadController
-	inherentGRPCRemoteControllers  *multicluster.Component[*inherentGRPCClusterController]
 	statusManager                  *status.Manager
-	activation                     *activation.Server
 }
 
 type readinessFlags struct {
@@ -172,8 +165,7 @@ func NewServer(args *DubboArgs, initFuncs ...func(*Server)) (*Server, error) {
 	e.DomainSuffix = args.RegistryOptions.KubeOptions.DomainSuffix
 
 	ac := aggregate.NewController(aggregate.Options{
-		MeshHolder:      e,
-		ConfigClusterID: getClusterID(args),
+		MeshHolder: e,
 	})
 	e.ServiceDiscovery = ac
 
@@ -197,7 +189,7 @@ func NewServer(args *DubboArgs, initFuncs ...func(*Server)) (*Server, error) {
 		fn(s)
 	}
 
-	s.XDSServer = xds.NewDiscoveryServer(e, args.RegistryOptions.KubeOptions.ClusterAliases, args.KrtDebugger)
+	s.XDSServer = xds.NewDiscoveryServer(e, args.KrtDebugger)
 	s.initXDSAuthentication()
 
 	s.initReadinessProbes()
@@ -249,10 +241,6 @@ func NewServer(args *DubboArgs, initFuncs ...func(*Server)) (*Server, error) {
 	}
 	if err := s.initManagementServer(args.ServerOptions.ManagementAddr); err != nil {
 		return nil, fmt.Errorf("error initializing Management Server: %v", err)
-	}
-
-	if err := s.initActivation(args); err != nil {
-		return nil, fmt.Errorf("error initializing activation scaler: %v", err)
 	}
 
 	// Initialize monitoring server
@@ -513,13 +501,6 @@ func (s *Server) initRegistryEventHandlers() {
 			Namespace: cfg.Namespace,
 		}
 
-		if configKind == kind.ServiceActivationPolicy &&
-			event == model.EventUpdate &&
-			cfg.Generation == prev.Generation {
-			log.Debugf("ignoring status-only update for %s/%s/%s", configKey.Kind, configKey.Namespace, configKey.Name)
-			return
-		}
-
 		// Log the config change
 		log.Infof("%s event for %s/%s/%s", event, configKey.Kind, configKey.Namespace, configKey.Name)
 
@@ -535,24 +516,13 @@ func (s *Server) initRegistryEventHandlers() {
 			configKind == kind.ReferenceGrant ||
 			configKind == kind.CircuitBreakerPolicy ||
 			configKind == kind.FaultInjectionPolicy ||
-			configKind == kind.TransitService ||
-			configKind == kind.ServiceActivationPolicy
+			configKind == kind.TransitService
 
 		// Trigger ConfigUpdate to push changes to all connected proxies
 		pushRequest := &model.PushRequest{
 			ConfigsUpdated: sets.New(configKey),
 			Reason:         model.NewReasonStats(model.DependentResource),
 			Full:           needsFullPush,
-		}
-		if configKind == kind.ServiceActivationPolicy {
-			pushRequest.Forced = true
-			pushRequest.ServiceActivationPolicyUpdates = map[model.ConfigKey]model.ServiceActivationPolicyUpdate{
-				configKey: {
-					Config:   cfg,
-					Previous: prev,
-					Deleted:  event == model.EventDelete,
-				},
-			}
 		}
 		s.XDSServer.ConfigUpdate(pushRequest)
 	}
@@ -621,27 +591,11 @@ func configKindForSchemaIdentifier(schemaID string) (kind.Kind, bool) {
 		return kind.FaultInjectionPolicy, true
 	case "TransitService":
 		return kind.TransitService, true
-	case "ServiceActivationPolicy":
-		return kind.ServiceActivationPolicy, true
 	case "Telemetry":
 		return kind.Telemetry, true
 	default:
 		return 0, false
 	}
-}
-
-func (s *Server) initMulticluster(args *DubboArgs) {
-	if s.kubeClient == nil {
-		return
-	}
-	s.multiclusterController = multicluster.NewController(s.kubeClient, args.Namespace, s.clusterID, s.environment.Watcher, func(r *rest.Config) {
-		r.QPS = args.RegistryOptions.KubeOptions.KubernetesAPIQPS
-		r.Burst = args.RegistryOptions.KubeOptions.KubernetesAPIBurst
-	})
-	// TODO ListRemoteClusters
-	s.addStartFunc("multicluster controller", func(stop <-chan struct{}) error {
-		return s.multiclusterController.Run(stop)
-	})
 }
 
 func (s *Server) initMeshHandlers(changeHandler func(_ *meshv1alpha1.MeshConfig)) {
@@ -707,14 +661,11 @@ func (s *Server) initKubeClient(args *DubboArgs) error {
 func (s *Server) initControllers(args *DubboArgs) error {
 	log.Info("initializing controllers")
 
-	s.initMulticluster(args)
-
 	s.initSDSServer()
 
 	if err := s.initConfigController(args); err != nil {
 		return fmt.Errorf("error initializing config controller: %v", err)
 	}
-	s.initMulticlusterGatewayDeploymentControllers(args)
 	if err := s.initServiceControllers(args); err != nil {
 		return fmt.Errorf("error initializing service controllers: %v", err)
 	}
@@ -845,7 +796,6 @@ func (s *Server) initSDSServer() {
 		log.Warnf("skipping Kubernetes credential reader; DUBBO_ENABLE_XDS_IDENTITY_CHECK must be set to true for this feature.")
 		return
 	}
-	// TODO ConfigUpdated Multicluster get secret and configmap
 }
 
 // isK8SSigning returns whether K8S (as a RA) is used to sign certs instead of private keys known by Dubbod
@@ -854,7 +804,6 @@ func (s *Server) isK8SSigning() bool {
 }
 
 func (s *Server) cachesSynced() bool {
-	// TODO MulticlusterController HasSynced
 	if !s.ServiceController().HasSynced() {
 		return false
 	}

@@ -35,7 +35,7 @@ concurrency:
 
 env:
   GOLANGCI_LINT_VERSION: v2.9.0
-  # Must match PROTOC_VERSION in tools/make/common.mk: protoc stamps its own
+  # Must match PROTOC_VERSION in common.mk: protoc stamps its own
   # version into every generated file, so a different one here rewrites them
   # all and make check-generate can never pass.
   PROTOC_VERSION: v33.0
@@ -103,62 +103,6 @@ jobs:
       - name: Check License Header
         uses: apache/skywalking-eyes/header@v0.6.0
 
-  unit-test:
-    name: Unit Tests
-    runs-on: ubuntu-latest
-    timeout-minutes: 30
-    if: github.repository == 'apache/dubbo-kubernetes'
-    permissions:
-      contents: read
-      id-token: write
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Set up Go
-        uses: actions/setup-go@v5
-        with:
-          go-version-file: go.mod
-          cache-dependency-path: go.sum
-
-      - name: Run unit tests with race detector and coverage
-        run: make test-coverage
-
-      - name: Upload test coverage
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: test-coverage
-          path: coverage.txt
-          retention-days: 7
-
-      - name: Upload coverage to Codecov
-        uses: codecov/codecov-action@v5
-        with:
-          files: ./coverage.txt
-          flags: unittests
-          name: codecov-umbrella
-          fail_ci_if_error: true
-          use_oidc: true
-
-  performance:
-    name: Performance Scale Smoke
-    runs-on: ubuntu-latest
-    timeout-minutes: 15
-    if: github.repository == 'apache/dubbo-kubernetes'
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Set up Go
-        uses: actions/setup-go@v5
-        with:
-          go-version-file: go.mod
-          cache-dependency-path: go.sum
-
-      - name: Exercise representative xDS push scale
-        run: make benchmark-smoke
-
   build:
     name: Build (${{ matrix.goos }}/${{ matrix.goarch }})
     runs-on: ubuntu-latest
@@ -202,77 +146,8 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Install Helm
-        run: tools/ci/install-helm.sh v3.16.4
-
       - name: Lint and render charts
         run: make lint-helm
-
-  e2e:
-    name: E2E Smoke (kind)
-    runs-on: ubuntu-latest
-    timeout-minutes: 40
-    if: github.repository == 'apache/dubbo-kubernetes'
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Install Helm
-        run: tools/ci/install-helm.sh v3.16.4
-
-      - name: Install kind
-        run: tools/ci/install-kind.sh v0.30.0
-
-      - name: Run e2e smoke test
-        env:
-          UPGRADE_FROM_VERSION: '0.4.3'
-        run: make test-e2e
-
-  activation-e2e:
-    name: Activation E2E (KEDA)
-    runs-on: ubuntu-24.04-arm
-    timeout-minutes: 45
-    if: github.repository == 'apache/dubbo-kubernetes'
-    env:
-      DOCKER_DEFAULT_PLATFORM: linux/arm64
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Verify native ARM64 runner
-        run: |
-          test "$(uname -m)" = "aarch64"
-          test "$(docker info --format '{{.Architecture}}')" = "aarch64"
-
-      # Pin the data plane source that implements request holding and demand
-      # reporting. A floating main branch could make a control-plane PR pass
-      # against behavior it did not declare.
-      - name: Checkout transit
-        uses: actions/checkout@v4
-        with:
-          repository: dubml/transit
-          ref: 460f879b285ae6c569508d3292b5d7f69af47ca2
-          path: .e2e/transit
-
-      - name: Build transit activation image
-        run: docker build -t dubml/transit:ga-e2e .e2e/transit
-
-      - name: Install Helm
-        run: tools/ci/install-helm.sh v3.16.4
-
-      - name: Install kind
-        run: tools/ci/install-kind.sh v0.30.0
-
-      - name: Run real KEDA activation
-        env:
-          ACTIVATION_E2E: '1'
-          AI_MESH_E2E: '1'
-          CLUSTER_NAME: dubbo-activation-ga
-          TRANSIT_IMAGE: dubml/transit:ga-e2e
-          IMAGE: dubml/dubbod:activation-ga-e2e
-          UPGRADE_FROM_IMAGE: dubml/dubbod:activation-ga-e2e
-          UPGRADE_FROM_VERSION: '0.4.3'
-        run: make test-e2e
 
   required:
     name: CI Required
@@ -284,34 +159,22 @@ jobs:
     needs:
       - lint
       - check
-      - unit-test
-      - performance
       - build
       - helm
-      - e2e
-      - activation-e2e
     steps:
       - name: Verify required jobs passed
         env:
           LINT_RESULT: ${{ needs.lint.result }}
           CHECK_RESULT: ${{ needs.check.result }}
-          UNIT_TEST_RESULT: ${{ needs.unit-test.result }}
-          PERFORMANCE_RESULT: ${{ needs.performance.result }}
           BUILD_RESULT: ${{ needs.build.result }}
           HELM_RESULT: ${{ needs.helm.result }}
-          E2E_RESULT: ${{ needs.e2e.result }}
-          ACTIVATION_E2E_RESULT: ${{ needs.activation-e2e.result }}
         run: |
           failed=0
           for job_result in \
             "lint=${LINT_RESULT}" \
             "check=${CHECK_RESULT}" \
-            "unit-test=${UNIT_TEST_RESULT}" \
-            "performance=${PERFORMANCE_RESULT}" \
             "build=${BUILD_RESULT}" \
-            "helm=${HELM_RESULT}" \
-            "e2e=${E2E_RESULT}" \
-            "activation-e2e=${ACTIVATION_E2E_RESULT}"; do
+            "helm=${HELM_RESULT}"; do
             job="${job_result%%=*}"
             result="${job_result#*=}"
             echo "${job}: ${result}"

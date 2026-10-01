@@ -32,7 +32,7 @@ type Watcher interface {
 	// AddMeshHandler registers a callback handler for changes to the mesh config.
 	AddMeshHandler(h func()) *WatcherHandlerRegistration
 
-	// DeleteMeshHandler unregisters a callback handler when remote cluster is removed.
+	// DeleteMeshHandler unregisters a callback handler.
 	DeleteMeshHandler(registration *WatcherHandlerRegistration)
 }
 

@@ -28,10 +28,8 @@ import (
 	"github.com/apache/dubbo-kubernetes/dubbod/discovery/pkg/model"
 	"github.com/apache/dubbo-kubernetes/pkg/config"
 	"github.com/apache/dubbo-kubernetes/pkg/config/host"
-	"github.com/apache/dubbo-kubernetes/pkg/util/sets"
 	route "github.com/dubml/xds-api/route/v1"
 	matcher "github.com/dubml/xds-api/type/matcher/v1"
-	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/types/known/durationpb"
 	"google.golang.org/protobuf/types/known/wrapperspb"
 	sigsk8siogatewayapiapisv1 "sigs.k8s.io/gateway-api/apis/v1"
@@ -165,12 +163,6 @@ func buildHTTPRoute(node *model.Proxy, push *model.PushContext, routeName string
 				Routes:  outboundRoutes,
 			},
 		}
-		if node.IsRouter() && svc.Attributes.Name == model.ActivationGatewayServiceName {
-			virtualHosts = appendNonConflictingVirtualHosts(
-				buildActivationVirtualHosts(push, svc.Attributes.Namespace),
-				virtualHosts,
-			)
-		}
 		return &route.RouteConfiguration{Name: routeName, VirtualHosts: virtualHosts}
 	}
 
@@ -230,7 +222,6 @@ func buildHTTPRoute(node *model.Proxy, push *model.PushContext, routeName string
 				gatewayNamespace = node.Metadata.Namespace
 			}
 		}
-		activationVirtualHosts := buildActivationVirtualHosts(push, gatewayNamespace)
 
 		// Try to find HTTPRoutes for Gateway Pod
 		// Gateway Pods receive traffic with arbitrary hostnames, so we need to collect all HTTPRoutes
@@ -284,12 +275,6 @@ func buildHTTPRoute(node *model.Proxy, push *model.PushContext, routeName string
 			}
 		} else {
 			log.Warnf("Gateway Pod inbound listener no HTTPRoute found for port %s", routeName)
-			if len(activationVirtualHosts) > 0 {
-				return &route.RouteConfiguration{
-					Name:         routeName,
-					VirtualHosts: activationVirtualHosts,
-				}
-			}
 			return &route.RouteConfiguration{
 				Name: routeName,
 				VirtualHosts: []*route.VirtualHost{
@@ -310,7 +295,6 @@ func buildHTTPRoute(node *model.Proxy, push *model.PushContext, routeName string
 				Routes:  outboundRoutes,
 			},
 		}
-		virtualHosts = appendNonConflictingVirtualHosts(activationVirtualHosts, virtualHosts)
 		return &route.RouteConfiguration{
 			Name:         routeName,
 			VirtualHosts: virtualHosts,
@@ -338,59 +322,6 @@ func buildHTTPRoute(node *model.Proxy, push *model.PushContext, routeName string
 			},
 		},
 	}
-}
-
-func buildActivationVirtualHosts(push *model.PushContext, namespace string) []*route.VirtualHost {
-	if push == nil || namespace == "" {
-		return nil
-	}
-	var out []*route.VirtualHost
-	for _, svc := range push.ActivatedServices(namespace) {
-		for portIndex, port := range svc.Ports {
-			hostName := string(svc.Hostname)
-			domains := []string{fmt.Sprintf("%s:%d", hostName, port.Port)}
-			shortName := strings.Split(hostName, ".")[0]
-			if shortName != hostName {
-				domains = append(domains, fmt.Sprintf("%s:%d", shortName, port.Port))
-			}
-			if portIndex == 0 {
-				domains = append(domains, hostName)
-				if shortName != hostName {
-					domains = append(domains, shortName)
-				}
-			}
-			clusterName := model.BuildSubsetKey(model.TrafficDirectionOutbound, "", svc.Hostname, port.Port)
-			out = append(out, &route.VirtualHost{
-				Name:    fmt.Sprintf("activation|%s|%d", hostName, port.Port),
-				Domains: domains,
-				Routes:  []*route.Route{defaultSingleClusterRoute(clusterName, nil)},
-			})
-		}
-	}
-	return out
-}
-
-func appendNonConflictingVirtualHosts(base, candidates []*route.VirtualHost) []*route.VirtualHost {
-	claimed := sets.New[string]()
-	for _, virtualHost := range base {
-		claimed.InsertAll(virtualHost.GetDomains()...)
-	}
-	for _, candidate := range candidates {
-		domains := make([]string, 0, len(candidate.GetDomains()))
-		for _, domain := range candidate.GetDomains() {
-			if !claimed.Contains(domain) {
-				domains = append(domains, domain)
-				claimed.Insert(domain)
-			}
-		}
-		if len(domains) == 0 {
-			continue
-		}
-		cloned := proto.Clone(candidate).(*route.VirtualHost)
-		cloned.Domains = domains
-		base = append(base, cloned)
-	}
-	return base
 }
 
 func defaultSingleClusterRoute(clusterName string, faultPolicy *route.FaultPolicy) *route.Route {

@@ -20,7 +20,6 @@ var (
 	GatewayClass_v1                = schema.GroupVersionResource{Group: "gateway.networking.k8s.io", Version: "v1", Resource: "gatewayclasses"}
 	HTTPRoute                      = schema.GroupVersionResource{Group: "gateway.networking.k8s.io", Version: "v1", Resource: "httproutes"}
 	HTTPRoute_v1                   = schema.GroupVersionResource{Group: "gateway.networking.k8s.io", Version: "v1", Resource: "httproutes"}
-	HorizontalPodAutoscaler        = schema.GroupVersionResource{Group: "autoscaling", Version: "v2", Resource: "horizontalpodautoscalers"}
 	KubernetesGateway              = schema.GroupVersionResource{Group: "gateway.networking.k8s.io", Version: "v1", Resource: "gateways"}
 	KubernetesGateway_v1           = schema.GroupVersionResource{Group: "gateway.networking.k8s.io", Version: "v1", Resource: "gateways"}
 	Lease                          = schema.GroupVersionResource{Group: "coordination.k8s.io", Version: "v1", Resource: "leases"}
@@ -37,7 +36,6 @@ var (
 	Secret                         = schema.GroupVersionResource{Group: "", Version: "v1", Resource: "secrets"}
 	Service                        = schema.GroupVersionResource{Group: "", Version: "v1", Resource: "services"}
 	ServiceAccount                 = schema.GroupVersionResource{Group: "", Version: "v1", Resource: "serviceaccounts"}
-	ServiceActivationPolicy        = schema.GroupVersionResource{Group: "networking.dubbo.apache.org", Version: "v1alpha3", Resource: "serviceactivationpolicies"}
 	ServiceEntry                   = schema.GroupVersionResource{Group: "networking.dubbo.apache.org", Version: "v1alpha3", Resource: "serviceentries"}
 	StatefulSet                    = schema.GroupVersionResource{Group: "apps", Version: "v1", Resource: "statefulsets"}
 	Telemetry                      = schema.GroupVersionResource{Group: "telemetry.dubbo.apache.org", Version: "v1alpha3", Resource: "telemetries"}
@@ -78,8 +76,6 @@ func IsClusterScoped(g schema.GroupVersionResource) bool {
 		return false
 	case HTTPRoute_v1:
 		return false
-	case HorizontalPodAutoscaler:
-		return false
 	case KubernetesGateway:
 		return false
 	case KubernetesGateway_v1:
@@ -109,8 +105,6 @@ func IsClusterScoped(g schema.GroupVersionResource) bool {
 	case Service:
 		return false
 	case ServiceAccount:
-		return false
-	case ServiceActivationPolicy:
 		return false
 	case ServiceEntry:
 		return false

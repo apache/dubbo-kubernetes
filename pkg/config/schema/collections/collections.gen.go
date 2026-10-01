@@ -18,7 +18,6 @@ import (
 	githubcomdubmlapitelemetryv1alpha3 "github.com/dubml/api/telemetry/v1alpha3"
 	k8sioapiadmissionregistrationv1 "k8s.io/api/admissionregistration/v1"
 	k8sioapiappsv1 "k8s.io/api/apps/v1"
-	k8sioapiautoscalingv2 "k8s.io/api/autoscaling/v2"
 	k8sioapicoordinationv1 "k8s.io/api/coordination/v1"
 	k8sioapicorev1 "k8s.io/api/core/v1"
 	k8sioapidiscoveryv1 "k8s.io/api/discovery/v1"
@@ -215,21 +214,6 @@ var (
 		ClusterScoped: false,
 		Synthetic:     false,
 		Builtin:       false,
-		ValidateProto: validation.EmptyValidate,
-	}.MustBuild()
-
-	HorizontalPodAutoscaler = resource.Builder{
-		Identifier: "HorizontalPodAutoscaler",
-		Group:      "autoscaling",
-		Kind:       "HorizontalPodAutoscaler",
-		Plural:     "horizontalpodautoscalers",
-		Version:    "v2",
-		Proto:      "k8s.io.api.autoscaling.v2.HorizontalPodAutoscalerSpec", StatusProto: "k8s.io.api.autoscaling.v2.HorizontalPodAutoscalerStatus",
-		ReflectType: reflect.TypeOf(&k8sioapiautoscalingv2.HorizontalPodAutoscalerSpec{}).Elem(), StatusType: reflect.TypeOf(&k8sioapiautoscalingv2.HorizontalPodAutoscalerStatus{}).Elem(),
-		ProtoPackage: "k8s.io/api/autoscaling/v2", StatusPackage: "k8s.io/api/autoscaling/v2",
-		ClusterScoped: false,
-		Synthetic:     false,
-		Builtin:       true,
 		ValidateProto: validation.EmptyValidate,
 	}.MustBuild()
 
@@ -449,21 +433,6 @@ var (
 		ValidateProto: validation.EmptyValidate,
 	}.MustBuild()
 
-	ServiceActivationPolicy = resource.Builder{
-		Identifier: "ServiceActivationPolicy",
-		Group:      "networking.dubbo.apache.org",
-		Kind:       "ServiceActivationPolicy",
-		Plural:     "serviceactivationpolicies",
-		Version:    "v1alpha3",
-		Proto:      "dubbo.networking.v1alpha3.ServiceActivationPolicy", StatusProto: "dubbo.meta.v1alpha1.DubboStatus",
-		ReflectType: reflect.TypeOf(&githubcomdubmlapinetworkingv1alpha3.ServiceActivationPolicy{}).Elem(), StatusType: reflect.TypeOf(&githubcomdubmlapimetav1alpha1.DubboStatus{}).Elem(),
-		ProtoPackage: "github.com/dubml/api/networking/v1alpha3", StatusPackage: "github.com/dubml/api/meta/v1alpha1",
-		ClusterScoped: false,
-		Synthetic:     false,
-		Builtin:       false,
-		ValidateProto: validation.EmptyValidate,
-	}.MustBuild()
-
 	ServiceEntry = resource.Builder{
 		Identifier: "ServiceEntry",
 		Group:      "networking.dubbo.apache.org",
@@ -568,7 +537,6 @@ var (
 		MustAdd(FaultInjectionPolicy).
 		MustAdd(GatewayClass).
 		MustAdd(HTTPRoute).
-		MustAdd(HorizontalPodAutoscaler).
 		MustAdd(KubernetesGateway).
 		MustAdd(Lease).
 		MustAdd(MeshConfig).
@@ -583,7 +551,6 @@ var (
 		MustAdd(Secret).
 		MustAdd(Service).
 		MustAdd(ServiceAccount).
-		MustAdd(ServiceActivationPolicy).
 		MustAdd(ServiceEntry).
 		MustAdd(StatefulSet).
 		MustAdd(Telemetry).
@@ -603,7 +570,6 @@ var (
 		MustAdd(Endpoints).
 		MustAdd(GatewayClass).
 		MustAdd(HTTPRoute).
-		MustAdd(HorizontalPodAutoscaler).
 		MustAdd(KubernetesGateway).
 		MustAdd(Lease).
 		MustAdd(MutatingWebhookConfiguration).
@@ -626,7 +592,6 @@ var (
 		MustAdd(FaultInjectionPolicy).
 		MustAdd(PeerAuthentication).
 		MustAdd(RequestAuthentication).
-		MustAdd(ServiceActivationPolicy).
 		MustAdd(ServiceEntry).
 		MustAdd(Telemetry).
 		MustAdd(TransitService).
@@ -645,7 +610,6 @@ var (
 			MustAdd(PeerAuthentication).
 			MustAdd(ReferenceGrant).
 			MustAdd(RequestAuthentication).
-			MustAdd(ServiceActivationPolicy).
 			MustAdd(ServiceEntry).
 			MustAdd(Telemetry).
 			MustAdd(TransitService).
@@ -664,7 +628,6 @@ var (
 				MustAdd(PeerAuthentication).
 				MustAdd(ReferenceGrant).
 				MustAdd(RequestAuthentication).
-				MustAdd(ServiceActivationPolicy).
 				MustAdd(ServiceEntry).
 				MustAdd(Telemetry).
 				MustAdd(TransitService).

@@ -39,78 +39,74 @@ type electionTestClient struct {
 func (c electionTestClient) Kube() kubernetes.Interface { return c.client }
 
 func TestNamespaceElectionReplicasAndHandoff(t *testing.T) {
-	for _, remote := range []bool{false, true} {
-		t.Run(fmt.Sprintf("remote=%t", remote), func(t *testing.T) {
-			client := fake.NewSimpleClientset()
-			// The fake tracker does not implement API-server resource-version conflicts.
-			client.PrependReactor("update", "configmaps", func(action clienttesting.Action) (bool, runtime.Object, error) {
-				candidate := action.(clienttesting.UpdateAction).GetObject().(*corev1.ConfigMap)
-				stored, err := client.Tracker().Get(action.GetResource(), candidate.Namespace, candidate.Name)
-				if err != nil {
-					return true, nil, err
-				}
-				current := stored.(*corev1.ConfigMap)
-				if candidate.ResourceVersion != current.ResourceVersion {
-					return true, nil, apierrors.NewConflict(action.GetResource().GroupResource(), candidate.Name, fmt.Errorf("resource version changed"))
-				}
-				revision, _ := strconv.Atoi(current.ResourceVersion)
-				updated := candidate.DeepCopy()
-				updated.ResourceVersion = strconv.Itoa(revision + 1)
-				if err := client.Tracker().Update(action.GetResource(), updated, updated.Namespace); err != nil {
-					return true, nil, err
-				}
-				return true, updated, nil
-			})
-			started := make(chan int, 4)
-			stops := []chan struct{}{make(chan struct{}), make(chan struct{})}
-			finished := []chan struct{}{make(chan struct{}), make(chan struct{})}
-			closed := []bool{false, false}
-			for id := 0; id < 2; id++ {
-				election := NewLeaderElectionMulticluster("dubbo-system", fmt.Sprintf("dubbod-%d", id), NamespaceController, "default", remote, electionTestClient{client: client}).SetEnabled(true)
-				election.ttl = 2 * time.Second
-				election.AddRunFunction(func(stop <-chan struct{}) { started <- id; <-stop })
-				go func() { election.Run(stops[id]); close(finished[id]) }()
+	client := fake.NewSimpleClientset()
+	// The fake tracker does not implement API-server resource-version conflicts.
+	client.PrependReactor("update", "configmaps", func(action clienttesting.Action) (bool, runtime.Object, error) {
+		candidate := action.(clienttesting.UpdateAction).GetObject().(*corev1.ConfigMap)
+		stored, err := client.Tracker().Get(action.GetResource(), candidate.Namespace, candidate.Name)
+		if err != nil {
+			return true, nil, err
+		}
+		current := stored.(*corev1.ConfigMap)
+		if candidate.ResourceVersion != current.ResourceVersion {
+			return true, nil, apierrors.NewConflict(action.GetResource().GroupResource(), candidate.Name, fmt.Errorf("resource version changed"))
+		}
+		revision, _ := strconv.Atoi(current.ResourceVersion)
+		updated := candidate.DeepCopy()
+		updated.ResourceVersion = strconv.Itoa(revision + 1)
+		if err := client.Tracker().Update(action.GetResource(), updated, updated.Namespace); err != nil {
+			return true, nil, err
+		}
+		return true, updated, nil
+	})
+	started := make(chan int, 4)
+	stops := []chan struct{}{make(chan struct{}), make(chan struct{})}
+	finished := []chan struct{}{make(chan struct{}), make(chan struct{})}
+	closed := []bool{false, false}
+	for id := 0; id < 2; id++ {
+		election := NewLeaderElection("dubbo-system", fmt.Sprintf("dubbod-%d", id), NamespaceController, "default", electionTestClient{client: client}).SetEnabled(true)
+		election.ttl = 2 * time.Second
+		election.AddRunFunction(func(stop <-chan struct{}) { started <- id; <-stop })
+		go func() { election.Run(stops[id]); close(finished[id]) }()
+	}
+	t.Cleanup(func() {
+		for id := range stops {
+			if !closed[id] {
+				close(stops[id])
 			}
-			t.Cleanup(func() {
-				for id := range stops {
-					if !closed[id] {
-						close(stops[id])
-					}
-				}
-				for _, done := range finished {
-					select {
-					case <-done:
-					case <-time.After(5 * time.Second):
-						t.Error("election did not stop")
-					}
-				}
-			})
-			var leader int
+		}
+		for _, done := range finished {
 			select {
-			case leader = <-started:
+			case <-done:
 			case <-time.After(5 * time.Second):
-				t.Fatal("no namespace leader")
+				t.Error("election did not stop")
 			}
-			select {
-			case other := <-started:
-				t.Fatalf("two active namespace leaders: %d and %d", leader, other)
-			case <-time.After(700 * time.Millisecond):
-			}
-			close(stops[leader])
-			closed[leader] = true
-			select {
-			case <-finished[leader]:
-			case <-time.After(5 * time.Second):
-				t.Fatal("old leader did not stop")
-			}
-			select {
-			case next := <-started:
-				if next == leader {
-					t.Fatal("stopped replica regained leadership")
-				}
-			case <-time.After(5 * time.Second):
-				t.Fatal("standby did not take over namespace reconciliation")
-			}
-		})
+		}
+	})
+	var leader int
+	select {
+	case leader = <-started:
+	case <-time.After(5 * time.Second):
+		t.Fatal("no namespace leader")
+	}
+	select {
+	case other := <-started:
+		t.Fatalf("two active namespace leaders: %d and %d", leader, other)
+	case <-time.After(700 * time.Millisecond):
+	}
+	close(stops[leader])
+	closed[leader] = true
+	select {
+	case <-finished[leader]:
+	case <-time.After(5 * time.Second):
+		t.Fatal("old leader did not stop")
+	}
+	select {
+	case next := <-started:
+		if next == leader {
+			t.Fatal("stopped replica regained leadership")
+		}
+	case <-time.After(5 * time.Second):
+		t.Fatal("standby did not take over namespace reconciliation")
 	}
 }

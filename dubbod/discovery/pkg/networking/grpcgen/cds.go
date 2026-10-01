@@ -232,15 +232,6 @@ func (b *clusterBuilder) buildUpstreamTLSContext(c *cluster.Cluster) *tlsv1.Upst
 		if len(sans) == 0 && b.hostname != b.svc.Hostname {
 			sans = b.push.ServiceAccounts(b.hostname, b.svc.Attributes.Namespace)
 		}
-		if b.push.ServiceActivationEnabled(b.svc.Attributes.Namespace, b.svc.Attributes.Name) {
-			pinned := sets.New(sans...)
-			pinned.InsertAll(b.push.ActivationBackendSANs(
-				b.svc.Attributes.Namespace,
-				b.svc.Attributes.Name,
-			)...)
-			pinned.InsertAll(b.push.ActivationGatewaySANs(b.svc.Attributes.Namespace)...)
-			sans = sets.SortedList(pinned)
-		}
 		if len(sans) == 0 {
 			log.Warnf("no SPIFFE identities found for %s; upstream TLS for cluster %s will not verify peer SAN", b.svc.Hostname, c.Name)
 		}

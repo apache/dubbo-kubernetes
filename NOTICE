@@ -6,3 +6,16 @@ at The Apache Software Foundation (http://dubbo.apache.org/).
 
 For additional information about the Apache Software Foundation, please see
 <http://www.apache.org/>.
+
+Third-party source attributions
+
+This product contains code derived from the Istio and Kubernetes projects.
+The matching source files and upstream license texts are recorded in
+licenses/manifest.json.
+
+Copyright Istio Authors
+Copyright 2019 Istio Authors
+Copyright The Kubernetes Authors.
+Copyright 2015 The Kubernetes Authors.
+Copyright 2017 The Kubernetes Authors.
+Copyright 2018 The Kubernetes Authors.

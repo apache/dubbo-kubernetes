@@ -89,7 +89,7 @@ func TestShouldSetWatchedResourcesTracksRoutes(t *testing.T) {
 func newDeltaXDSTestServer(generator model.XdsResourceGenerator) (*DiscoveryServer, *Connection, *fakeDeltaADSStream) {
 	push := model.NewPushContext()
 	push.PushVersion = "test-version"
-	server := NewDiscoveryServer(model.NewEnvironment(), nil, nil)
+	server := NewDiscoveryServer(model.NewEnvironment(), nil)
 	server.Authorize = allowTestWorkload
 	server.Generators = map[string]model.XdsResourceGenerator{
 		"grpc/" + v1.ClusterType: generator,

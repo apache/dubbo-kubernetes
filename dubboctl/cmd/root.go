@@ -67,7 +67,6 @@ func GetRootCmd(args []string) *cobra.Command {
 	rootCmd.AddCommand(GetCmd(ctx))
 	rootCmd.AddCommand(ProxyStatusCmd(ctx))
 	rootCmd.AddCommand(AnalyzeCmd(ctx))
-	rootCmd.AddCommand(MulticlusterCmd())
 
 	rootCmd.AddCommand(GuiCmd())
 

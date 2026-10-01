@@ -199,3 +199,16 @@
    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
    See the License for the specific language governing permissions and
    limitations under the License.
+
+Third-party licensing
+---------------------
+
+This product contains code from third-party open-source projects. Component
+versions, applicable license texts and upstream source locations are recorded
+in licenses/manifest.json. Retained licenses, copyright notices and patent
+grants are in licenses/.
+
+The source tree also keeps license materials for dependencies linked into
+binary distributions. A dependency declaration alone does not mean that its
+code is bundled with the source distribution. Binary distributions carry the
+license materials selected for the particular binary and target platform.

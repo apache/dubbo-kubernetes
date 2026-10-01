@@ -18,7 +18,6 @@ const (
 	FaultInjectionPolicy
 	GatewayClass
 	HTTPRoute
-	HorizontalPodAutoscaler
 	KubernetesGateway
 	Lease
 	MeshConfig
@@ -33,7 +32,6 @@ const (
 	Secret
 	Service
 	ServiceAccount
-	ServiceActivationPolicy
 	ServiceEntry
 	StatefulSet
 	Telemetry
@@ -72,8 +70,6 @@ func (k Kind) String() string {
 		return "GatewayClass"
 	case HTTPRoute:
 		return "HTTPRoute"
-	case HorizontalPodAutoscaler:
-		return "HorizontalPodAutoscaler"
 	case KubernetesGateway:
 		return "KubernetesGateway"
 	case Lease:
@@ -102,8 +98,6 @@ func (k Kind) String() string {
 		return "Service"
 	case ServiceAccount:
 		return "ServiceAccount"
-	case ServiceActivationPolicy:
-		return "ServiceActivationPolicy"
 	case ServiceEntry:
 		return "ServiceEntry"
 	case StatefulSet:
@@ -151,8 +145,6 @@ func FromString(s string) Kind {
 		return GatewayClass
 	case "HTTPRoute":
 		return HTTPRoute
-	case "HorizontalPodAutoscaler":
-		return HorizontalPodAutoscaler
 	case "KubernetesGateway":
 		return KubernetesGateway
 	case "Lease":
@@ -181,8 +173,6 @@ func FromString(s string) Kind {
 		return Service
 	case "ServiceAccount":
 		return ServiceAccount
-	case "ServiceActivationPolicy":
-		return ServiceActivationPolicy
 	case "ServiceEntry":
 		return ServiceEntry
 	case "StatefulSet":

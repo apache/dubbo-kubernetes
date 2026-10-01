@@ -169,9 +169,7 @@ func (c *Controller) convertService(cfg config.Config, entry *networking.Service
 		Hostname:        hostname,
 		Ports:           ports,
 		ServiceAccounts: append([]string(nil), entry.GetSubjectAltNames()...),
-		ClusterVIPs: model.AddressMap{Addresses: map[cluster.ID][]string{
-			c.clusterID: addresses,
-		}},
+		Addresses:       addresses,
 		CreationTime:    cfg.CreationTimestamp,
 		DefaultAddress:  defaultAddress,
 		ResourceVersion: cfg.ResourceVersion,

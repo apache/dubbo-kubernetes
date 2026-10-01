@@ -24,13 +24,6 @@ rules:
   - apiGroups: [ "networking.dubbo.apache.org" ]
     verbs: [ "get", "watch", "list" ]
     resources: [ "*" ]
-  # The activation controller publishes readiness back onto the policy. Without
-  # the status subresource the conditions are computed and then silently
-  # dropped, leaving an operator with no way to tell a working policy from a
-  # broken one.
-  - apiGroups: [ "networking.dubbo.apache.org" ]
-    verbs: [ "get", "update", "patch" ]
-    resources: [ "serviceactivationpolicies/status" ]
   - apiGroups: [ "telemetry.dubbo.apache.org" ]
     verbs: [ "get", "watch", "list" ]
     resources: [ "*" ]
@@ -72,12 +65,6 @@ rules:
   - apiGroups: ["coordination.k8s.io"]
     resources: ["leases"]
     verbs: ["get", "list", "watch", "create", "update", "patch"]
-  # ServiceActivationPolicy status follows the referenced KEDA object. This is
-  # read-only and optional: the delayed informer remains dormant when KEDA is
-  # not installed.
-  - apiGroups: ["keda.sh"]
-    resources: ["scaledobjects"]
-    verbs: ["get", "list", "watch"]
   - apiGroups: ["gateway.networking.k8s.io"]
     resources:
       - gateways

@@ -19,11 +19,9 @@ package model
 import (
 	"strconv"
 	"strings"
-	"sync"
 	"time"
 
 	"github.com/apache/dubbo-kubernetes/dubbod/discovery/pkg/serviceregistry/provider"
-	"github.com/apache/dubbo-kubernetes/pkg/cluster"
 	"github.com/apache/dubbo-kubernetes/pkg/config/host"
 	"github.com/apache/dubbo-kubernetes/pkg/config/labels"
 	"github.com/apache/dubbo-kubernetes/pkg/config/protocol"
@@ -92,21 +90,14 @@ type Port struct {
 
 type PortList []*Port
 
-type AddressMap struct {
-	Addresses map[cluster.ID][]string
-
-	// NOTE: The copystructure library is not able to copy unexported fields, so the mutex will not be copied.
-	mutex sync.RWMutex
-}
-
 type Service struct {
 	Attributes               ServiceAttributes
-	Hostname                 host.Name  `json:"hostname"`
-	Ports                    PortList   `json:"ports,omitempty"`
-	ServiceAccounts          []string   `json:"serviceAccounts,omitempty"`
-	ClusterVIPs              AddressMap `json:"clusterVIPs,omitempty"`
-	CreationTime             time.Time  `json:"creationTime,omitempty"`
-	DefaultAddress           string     `json:"defaultAddress,omitempty"`
+	Hostname                 host.Name `json:"hostname"`
+	Ports                    PortList  `json:"ports,omitempty"`
+	ServiceAccounts          []string  `json:"serviceAccounts,omitempty"`
+	Addresses                []string  `json:"addresses,omitempty"`
+	CreationTime             time.Time `json:"creationTime,omitempty"`
+	DefaultAddress           string    `json:"defaultAddress,omitempty"`
 	ResourceVersion          string
 	Resolution               Resolution
 	AutoAllocatedIPv4Address string `json:"autoAllocatedIPv4Address,omitempty"`
@@ -115,13 +106,11 @@ type Service struct {
 }
 
 type ServiceAttributes struct {
-	Labels                   map[string]string
-	LabelSelectors           map[string]string
-	ExportTo                 sets.Set[visibility.Instance]
-	ClusterExternalAddresses *AddressMap
-	ClusterExternalPorts     map[cluster.ID]map[uint32]uint32
-	Aliases                  []NamespacedHostname
-	PassthroughTargetPorts   map[uint32]uint32
+	Labels                 map[string]string
+	LabelSelectors         map[string]string
+	ExportTo               sets.Set[visibility.Instance]
+	Aliases                []NamespacedHostname
+	PassthroughTargetPorts map[uint32]uint32
 	// Name is "destination.service.name" attribute
 	Name string
 	// Namespace is "destination.service.namespace" attribute
@@ -243,8 +232,6 @@ func (ep *DubboEndpoint) Equals(other *DubboEndpoint) bool {
 }
 
 func (s *ServiceAttributes) DeepCopy() ServiceAttributes {
-	// AddressMap contains a mutex, which is safe to copy in this case.
-	// nolint: govet
 	out := *s
 
 	out.Labels = maps.Clone(s.Labels)
@@ -253,19 +240,10 @@ func (s *ServiceAttributes) DeepCopy() ServiceAttributes {
 	}
 
 	out.LabelSelectors = maps.Clone(s.LabelSelectors)
-	out.ClusterExternalAddresses = s.ClusterExternalAddresses.DeepCopy()
-
-	if s.ClusterExternalPorts != nil {
-		out.ClusterExternalPorts = make(map[cluster.ID]map[uint32]uint32, len(s.ClusterExternalPorts))
-		for k, m := range s.ClusterExternalPorts {
-			out.ClusterExternalPorts[k] = maps.Clone(m)
-		}
-	}
 
 	out.Aliases = slices.Clone(s.Aliases)
 	out.PassthroughTargetPorts = maps.Clone(out.PassthroughTargetPorts)
 
-	// nolint: govet
 	return out
 }
 
@@ -293,31 +271,11 @@ func (s *ServiceAttributes) Equals(other *ServiceAttributes) bool {
 		return false
 	}
 
-	if s.ClusterExternalAddresses.Len() != other.ClusterExternalAddresses.Len() {
-		return false
-	}
-
-	for k, v1 := range s.ClusterExternalAddresses.GetAddresses() {
-		if v2, ok := other.ClusterExternalAddresses.Addresses[k]; !ok || !slices.Equal(v1, v2) {
-			return false
-		}
-	}
-
-	if len(s.ClusterExternalPorts) != len(other.ClusterExternalPorts) {
-		return false
-	}
-
-	for k, v1 := range s.ClusterExternalPorts {
-		if v2, ok := s.ClusterExternalPorts[k]; !ok || !maps.Equal(v1, v2) {
-			return false
-		}
-	}
 	return s.Name == other.Name && s.Namespace == other.Namespace &&
 		s.ServiceRegistry == other.ServiceRegistry && s.K8sAttributes == other.K8sAttributes
 }
 
 func (s *Service) DeepCopy() *Service {
-	// Manually copy fields to avoid copying the mutex in AddressMap
 	out := &Service{
 		Attributes:               s.Attributes.DeepCopy(),
 		Hostname:                 s.Hostname,
@@ -329,7 +287,7 @@ func (s *Service) DeepCopy() *Service {
 		AutoAllocatedIPv4Address: s.AutoAllocatedIPv4Address,
 		AutoAllocatedIPv6Address: s.AutoAllocatedIPv6Address,
 		MeshExternal:             s.MeshExternal,
-		ClusterVIPs:              *s.ClusterVIPs.DeepCopy(),
+		Addresses:                slices.Clone(s.Addresses),
 	}
 	if s.Ports != nil {
 		out.Ports = make(PortList, len(s.Ports))
@@ -375,13 +333,8 @@ func (s *Service) Equals(other *Service) bool {
 		return false
 	}
 
-	if len(s.ClusterVIPs.Addresses) != len(other.ClusterVIPs.Addresses) {
+	if !slices.Equal(s.Addresses, other.Addresses) {
 		return false
-	}
-	for k, v1 := range s.ClusterVIPs.Addresses {
-		if v2, ok := other.ClusterVIPs.Addresses[k]; !ok || !slices.Equal(v1, v2) {
-			return false
-		}
 	}
 
 	return s.DefaultAddress == other.DefaultAddress && s.AutoAllocatedIPv4Address == other.AutoAllocatedIPv4Address &&
@@ -432,10 +385,7 @@ func nodeUsesAutoallocatedIPs(node *Proxy) bool {
 }
 
 func (s *Service) getAllAddressesForProxy(node *Proxy) []string {
-	addresses := []string{}
-	if node.Metadata != nil && node.Metadata.ClusterID != "" {
-		addresses = s.ClusterVIPs.GetAddressesFor(node.Metadata.ClusterID)
-	}
+	addresses := slices.Clone(s.Addresses)
 	if len(addresses) == 0 && nodeUsesAutoallocatedIPs(node) {
 		// The criteria to use AutoAllocated addresses is met so we should go ahead and use them if they are populated
 		if s.AutoAllocatedIPv4Address != "" {
@@ -477,15 +427,6 @@ func (ports PortList) GetByPort(num int) (*Port, bool) {
 		}
 	}
 	return nil, false
-}
-
-func (m *AddressMap) DeepCopy() *AddressMap {
-	if m == nil {
-		return nil
-	}
-	return &AddressMap{
-		Addresses: m.GetAddresses(),
-	}
 }
 
 func BuildSubsetKey(direction TrafficDirection, subsetName string, hostname host.Name, port int) string {

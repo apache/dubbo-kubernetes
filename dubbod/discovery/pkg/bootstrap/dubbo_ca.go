@@ -134,7 +134,6 @@ func (s *Server) loadCACerts(caOpts *caOptions, dir string) error {
 		return err
 	}
 
-	// TODO: writing cacerts files from remote cluster will always fail,
 	log.Infof("cacerts Secret found in config cluster, saving contents to %s", dir)
 	if err := os.MkdirAll(dir, 0o700); err != nil {
 		return err

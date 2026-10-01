@@ -20,7 +20,6 @@ import (
 	"sync"
 
 	"github.com/apache/dubbo-kubernetes/dubbod/discovery/pkg/serviceregistry/provider"
-	"github.com/apache/dubbo-kubernetes/pkg/cluster"
 	"github.com/apache/dubbo-kubernetes/pkg/util/sets"
 )
 
@@ -33,12 +32,10 @@ const (
 )
 
 type shardRegistry interface {
-	Cluster() cluster.ID
 	Provider() provider.ID
 }
 
 type ShardKey struct {
-	Cluster  cluster.ID
 	Provider provider.ID
 }
 
@@ -343,5 +340,5 @@ func (es *EndpointShards) CopyEndpoints(portMap map[string]int, ports sets.Set[i
 }
 
 func ShardKeyFromRegistry(instance shardRegistry) ShardKey {
-	return ShardKey{Cluster: instance.Cluster(), Provider: instance.Provider()}
+	return ShardKey{Provider: instance.Provider()}
 }

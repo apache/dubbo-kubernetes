@@ -22,7 +22,6 @@ import (
 	"github.com/apache/dubbo-kubernetes/dubbod/discovery/pkg/model"
 	"github.com/apache/dubbo-kubernetes/dubbod/discovery/pkg/serviceregistry"
 	"github.com/apache/dubbo-kubernetes/dubbod/discovery/pkg/serviceregistry/provider"
-	"github.com/apache/dubbo-kubernetes/pkg/cluster"
 	"github.com/apache/dubbo-kubernetes/pkg/config/host"
 	"github.com/apache/dubbo-kubernetes/pkg/config/mesh"
 	"github.com/apache/dubbo-kubernetes/pkg/slices"
@@ -38,11 +37,10 @@ var (
 )
 
 type Controller struct {
-	registries      []*registryEntry
-	storeLock       sync.RWMutex
-	running         bool
-	meshHolder      mesh.Holder
-	configClusterID cluster.ID
+	registries []*registryEntry
+	storeLock  sync.RWMutex
+	running    bool
+	meshHolder mesh.Holder
 }
 
 type registryEntry struct {
@@ -51,16 +49,14 @@ type registryEntry struct {
 }
 
 type Options struct {
-	MeshHolder      mesh.Holder
-	ConfigClusterID cluster.ID
+	MeshHolder mesh.Holder
 }
 
 func NewController(opt Options) *Controller {
 	return &Controller{
-		registries:      make([]*registryEntry, 0),
-		configClusterID: opt.ConfigClusterID,
-		meshHolder:      opt.MeshHolder,
-		running:         false,
+		registries: make([]*registryEntry, 0),
+		meshHolder: opt.MeshHolder,
+		running:    false,
 	}
 }
 
@@ -91,48 +87,19 @@ func (c *Controller) HasSynced() bool {
 }
 
 func (c *Controller) Services() []*model.Service {
-	// smap is a map of hostname (string) to service index, used to identify services that
-	// are installed in multiple clusters.
-	smap := make(map[host.Name]int)
-	index := 0
+	indices := make(map[host.Name]int)
 	services := make([]*model.Service, 0)
-	// Locking Registries list while walking it to prevent inconsistent results
-	for _, r := range c.GetRegistries() {
-		svcs := r.Services()
-		if r.Provider() != provider.Kubernetes {
-			for _, s := range svcs {
-				if previous, found := smap[s.Hostname]; found && r.Provider() == provider.External {
-					services[previous] = services[previous].DeepCopy()
-					decorateService(services[previous], s)
-					continue
+	for _, registry := range c.GetRegistries() {
+		for _, service := range registry.Services() {
+			if index, found := indices[service.Hostname]; found {
+				if registry.Provider() == provider.External {
+					services[index] = services[index].DeepCopy()
+					decorateService(services[index], service)
 				}
-				smap[s.Hostname] = index
-				index++
-				services = append(services, s)
+				continue
 			}
-		} else {
-			for _, s := range svcs {
-				previous, ok := smap[s.Hostname]
-				if !ok {
-					// First time we see a service. The result will have a single service per hostname
-					// The first cluster will be listed first, so the services in the primary cluster
-					// will be used for default settings. If a service appears in multiple clusters,
-					// the order is less clear.
-					smap[s.Hostname] = index
-					index++
-					services = append(services, s)
-				} else {
-					// We must deepcopy before merge, and after merging, the ClusterVips length will be >= 2.
-					// This is an optimization to prevent deepcopy multi-times
-					if services[previous].ClusterVIPs.Len() < 2 {
-						// Deep copy before merging, otherwise there is a case
-						// a service in remote cluster can be deleted, but the ClusterIP left.
-						services[previous] = services[previous].DeepCopy()
-					}
-					// If it is seen second time, that means it is from a different cluster, update cluster VIPs.
-					mergeService(services[previous], s, r)
-				}
-			}
+			indices[service.Hostname] = len(services)
+			services = append(services, service)
 		}
 	}
 	return services
@@ -140,25 +107,15 @@ func (c *Controller) Services() []*model.Service {
 
 func (c *Controller) GetService(hostname host.Name) *model.Service {
 	var out *model.Service
-	for _, r := range c.GetRegistries() {
-		service := r.GetService(hostname)
+	for _, registry := range c.GetRegistries() {
+		service := registry.GetService(hostname)
 		if service == nil {
 			continue
 		}
-		if r.Provider() != provider.Kubernetes {
-			if out == nil {
-				return service
-			}
-			if r.Provider() == provider.External {
-				decorateService(out, service)
-			}
-			return out
-		}
 		if out == nil {
 			out = service.DeepCopy()
-		} else {
-			// If we are seeing the service for the second time, it means it is available in multiple clusters.
-			mergeService(out, service, r)
+		} else if registry.Provider() == provider.External {
+			decorateService(out, service)
 		}
 	}
 	return out
@@ -220,28 +177,9 @@ func (c *Controller) addRegistry(registry serviceregistry.Instance, stop <-chan 
 
 }
 
-func mergeService(dst, src *model.Service, srcRegistry serviceregistry.Instance) {
-	if !src.Ports.Equals(dst.Ports) {
-		log.Debugf("service %s defined from cluster %s is different from others", src.Hostname, srcRegistry.Cluster())
-	}
-	// Prefer the k8s HostVIPs where possible
-	clusterID := srcRegistry.Cluster()
-	if len(dst.ClusterVIPs.GetAddressesFor(clusterID)) == 0 {
-		newAddresses := src.ClusterVIPs.GetAddressesFor(clusterID)
-		dst.ClusterVIPs.SetAddressesFor(clusterID, newAddresses)
-	}
-}
-
 func (c *Controller) GetProxyServiceTargets(node *model.Proxy) []model.ServiceTarget {
 	out := make([]model.ServiceTarget, 0)
-	nodeClusterID := nodeClusterID(node)
 	for _, r := range c.GetRegistries() {
-		if skipSearchingRegistryForProxy(nodeClusterID, r) {
-			log.Infof("not searching registry %v: proxy %v CLUSTER_ID is %v",
-				r.Cluster(), node.ID, nodeClusterID)
-			continue
-		}
-
 		instances := r.GetProxyServiceTargets(node)
 		if len(instances) > 0 {
 			out = append(out, instances...)
@@ -249,24 +187,8 @@ func (c *Controller) GetProxyServiceTargets(node *model.Proxy) []model.ServiceTa
 	}
 
 	if len(out) == 0 {
-		log.Infof("no service targets found for proxy %s with clusterID %s",
-			node.ID, nodeClusterID.String())
+		log.Infof("no service targets found for proxy %s", node.ID)
 	}
 
 	return out
-}
-
-func nodeClusterID(node *model.Proxy) cluster.ID {
-	if node.Metadata == nil || node.Metadata.ClusterID == "" {
-		return ""
-	}
-	return node.Metadata.ClusterID
-}
-
-func skipSearchingRegistryForProxy(nodeClusterID cluster.ID, r serviceregistry.Instance) bool {
-	if r.Provider() != provider.Kubernetes || nodeClusterID == "" {
-		return false
-	}
-
-	return !r.Cluster().Equals(nodeClusterID)
 }

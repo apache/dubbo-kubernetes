@@ -94,7 +94,6 @@ type Environment struct {
 	configSnapshot       *ConfigSnapshot
 	configMutex          sync.Mutex
 	configHandlers       []func(*ConfigChange)
-	clusterLocalServices ClusterLocalProvider
 	DomainSuffix         string
 	EndpointIndex        *EndpointIndex
 	Cache                XdsCache
@@ -188,16 +187,11 @@ func (e *Environment) GetProxyConfigOrDefault(ns string, labels, annotations map
 	return mesh.DefaultProxyConfig()
 }
 
-func (e *Environment) ClusterLocal() ClusterLocalProvider {
-	return e.clusterLocalServices
-}
-
 func (e *Environment) Init() {
 	if len(e.DomainSuffix) == 0 {
 		e.DomainSuffix = constants.DefaultClusterLocalDomain
 	}
 
-	e.clusterLocalServices = NewClusterLocalProvider(e)
 }
 
 type Proxy struct {

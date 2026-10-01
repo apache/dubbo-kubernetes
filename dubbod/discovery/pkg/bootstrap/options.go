@@ -27,11 +27,10 @@ import (
 )
 
 type RegistryOptions struct {
-	FileDir                    string
-	Registries                 []string
-	KubeConfig                 string
-	KubeOptions                kubecontroller.Options
-	ClusterRegistriesNamespace string
+	FileDir     string
+	Registries  []string
+	KubeConfig  string
+	KubeOptions kubecontroller.Options
 }
 
 type InjectionOptions struct {
@@ -57,9 +56,6 @@ type DiscoveryServerOptions struct {
 	HTTPSAddr      string
 	GRPCAddr       string
 	SecureGRPCAddr string
-	// ActivationAddr serves KEDA's external scaler contract. Empty disables it,
-	// which is how a cluster without KEDA runs unchanged.
-	ActivationAddr string
 	TLSOptions     TLSOptions
 }
 
@@ -76,7 +72,6 @@ func (p *DubboArgs) applyDefaults() {
 	p.PodName = lookupEnvOrDefault("POD_NAME", "")
 	p.Revision = lookupEnvOrDefault("REVISION", "")
 	p.KeepaliveOptions = keepalive.DefaultOption()
-	p.RegistryOptions.ClusterRegistriesNamespace = p.Namespace
 }
 
 func NewDubboArgs(initFuncs ...func(*DubboArgs)) *DubboArgs {

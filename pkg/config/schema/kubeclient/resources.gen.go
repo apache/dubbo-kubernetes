@@ -22,7 +22,6 @@ import (
 	apigithubcomapachedubbokubernetesapitelemetryv1alpha3 "github.com/dubml/client-go/pkg/apis/telemetry/v1alpha3"
 	k8sioapiadmissionregistrationv1 "k8s.io/api/admissionregistration/v1"
 	k8sioapiappsv1 "k8s.io/api/apps/v1"
-	k8sioapiautoscalingv2 "k8s.io/api/autoscaling/v2"
 	k8sioapicoordinationv1 "k8s.io/api/coordination/v1"
 	k8sioapicorev1 "k8s.io/api/core/v1"
 	k8sioapidiscoveryv1 "k8s.io/api/discovery/v1"
@@ -58,8 +57,6 @@ func GetWriteClient[T runtime.Object](c ClientGetter, namespace string) ktypes.W
 		return c.GatewayAPI().GatewayV1().GatewayClasses().(ktypes.WriteAPI[T])
 	case *sigsk8siogatewayapiapisv1.HTTPRoute:
 		return c.GatewayAPI().GatewayV1().HTTPRoutes(namespace).(ktypes.WriteAPI[T])
-	case *k8sioapiautoscalingv2.HorizontalPodAutoscaler:
-		return c.Kube().AutoscalingV2().HorizontalPodAutoscalers(namespace).(ktypes.WriteAPI[T])
 	case *sigsk8siogatewayapiapisv1.Gateway:
 		return c.GatewayAPI().GatewayV1().Gateways(namespace).(ktypes.WriteAPI[T])
 	case *k8sioapicoordinationv1.Lease:
@@ -86,8 +83,6 @@ func GetWriteClient[T runtime.Object](c ClientGetter, namespace string) ktypes.W
 		return c.Kube().CoreV1().Services(namespace).(ktypes.WriteAPI[T])
 	case *k8sioapicorev1.ServiceAccount:
 		return c.Kube().CoreV1().ServiceAccounts(namespace).(ktypes.WriteAPI[T])
-	case *apigithubcomapachedubbokubernetesapinetworkingv1alpha3.ServiceActivationPolicy:
-		return c.Dubbo().NetworkingV1alpha3().ServiceActivationPolicies(namespace).(ktypes.WriteAPI[T])
 	case *apigithubcomapachedubbokubernetesapinetworkingv1alpha3.ServiceEntry:
 		return c.Dubbo().NetworkingV1alpha3().ServiceEntries(namespace).(ktypes.WriteAPI[T])
 	case *k8sioapiappsv1.StatefulSet:
@@ -131,8 +126,6 @@ func GetClient[T, TL runtime.Object](c ClientGetter, namespace string) ktypes.Re
 		return c.GatewayAPI().GatewayV1().GatewayClasses().(ktypes.ReadWriteAPI[T, TL])
 	case *sigsk8siogatewayapiapisv1.HTTPRoute:
 		return c.GatewayAPI().GatewayV1().HTTPRoutes(namespace).(ktypes.ReadWriteAPI[T, TL])
-	case *k8sioapiautoscalingv2.HorizontalPodAutoscaler:
-		return c.Kube().AutoscalingV2().HorizontalPodAutoscalers(namespace).(ktypes.ReadWriteAPI[T, TL])
 	case *sigsk8siogatewayapiapisv1.Gateway:
 		return c.GatewayAPI().GatewayV1().Gateways(namespace).(ktypes.ReadWriteAPI[T, TL])
 	case *k8sioapicoordinationv1.Lease:
@@ -159,8 +152,6 @@ func GetClient[T, TL runtime.Object](c ClientGetter, namespace string) ktypes.Re
 		return c.Kube().CoreV1().Services(namespace).(ktypes.ReadWriteAPI[T, TL])
 	case *k8sioapicorev1.ServiceAccount:
 		return c.Kube().CoreV1().ServiceAccounts(namespace).(ktypes.ReadWriteAPI[T, TL])
-	case *apigithubcomapachedubbokubernetesapinetworkingv1alpha3.ServiceActivationPolicy:
-		return c.Dubbo().NetworkingV1alpha3().ServiceActivationPolicies(namespace).(ktypes.ReadWriteAPI[T, TL])
 	case *apigithubcomapachedubbokubernetesapinetworkingv1alpha3.ServiceEntry:
 		return c.Dubbo().NetworkingV1alpha3().ServiceEntries(namespace).(ktypes.ReadWriteAPI[T, TL])
 	case *k8sioapiappsv1.StatefulSet:
@@ -204,8 +195,6 @@ func gvrToObject(g schema.GroupVersionResource) runtime.Object {
 		return &sigsk8siogatewayapiapisv1.GatewayClass{}
 	case gvr.HTTPRoute:
 		return &sigsk8siogatewayapiapisv1.HTTPRoute{}
-	case gvr.HorizontalPodAutoscaler:
-		return &k8sioapiautoscalingv2.HorizontalPodAutoscaler{}
 	case gvr.KubernetesGateway:
 		return &sigsk8siogatewayapiapisv1.Gateway{}
 	case gvr.Lease:
@@ -232,8 +221,6 @@ func gvrToObject(g schema.GroupVersionResource) runtime.Object {
 		return &k8sioapicorev1.Service{}
 	case gvr.ServiceAccount:
 		return &k8sioapicorev1.ServiceAccount{}
-	case gvr.ServiceActivationPolicy:
-		return &apigithubcomapachedubbokubernetesapinetworkingv1alpha3.ServiceActivationPolicy{}
 	case gvr.ServiceEntry:
 		return &apigithubcomapachedubbokubernetesapinetworkingv1alpha3.ServiceEntry{}
 	case gvr.StatefulSet:
@@ -340,13 +327,6 @@ func getInformerFiltered(c ClientGetter, opts ktypes.InformerOptions, g schema.G
 		w = func(options metav1.ListOptions) (watch.Interface, error) {
 			return c.GatewayAPI().GatewayV1().HTTPRoutes(opts.Namespace).Watch(context.Background(), options)
 		}
-	case gvr.HorizontalPodAutoscaler:
-		l = func(options metav1.ListOptions) (runtime.Object, error) {
-			return c.Kube().AutoscalingV2().HorizontalPodAutoscalers(opts.Namespace).List(context.Background(), options)
-		}
-		w = func(options metav1.ListOptions) (watch.Interface, error) {
-			return c.Kube().AutoscalingV2().HorizontalPodAutoscalers(opts.Namespace).Watch(context.Background(), options)
-		}
 	case gvr.KubernetesGateway:
 		l = func(options metav1.ListOptions) (runtime.Object, error) {
 			return c.GatewayAPI().GatewayV1().Gateways(opts.Namespace).List(context.Background(), options)
@@ -437,13 +417,6 @@ func getInformerFiltered(c ClientGetter, opts ktypes.InformerOptions, g schema.G
 		}
 		w = func(options metav1.ListOptions) (watch.Interface, error) {
 			return c.Kube().CoreV1().ServiceAccounts(opts.Namespace).Watch(context.Background(), options)
-		}
-	case gvr.ServiceActivationPolicy:
-		l = func(options metav1.ListOptions) (runtime.Object, error) {
-			return c.Dubbo().NetworkingV1alpha3().ServiceActivationPolicies(opts.Namespace).List(context.Background(), options)
-		}
-		w = func(options metav1.ListOptions) (watch.Interface, error) {
-			return c.Dubbo().NetworkingV1alpha3().ServiceActivationPolicies(opts.Namespace).Watch(context.Background(), options)
 		}
 	case gvr.ServiceEntry:
 		l = func(options metav1.ListOptions) (runtime.Object, error) {

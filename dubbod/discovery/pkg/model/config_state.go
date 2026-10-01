@@ -20,13 +20,12 @@ import "github.com/apache/dubbo-kubernetes/pkg/util/sets"
 
 // ConfigChange describes source changes without carrying an xDS connection or delivery state.
 type ConfigChange struct {
-	ConfigsUpdated                 sets.Set[ConfigKey]
-	ServiceActivationPolicyUpdates map[ConfigKey]ServiceActivationPolicyUpdate
-	AddressesUpdated               sets.String
-	Full                           bool
-	Forced                         bool
-	EndpointsChanged               bool
-	Global                         bool
+	ConfigsUpdated   sets.Set[ConfigKey]
+	AddressesUpdated sets.String
+	Full             bool
+	Forced           bool
+	EndpointsChanged bool
+	Global           bool
 }
 
 func (e *Environment) ConfigSnapshot() *ConfigSnapshot {

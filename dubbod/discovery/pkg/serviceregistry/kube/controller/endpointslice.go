@@ -33,11 +33,10 @@ import (
 	"k8s.io/apimachinery/pkg/selection"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/intstr"
-	mcs "sigs.k8s.io/mcs-api/pkg/apis/v1alpha1"
 )
 
 var (
-	endpointSliceRequirement = labelRequirement(mcs.LabelServiceName, selection.DoesNotExist, nil)
+	endpointSliceRequirement = labelRequirement(v1.LabelServiceName, selection.Exists, nil)
 	endpointSliceSelector    = klabels.NewSelector().Add(*endpointSliceRequirement)
 )
 

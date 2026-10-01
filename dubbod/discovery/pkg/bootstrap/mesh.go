@@ -129,7 +129,6 @@ func compactDubboArgs(args *DubboArgs) string {
 		formatQuotedField("pod_name", args.PodName),
 		formatQuotedField("revision", args.Revision),
 		formatStringSliceField("registries", args.RegistryOptions.Registries),
-		formatQuotedField("cluster_registries_namespace", args.RegistryOptions.ClusterRegistriesNamespace),
 		formatQuotedField("kubeconfig", args.RegistryOptions.KubeConfig),
 		formatQuotedField("config_dir", args.RegistryOptions.FileDir),
 		formatStringField("injection_dir", args.InjectionOptions.InjectionDirectory),
@@ -171,7 +170,6 @@ func kubeOptionsSummary(args *DubboArgs) string {
 		formatStringField("domain", args.RegistryOptions.KubeOptions.DomainSuffix),
 		formatFloat32Field("qps", args.RegistryOptions.KubeOptions.KubernetesAPIQPS),
 		formatIntField("burst", args.RegistryOptions.KubeOptions.KubernetesAPIBurst),
-		formatIntField("cluster_aliases", len(args.RegistryOptions.KubeOptions.ClusterAliases)),
 	)
 }
 

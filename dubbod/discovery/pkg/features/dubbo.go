@@ -49,9 +49,6 @@ var (
 	DubbodServiceCustomHost = env.Register("DUBBOD_CUSTOM_HOST", "",
 		"Custom host name of dubbod that dubbod signs the server cert. "+
 			"Multiple custom host names are supported, and multiple values are separated by commas.").Get()
-	EastWestGatewayRegistry = env.Register("DUBBO_EASTWEST_GATEWAYS", "",
-		"Comma-separated east-west gateway endpoints in cluster=host:port format. "+
-			"When set, endpoints from another cluster are advertised through that cluster's gateway instead of its pod IPs.").Get()
 	InjectionWebhookConfigName = env.Register("INJECTION_WEBHOOK_CONFIG_NAME", "dubbo-inherent-injector",
 		"Name of the mutatingwebhookconfiguration to patch, if dubboctl is not used.").Get()
 	ManagedGatewayController = env.Register("DUBBO_GATEWAY_API_CONTROLLER_NAME", "dubbo.apache.org/gateway-controller",
@@ -66,11 +63,4 @@ var (
 			" gateway.dubbo.apache.org/replicas annotation").Get()
 	StatusMaxWorkers = env.Register("DUBBO_STATUS_MAX_WORKERS", 100, "The maximum number of workers"+
 		" for status update").Get()
-	ActivationDemandPort = env.Register("DUBBO_ACTIVATION_DEMAND_PORT", 26030,
-		"Port on which dubbod accepts activation demand reports from gateways. Must match the"+
-			" activation port the control plane serves; zero disables demand reporting, leaving"+
-			" scaled-to-zero services reachable only after something else scales them up").Get()
-	ActivationHoldTimeout = env.Register("DUBBO_ACTIVATION_HOLD_TIMEOUT", 30,
-		"Seconds a gateway holds a request waiting for a scaled-to-zero target to come up before"+
-			" failing it. Longer than a cold start, shorter than the caller's own timeout").Get()
 )
