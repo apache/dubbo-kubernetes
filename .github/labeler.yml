@@ -100,7 +100,7 @@ networking:
           - 'pkg/adsc/**'
           - 'pkg/xds/**'
 
-samples:
+examples:
   - changed-files:
       - any-glob-to-any-file: 'examples/**'
 

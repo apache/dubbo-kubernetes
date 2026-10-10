@@ -32,10 +32,10 @@ $(addprefix build-,$(BINARIES)): build-%:
 docker-build: ## Build the dubbod container image (override with HUB=/IMAGE_TAG=).
 	docker build -f dubbod/discovery/docker/dockerfile.dubbod -t $(IMAGE) .
 
-.PHONY: clone-sample
-clone-sample: ## Copy samples/ next to the binaries for release packaging.
+.PHONY: clone-examples
+clone-examples: ## Copy examples/ next to the binaries for release packaging.
 	mkdir -p $(BIN_DIR)
-	cp -r samples $(BIN_DIR)/samples
+	cp -r examples $(BIN_DIR)/examples
 
 .PHONY: clean
 clean: ## Remove build artifacts.
