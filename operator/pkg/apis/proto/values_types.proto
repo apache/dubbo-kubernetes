@@ -28,11 +28,6 @@ message ManagementConfig {
   int64 port = 1;
 }
 
-
-message ProxyConfig {
-  string clusterDomain = 1;
-}
-
 message GatewayConfig {
   // Default replica count for managed transit deployments. Individual Gateways
   // override it with the gateway.dubbo.apache.org/replicas annotation.
@@ -40,7 +35,7 @@ message GatewayConfig {
 }
 
 message GlobalConfig {
-  ProxyConfig proxy = 1;
+  string trustDomain = 1;
 
   int64 statusPort = 2;
 

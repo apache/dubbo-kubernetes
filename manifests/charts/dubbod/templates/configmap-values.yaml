@@ -14,11 +14,9 @@
 # limitations under the License.
 
 {{- $defaults := .Values._internal_default_values_not_set | default dict }}
-{{- $defaultProxy := $defaults.proxy | default dict }}
 {{- $defaultManagement := $defaults.management | default dict }}
-{{- $proxy := .Values.proxy | default dict }}
 {{- $management := .Values.management | default dict }}
-{{- $clusterDomain := coalesce $proxy.clusterDomain $defaultProxy.clusterDomain "cluster.local" }}
+{{- $trustDomain := coalesce .Values.trustDomain $defaults.trustDomain "cluster.local" }}
 {{- $revision := .Values.revision | default "default" }}
 {{- $statusPort := coalesce .Values.statusPort $defaults.statusPort 26020 }}
 {{- $managementPort := int (coalesce $management.port $defaultManagement.port 26080) }}
@@ -36,8 +34,7 @@ data:
   merged-values: |-
     revision: {{ $revision | quote }}
     image: {{ $image | quote }}
-    proxy:
-      clusterDomain: {{ $clusterDomain | quote }}
+    trustDomain: {{ $trustDomain | quote }}
     management:
       port: {{ $managementPort }}
     statusPort: {{ $statusPort }}

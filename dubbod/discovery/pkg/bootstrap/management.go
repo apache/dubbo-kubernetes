@@ -47,8 +47,7 @@ import (
 	sigsk8siogatewayapiapisv1 "sigs.k8s.io/gateway-api/apis/v1"
 )
 
-// managementAPIBase is the HTTP base path of the read-only management API the
-// external console aggregates across control planes.
+// managementAPIBase is the HTTP base path of the read-only management API.
 const managementAPIBase = "/api/v1"
 
 type managementOverview struct {
@@ -67,7 +66,7 @@ type managementOverview struct {
 	Instances   []managementDubbodInstance `json:"instances"`
 	DataPlane   []managementWorkload       `json:"dataPlane"`
 	// Total running pods per namespace considered for proxyless bootstrap
-	// injection, so the console can show the configured ratio.
+	// injection.
 	DataPlanePods    map[string]int             `json:"dataPlanePods,omitempty"`
 	Routes           []managementRoute          `json:"routes"`
 	XDSClients       []managementXDSClient      `json:"xdsClients"`
@@ -791,7 +790,7 @@ func managementContainerEnv(container corev1.Container, name string) string {
 }
 
 // managementActiveRootCert mirrors inherentGRPCWorkloadController.activeRootCert so
-// the console compares workload secrets against the same root the issuer uses.
+// workload secrets can be compared against the same root the issuer uses.
 func (s *Server) managementActiveRootCert() []byte {
 	authority := s.RA
 	if authority == nil {
@@ -991,9 +990,8 @@ func managementGatewayInstanceFromDeployment(deployment appsv1.Deployment) manag
 	}
 }
 
-// buildManagementRoutes flattens the HTTPRoutes in the config store into the shape the
-// console draws. Matches are rendered as the operator wrote them so a rule in
-// the UI can be grepped for in `kubectl get httproute -o yaml`.
+// buildManagementRoutes flattens the HTTPRoutes in the config store into a simplified structure.
+// Matches are rendered as the operator wrote them so a rule can be grepped for in `kubectl get httproute -o yaml`.
 func (s *Server) buildManagementRoutes() []managementRoute {
 	routes := make([]managementRoute, 0)
 	if s.environment.ConfigStore == nil {

@@ -82,50 +82,6 @@ func (x *ManagementConfig) GetPort() int64 {
 	return 0
 }
 
-type ProxyConfig struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	ClusterDomain string                 `protobuf:"bytes,1,opt,name=clusterDomain,proto3" json:"clusterDomain,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *ProxyConfig) Reset() {
-	*x = ProxyConfig{}
-	mi := &file_values_types_proto_msgTypes[1]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *ProxyConfig) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*ProxyConfig) ProtoMessage() {}
-
-func (x *ProxyConfig) ProtoReflect() protoreflect.Message {
-	mi := &file_values_types_proto_msgTypes[1]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use ProxyConfig.ProtoReflect.Descriptor instead.
-func (*ProxyConfig) Descriptor() ([]byte, []int) {
-	return file_values_types_proto_rawDescGZIP(), []int{1}
-}
-
-func (x *ProxyConfig) GetClusterDomain() string {
-	if x != nil {
-		return x.ClusterDomain
-	}
-	return ""
-}
-
 type GatewayConfig struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	// Default replica count for managed transit deployments. Individual Gateways
@@ -137,7 +93,7 @@ type GatewayConfig struct {
 
 func (x *GatewayConfig) Reset() {
 	*x = GatewayConfig{}
-	mi := &file_values_types_proto_msgTypes[2]
+	mi := &file_values_types_proto_msgTypes[1]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -149,7 +105,7 @@ func (x *GatewayConfig) String() string {
 func (*GatewayConfig) ProtoMessage() {}
 
 func (x *GatewayConfig) ProtoReflect() protoreflect.Message {
-	mi := &file_values_types_proto_msgTypes[2]
+	mi := &file_values_types_proto_msgTypes[1]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -162,7 +118,7 @@ func (x *GatewayConfig) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GatewayConfig.ProtoReflect.Descriptor instead.
 func (*GatewayConfig) Descriptor() ([]byte, []int) {
-	return file_values_types_proto_rawDescGZIP(), []int{2}
+	return file_values_types_proto_rawDescGZIP(), []int{1}
 }
 
 func (x *GatewayConfig) GetReplicaCount() *wrapperspb.Int32Value {
@@ -174,7 +130,7 @@ func (x *GatewayConfig) GetReplicaCount() *wrapperspb.Int32Value {
 
 type GlobalConfig struct {
 	state            protoimpl.MessageState `protogen:"open.v1"`
-	Proxy            *ProxyConfig           `protobuf:"bytes,1,opt,name=proxy,proto3" json:"proxy,omitempty"`
+	TrustDomain      string                 `protobuf:"bytes,1,opt,name=trustDomain,proto3" json:"trustDomain,omitempty"`
 	StatusPort       int64                  `protobuf:"varint,2,opt,name=statusPort,proto3" json:"statusPort,omitempty"`
 	Management       *ManagementConfig      `protobuf:"bytes,3,opt,name=management,proto3" json:"management,omitempty"`
 	ConfigValidation bool                   `protobuf:"varint,4,opt,name=configValidation,proto3" json:"configValidation,omitempty"`
@@ -185,7 +141,7 @@ type GlobalConfig struct {
 
 func (x *GlobalConfig) Reset() {
 	*x = GlobalConfig{}
-	mi := &file_values_types_proto_msgTypes[3]
+	mi := &file_values_types_proto_msgTypes[2]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -197,7 +153,7 @@ func (x *GlobalConfig) String() string {
 func (*GlobalConfig) ProtoMessage() {}
 
 func (x *GlobalConfig) ProtoReflect() protoreflect.Message {
-	mi := &file_values_types_proto_msgTypes[3]
+	mi := &file_values_types_proto_msgTypes[2]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -210,14 +166,14 @@ func (x *GlobalConfig) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GlobalConfig.ProtoReflect.Descriptor instead.
 func (*GlobalConfig) Descriptor() ([]byte, []int) {
-	return file_values_types_proto_rawDescGZIP(), []int{3}
+	return file_values_types_proto_rawDescGZIP(), []int{2}
 }
 
-func (x *GlobalConfig) GetProxy() *ProxyConfig {
+func (x *GlobalConfig) GetTrustDomain() string {
 	if x != nil {
-		return x.Proxy
+		return x.TrustDomain
 	}
-	return nil
+	return ""
 }
 
 func (x *GlobalConfig) GetStatusPort() int64 {
@@ -266,7 +222,7 @@ type Values struct {
 
 func (x *Values) Reset() {
 	*x = Values{}
-	mi := &file_values_types_proto_msgTypes[4]
+	mi := &file_values_types_proto_msgTypes[3]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -278,7 +234,7 @@ func (x *Values) String() string {
 func (*Values) ProtoMessage() {}
 
 func (x *Values) ProtoReflect() protoreflect.Message {
-	mi := &file_values_types_proto_msgTypes[4]
+	mi := &file_values_types_proto_msgTypes[3]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -291,7 +247,7 @@ func (x *Values) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Values.ProtoReflect.Descriptor instead.
 func (*Values) Descriptor() ([]byte, []int) {
-	return file_values_types_proto_rawDescGZIP(), []int{4}
+	return file_values_types_proto_rawDescGZIP(), []int{3}
 }
 
 func (x *Values) GetGlobal() *GlobalConfig {
@@ -342,7 +298,7 @@ type IntOrString struct {
 
 func (x *IntOrString) Reset() {
 	*x = IntOrString{}
-	mi := &file_values_types_proto_msgTypes[5]
+	mi := &file_values_types_proto_msgTypes[4]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -354,7 +310,7 @@ func (x *IntOrString) String() string {
 func (*IntOrString) ProtoMessage() {}
 
 func (x *IntOrString) ProtoReflect() protoreflect.Message {
-	mi := &file_values_types_proto_msgTypes[5]
+	mi := &file_values_types_proto_msgTypes[4]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -367,7 +323,7 @@ func (x *IntOrString) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use IntOrString.ProtoReflect.Descriptor instead.
 func (*IntOrString) Descriptor() ([]byte, []int) {
-	return file_values_types_proto_rawDescGZIP(), []int{5}
+	return file_values_types_proto_rawDescGZIP(), []int{4}
 }
 
 func (x *IntOrString) GetType() int64 {
@@ -397,13 +353,11 @@ const file_values_types_proto_rawDesc = "" +
 	"\n" +
 	"\x12values_types.proto\x12\x17dubbo.operator.v1alpha1\x1a\x1egoogle/protobuf/wrappers.proto\"&\n" +
 	"\x10ManagementConfig\x12\x12\n" +
-	"\x04port\x18\x01 \x01(\x03R\x04port\"3\n" +
-	"\vProxyConfig\x12$\n" +
-	"\rclusterDomain\x18\x01 \x01(\tR\rclusterDomain\"P\n" +
+	"\x04port\x18\x01 \x01(\x03R\x04port\"P\n" +
 	"\rGatewayConfig\x12?\n" +
-	"\freplicaCount\x18\x01 \x01(\v2\x1b.google.protobuf.Int32ValueR\freplicaCount\"\xb5\x02\n" +
-	"\fGlobalConfig\x12:\n" +
-	"\x05proxy\x18\x01 \x01(\v2$.dubbo.operator.v1alpha1.ProxyConfigR\x05proxy\x12\x1e\n" +
+	"\freplicaCount\x18\x01 \x01(\v2\x1b.google.protobuf.Int32ValueR\freplicaCount\"\x9b\x02\n" +
+	"\fGlobalConfig\x12 \n" +
+	"\vtrustDomain\x18\x01 \x01(\tR\vtrustDomain\x12\x1e\n" +
 	"\n" +
 	"statusPort\x18\x02 \x01(\x03R\n" +
 	"statusPort\x12I\n" +
@@ -434,31 +388,29 @@ func file_values_types_proto_rawDescGZIP() []byte {
 	return file_values_types_proto_rawDescData
 }
 
-var file_values_types_proto_msgTypes = make([]protoimpl.MessageInfo, 6)
+var file_values_types_proto_msgTypes = make([]protoimpl.MessageInfo, 5)
 var file_values_types_proto_goTypes = []any{
 	(*ManagementConfig)(nil),       // 0: dubbo.operator.v1alpha1.ManagementConfig
-	(*ProxyConfig)(nil),            // 1: dubbo.operator.v1alpha1.ProxyConfig
-	(*GatewayConfig)(nil),          // 2: dubbo.operator.v1alpha1.GatewayConfig
-	(*GlobalConfig)(nil),           // 3: dubbo.operator.v1alpha1.GlobalConfig
-	(*Values)(nil),                 // 4: dubbo.operator.v1alpha1.Values
-	(*IntOrString)(nil),            // 5: dubbo.operator.v1alpha1.IntOrString
-	(*wrapperspb.Int32Value)(nil),  // 6: google.protobuf.Int32Value
-	(*wrapperspb.StringValue)(nil), // 7: google.protobuf.StringValue
+	(*GatewayConfig)(nil),          // 1: dubbo.operator.v1alpha1.GatewayConfig
+	(*GlobalConfig)(nil),           // 2: dubbo.operator.v1alpha1.GlobalConfig
+	(*Values)(nil),                 // 3: dubbo.operator.v1alpha1.Values
+	(*IntOrString)(nil),            // 4: dubbo.operator.v1alpha1.IntOrString
+	(*wrapperspb.Int32Value)(nil),  // 5: google.protobuf.Int32Value
+	(*wrapperspb.StringValue)(nil), // 6: google.protobuf.StringValue
 }
 var file_values_types_proto_depIdxs = []int32{
-	6, // 0: dubbo.operator.v1alpha1.GatewayConfig.replicaCount:type_name -> google.protobuf.Int32Value
-	1, // 1: dubbo.operator.v1alpha1.GlobalConfig.proxy:type_name -> dubbo.operator.v1alpha1.ProxyConfig
-	0, // 2: dubbo.operator.v1alpha1.GlobalConfig.management:type_name -> dubbo.operator.v1alpha1.ManagementConfig
-	2, // 3: dubbo.operator.v1alpha1.GlobalConfig.gateway:type_name -> dubbo.operator.v1alpha1.GatewayConfig
-	3, // 4: dubbo.operator.v1alpha1.Values.global:type_name -> dubbo.operator.v1alpha1.GlobalConfig
-	6, // 5: dubbo.operator.v1alpha1.Values.replicaCount:type_name -> google.protobuf.Int32Value
-	6, // 6: dubbo.operator.v1alpha1.IntOrString.intVal:type_name -> google.protobuf.Int32Value
-	7, // 7: dubbo.operator.v1alpha1.IntOrString.strVal:type_name -> google.protobuf.StringValue
-	8, // [8:8] is the sub-list for method output_type
-	8, // [8:8] is the sub-list for method input_type
-	8, // [8:8] is the sub-list for extension type_name
-	8, // [8:8] is the sub-list for extension extendee
-	0, // [0:8] is the sub-list for field type_name
+	5, // 0: dubbo.operator.v1alpha1.GatewayConfig.replicaCount:type_name -> google.protobuf.Int32Value
+	0, // 1: dubbo.operator.v1alpha1.GlobalConfig.management:type_name -> dubbo.operator.v1alpha1.ManagementConfig
+	1, // 2: dubbo.operator.v1alpha1.GlobalConfig.gateway:type_name -> dubbo.operator.v1alpha1.GatewayConfig
+	2, // 3: dubbo.operator.v1alpha1.Values.global:type_name -> dubbo.operator.v1alpha1.GlobalConfig
+	5, // 4: dubbo.operator.v1alpha1.Values.replicaCount:type_name -> google.protobuf.Int32Value
+	5, // 5: dubbo.operator.v1alpha1.IntOrString.intVal:type_name -> google.protobuf.Int32Value
+	6, // 6: dubbo.operator.v1alpha1.IntOrString.strVal:type_name -> google.protobuf.StringValue
+	7, // [7:7] is the sub-list for method output_type
+	7, // [7:7] is the sub-list for method input_type
+	7, // [7:7] is the sub-list for extension type_name
+	7, // [7:7] is the sub-list for extension extendee
+	0, // [0:7] is the sub-list for field type_name
 }
 
 func init() { file_values_types_proto_init() }
@@ -472,7 +424,7 @@ func file_values_types_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_values_types_proto_rawDesc), len(file_values_types_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   6,
+			NumMessages:   5,
 			NumExtensions: 0,
 			NumServices:   0,
 		},

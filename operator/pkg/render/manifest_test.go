@@ -214,7 +214,7 @@ func TestGenerateManifestExposesDubbodPrometheusScrapeEndpoint(t *testing.T) {
 func TestGenerateManifestSetOverridesHelmValues(t *testing.T) {
 	manifests, _, err := GenerateManifest(nil, []string{
 		"values.global.management.port=26081",
-		"values.global.proxy.clusterDomain=example.local",
+		"values.global.trustDomain=example.local",
 		"values.global.statusPort=26021",
 		"values.global.configValidation=false",
 		"values.revision=canary",
