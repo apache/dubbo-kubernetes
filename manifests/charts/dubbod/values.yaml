@@ -27,8 +27,7 @@ _internal_default_values_not_set:
   # ghcr.io/apache/dubbo-kubernetes/dubbod:<Chart.appVersion>.
   image: ""
 
-  proxy:
-    clusterDomain: "cluster.local"
+  trustDomain: "cluster.local"
 
   statusPort: 26020
 

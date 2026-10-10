@@ -1,0 +1,131 @@
+{
+  "validity_vectors": [
+    {
+      "branch": "positive_units_nanos",
+      "input": { "currencyCode": "USD", "units": 10, "nanos": 500000000 },
+      "expected_valid": true
+    },
+    {
+      "branch": "negative_units_nanos",
+      "input": { "currencyCode": "USD", "units": -10, "nanos": -500000000 },
+      "expected_valid": true
+    },
+    {
+      "branch": "zero",
+      "input": { "currencyCode": "USD", "units": 0, "nanos": 0 },
+      "expected_valid": true
+    },
+    {
+      "branch": "nanos_zero",
+      "input": { "currencyCode": "USD", "units": 10, "nanos": 0 },
+      "expected_valid": true
+    },
+    {
+      "branch": "units_zero_negative_nanos",
+      "input": { "currencyCode": "USD", "units": 0, "nanos": -500000000 },
+      "expected_valid": true
+    },
+    {
+      "branch": "units_zero_positive_nanos",
+      "input": { "currencyCode": "USD", "units": 0, "nanos": 500000000 },
+      "expected_valid": true
+    },
+    {
+      "branch": "mixed_positive_units_negative_nanos",
+      "input": { "currencyCode": "USD", "units": 10, "nanos": -500000000 },
+      "expected_valid": false
+    },
+    {
+      "branch": "mixed_negative_units_positive_nanos",
+      "input": { "currencyCode": "USD", "units": -10, "nanos": 500000000 },
+      "expected_valid": false
+    },
+    {
+      "branch": "nanos_exceeds_max",
+      "input": { "currencyCode": "USD", "units": 1, "nanos": 1000000000 },
+      "expected_valid": false
+    },
+    {
+      "branch": "nanos_exceeds_min",
+      "input": { "currencyCode": "USD", "units": -1, "nanos": -1000000000 },
+      "expected_valid": false
+    }
+  ],
+  "sum_vectors": [
+    {
+      "branch": "positive_no_carry",
+      "a": { "currencyCode": "USD", "units": 1, "nanos": 200000000 },
+      "b": { "currencyCode": "USD", "units": 2, "nanos": 300000000 },
+      "expected": { "currencyCode": "USD", "units": 3, "nanos": 500000000 }
+    },
+    {
+      "branch": "positive_with_nanos_carry",
+      "a": { "currencyCode": "USD", "units": 1, "nanos": 800000000 },
+      "b": { "currencyCode": "USD", "units": 2, "nanos": 500000000 },
+      "expected": { "currencyCode": "USD", "units": 4, "nanos": 300000000 }
+    },
+    {
+      "branch": "negative_no_carry",
+      "a": { "currencyCode": "USD", "units": -1, "nanos": -200000000 },
+      "b": { "currencyCode": "USD", "units": -2, "nanos": -300000000 },
+      "expected": { "currencyCode": "USD", "units": -3, "nanos": -500000000 }
+    },
+    {
+      "branch": "negative_with_nanos_carry",
+      "a": { "currencyCode": "USD", "units": -1, "nanos": -800000000 },
+      "b": { "currencyCode": "USD", "units": -2, "nanos": -500000000 },
+      "expected": { "currencyCode": "USD", "units": -4, "nanos": -300000000 }
+    },
+    {
+      "branch": "mixed_units_positive_nanos_negative",
+      "a": { "currencyCode": "USD", "units": 2, "nanos": 100000000 },
+      "b": { "currencyCode": "USD", "units": -1, "nanos": -300000000 },
+      "expected": { "currencyCode": "USD", "units": 0, "nanos": 800000000 }
+    },
+    {
+      "branch": "mixed_units_negative_nanos_positive",
+      "a": { "currencyCode": "USD", "units": -2, "nanos": -100000000 },
+      "b": { "currencyCode": "USD", "units": 1, "nanos": 300000000 },
+      "expected": { "currencyCode": "USD", "units": 0, "nanos": -800000000 }
+    },
+    {
+      "branch": "currency_mismatch",
+      "a": { "currencyCode": "USD", "units": 1, "nanos": 0 },
+      "b": { "currencyCode": "EUR", "units": 1, "nanos": 0 },
+      "expect_error": "Mismatching currency codes"
+    },
+    {
+      "branch": "invalid_operand",
+      "a": { "currencyCode": "USD", "units": 1, "nanos": -500000000 },
+      "b": { "currencyCode": "USD", "units": 1, "nanos": 0 },
+      "expect_error": "Invalid money value"
+    }
+  ],
+  "multiply_slow_vectors": [
+    {
+      "branch": "multiply_multiple",
+      "input": { "currencyCode": "USD", "units": 2, "nanos": 500000000 },
+      "multiplier": 3,
+      "expected": { "currencyCode": "USD", "units": 7, "nanos": 500000000 }
+    },
+    {
+      "branch": "multiply_one",
+      "input": { "currencyCode": "USD", "units": 2, "nanos": 500000000 },
+      "multiplier": 1,
+      "expected": { "currencyCode": "USD", "units": 2, "nanos": 500000000 }
+    },
+    {
+      "branch": "multiply_zero",
+      "input": { "currencyCode": "USD", "units": 2, "nanos": 500000000 },
+      "multiplier": 0,
+      "expected": { "currencyCode": "USD", "units": 2, "nanos": 500000000 }
+    }
+  ],
+  "reset_vectors": [
+    {
+      "branch": "reset_to_zero",
+      "input": { "currencyCode": "USD", "units": 5, "nanos": 500000000 },
+      "expected": { "currencyCode": "USD", "units": 0, "nanos": 0 }
+    }
+  ]
+}

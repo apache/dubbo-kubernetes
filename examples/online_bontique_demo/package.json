@@ -1,0 +1,7 @@
+{
+  "name": "online-boutique-root",
+  "private": true,
+  "scripts": {
+    "build": "npm --prefix web run build"
+  }
+}

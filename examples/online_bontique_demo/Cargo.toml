@@ -1,0 +1,6 @@
+[workspace]
+members = [
+    "src/product-catalogs",
+    "src/currency",
+]
+resolver = "2"

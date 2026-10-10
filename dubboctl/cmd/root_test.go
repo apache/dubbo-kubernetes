@@ -22,7 +22,7 @@ import (
 )
 
 func TestRootCommandDoesNotExposeRemovedCommands(t *testing.T) {
-	for _, name := range []string{"admin", "create", "dashboard", "image", "repo"} {
+	for _, name := range []string{"admin", "create", "dashboard", "gui", "image", "repo"} {
 		t.Run(name, func(t *testing.T) {
 			root := GetRootCmd([]string{name})
 			if err := root.Execute(); err == nil || !strings.Contains(err.Error(), "unknown command") {
@@ -41,7 +41,7 @@ func TestRootCommandHelpDoesNotListRemovedCommands(t *testing.T) {
 		t.Fatalf("root help failed: %v", err)
 	}
 
-	for _, name := range []string{"admin", "create", "dashboard", "image", "repo"} {
+	for _, name := range []string{"admin", "create", "dashboard", "gui", "image", "repo"} {
 		if strings.Contains(output.String(), "\n  "+name+" ") {
 			t.Fatalf("%q command found in root help:\n%s", name, output.String())
 		}

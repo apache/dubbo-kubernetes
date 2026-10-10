@@ -1,0 +1,9 @@
+data/*.db
+data/*.db-journal
+.run/
+.venv/
+node_modules/
+web/node_modules/
+web/dist/
+target/
+bin/

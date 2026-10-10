@@ -14,9 +14,7 @@
 # limitations under the License.
 
 {{- $defaults := .Values._internal_default_values_not_set | default dict }}
-{{- $defaultProxy := $defaults.proxy | default dict }}
-{{- $proxy := .Values.proxy | default dict }}
-{{- $clusterDomain := coalesce $proxy.clusterDomain $defaultProxy.clusterDomain "cluster.local" }}
+{{- $trustDomain := coalesce .Values.trustDomain $defaults.trustDomain "cluster.local" }}
 {{- $revision := .Values.revision | default "default" }}
 {{- $statusPort := coalesce .Values.statusPort $defaults.statusPort 26020 }}
 apiVersion: v1
@@ -33,4 +31,4 @@ data:
       discoveryAddress: dubbod.dubbo-system.svc:26012
       statusPort: {{ $statusPort }}
     rootNamespace: dubbo-system
-    trustDomain: {{ $clusterDomain }}
+    trustDomain: {{ $trustDomain }}

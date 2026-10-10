@@ -68,8 +68,6 @@ func GetRootCmd(args []string) *cobra.Command {
 	rootCmd.AddCommand(ProxyStatusCmd(ctx))
 	rootCmd.AddCommand(AnalyzeCmd(ctx))
 
-	rootCmd.AddCommand(GuiCmd())
-
 	rootCmd.AddCommand(version.NewVersionCommand())
 
 	return rootCmd
