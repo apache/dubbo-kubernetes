@@ -52,7 +52,6 @@ type ConfigSnapshot struct {
 	exportToDefaults       exportToDefaults
 	ServiceIndex           serviceIndex
 	httpRouteIndex         httpRouteIndex
-	transitServiceIndex    transitServiceIndex
 	backendTLSPolicyIndex  backendTLSPolicyIndex
 	faultInjectionIndex    faultInjectionPolicyIndex
 	serviceAccounts        map[serviceAccountKey][]string
@@ -81,10 +80,6 @@ type httpRouteIndex struct {
 	hostToRoutes map[host.Name][]config.Config
 }
 
-type transitServiceIndex struct {
-	byNamespace map[string]map[string]config.Config
-}
-
 type backendTLSPolicyIndex struct {
 	serviceTLS map[string]BackendTLSSettings
 }
@@ -96,7 +91,6 @@ type BackendTLSSettings struct {
 func NewConfigSnapshot() *ConfigSnapshot {
 	return &ConfigSnapshot{
 		ServiceIndex:          newServiceIndex(),
-		transitServiceIndex:   transitServiceIndex{byNamespace: map[string]map[string]config.Config{}},
 		backendTLSPolicyIndex: backendTLSPolicyIndex{serviceTLS: map[string]BackendTLSSettings{}},
 		serviceAccounts:       map[serviceAccountKey][]string{},
 	}
@@ -305,7 +299,6 @@ func (ps *ConfigSnapshot) createNewContext(env *Environment) {
 	// Initialize Kubernetes Gateway API resources if the controller is enabled.
 	ps.initKubernetesGateways(env)
 	ps.initHTTPRoutes(env)
-	ps.initTransitServices(env)
 	ps.initBackendTLSPolicies(env)
 	ps.initFaultInjectionPolicies(env)
 	ps.initAuthenticationPolicies(env)
@@ -359,13 +352,6 @@ func (ps *ConfigSnapshot) updateContext(env *Environment, oldSnapshot *ConfigSna
 	} else {
 		log.Debugf("HTTPRoutes unchanged, reusing old HTTPRoute index")
 		ps.httpRouteIndex = oldSnapshot.httpRouteIndex
-	}
-
-	transitServicesChanged := change != nil && HasConfigsOfKind(change.ConfigsUpdated, kind.TransitService)
-	if transitServicesChanged {
-		ps.initTransitServices(env)
-	} else {
-		ps.transitServiceIndex = oldSnapshot.transitServiceIndex
 	}
 
 	backendTLSPoliciesChanged := change != nil && HasConfigsOfKind(change.ConfigsUpdated, kind.BackendTLSPolicy)
@@ -530,31 +516,6 @@ func (ps *ConfigSnapshot) initHTTPRoutes(env *Environment) {
 			log.Infof("hostname %s has %d HTTPRoute(s)", hostname, len(routes))
 		}
 	}
-}
-
-func (ps *ConfigSnapshot) initTransitServices(env *Environment) {
-	services := sortConfigByCreationTime(env.List(gvk.TransitService, NamespaceAll))
-	index := make(map[string]map[string]config.Config)
-	for _, service := range services {
-		if index[service.Namespace] == nil {
-			index[service.Namespace] = make(map[string]config.Config)
-		}
-		index[service.Namespace][service.Name] = service
-	}
-	ps.transitServiceIndex = transitServiceIndex{byNamespace: index}
-}
-
-// TransitService resolves the mesh-native backend named by an HTTPRoute.
-func (ps *ConfigSnapshot) TransitService(namespace, name string) (config.Config, bool) {
-	if ps == nil {
-		return config.Config{}, false
-	}
-	services := ps.transitServiceIndex.byNamespace[namespace]
-	if services == nil {
-		return config.Config{}, false
-	}
-	service, found := services[name]
-	return service, found
 }
 
 // HTTPRouteForHost returns HTTPRoutes that match the given hostname.

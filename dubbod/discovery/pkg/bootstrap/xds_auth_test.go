@@ -34,16 +34,11 @@ func TestAuthorizeXDSPod(t *testing.T) {
 		wantOK   bool
 	}{
 		{name: "workload", wantOK: true},
-		{name: "gateway", change: func(p *model.Proxy, pod *corev1.Pod) {
-			p.Type = model.Router
-			pod.Labels = map[string]string{"gateway.networking.k8s.io/gateway-name": "edge"}
-		}, wantOK: true},
 		{name: "wrong service account", identity: "spiffe://cluster.local/ns/app/sa/other"},
 		{name: "wrong namespace", identity: "spiffe://cluster.local/ns/other/sa/default"},
 		{name: "wrong trust domain", identity: "spiffe://other/ns/app/sa/default"},
 		{name: "wrong IP", change: func(p *model.Proxy, _ *corev1.Pod) { p.IPAddresses = []string{"10.0.0.2"} }},
 		{name: "wrong pod", change: func(p *model.Proxy, _ *corev1.Pod) { p.ID = "other.app" }},
-		{name: "router impersonation", change: func(p *model.Proxy, _ *corev1.Pod) { p.Type = model.Router }},
 		{name: "unmanaged", change: func(_ *model.Proxy, pod *corev1.Pod) { pod.Annotations = nil }},
 		{name: "deleted", change: func(_ *model.Proxy, pod *corev1.Pod) { now := metav1.Now(); pod.DeletionTimestamp = &now }},
 	} {

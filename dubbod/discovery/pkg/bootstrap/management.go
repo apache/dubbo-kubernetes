@@ -428,7 +428,7 @@ func (s *Server) managementLogsHandler(writer http.ResponseWriter, request *http
 			writeManagementError(writer, http.StatusBadRequest, "gateway logs require namespace and name")
 			return
 		}
-		response, err = s.deploymentLogs(request.Context(), "gateway", namespace, name, "transit", tailLines)
+		response, err = s.deploymentLogs(request.Context(), "gateway", namespace, name, "gateway", tailLines)
 	default:
 		writeManagementError(writer, http.StatusBadRequest, "unknown log kind")
 		return
@@ -644,7 +644,7 @@ const (
 	// Gateway deployments provisioned by dubbod carry these labels; the same
 	// pair identifies gateway pods so the data plane listing can skip them.
 	managementGatewayNameLabel = "app.kubernetes.io/name"
-	managementGatewayNameValue = "transit"
+	managementGatewayNameValue = "gateway"
 	managementGatewaySelector  = managementGatewayNameLabel + "=" + managementGatewayNameValue + ",app.kubernetes.io/managed-by=dubbod"
 
 	// What the native application runtime uses when no PeerAuthentication applies.

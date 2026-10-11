@@ -32,8 +32,8 @@ var log = dubbolog.RegisterScope("introspection", "process introspection listene
 const (
 	DefaultPort = 9876
 
-	PortFlagName    = "introspection_port"
-	AddressFlagName = "introspection_address"
+	PortFlagName    = "diag_port"
+	AddressFlagName = "diag_address"
 
 	portFlagHelp    = "The IP port to use for the process introspection listener"
 	addressFlagHelp = "The IP address to listen on for the process introspection listener. Use '*' to indicate all addresses."

@@ -124,7 +124,7 @@ rules:
       - patch
       - delete
   # The gateway controller renders a PodDisruptionBudget alongside each
-  # multi-replica transit Deployment. Without this the budget is generated but
+  # multi-replica gateway Deployment. Without this the budget is generated but
   # never applied, and the apply failure is the only symptom.
   - apiGroups: ["policy"]
     resources:

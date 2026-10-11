@@ -874,7 +874,7 @@ func runtimeWorkloadAuthorizationPolicies(
 				policy.Rules = append(policy.Rules, projected)
 			}
 		}
-		// JWT claim constraints are enforced by transit. Never weaken them into
+		// JWT claim constraints are enforced at the ingress gateway. Never weaken them into
 		// an unconstrained native workload rule.
 		if len(spec.GetRules()) > 0 && len(policy.Rules) == 0 {
 			continue

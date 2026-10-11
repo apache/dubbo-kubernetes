@@ -131,9 +131,6 @@ func (b *clusterBuilder) build() []*cluster.Cluster {
 	if b.requiresPeerAuthenticationMTLS() {
 		b.applyPeerAuthenticationMTLS(defaultCluster)
 	}
-	if b.node != nil && b.node.IsRouter() {
-		b.applyBackendTLSPolicy(defaultCluster)
-	}
 	log.Debugf("generated cluster %s", b.defaultClusterName)
 	return []*cluster.Cluster{defaultCluster}
 }
@@ -197,28 +194,6 @@ func defaultLbPolicy() cluster.Cluster_LbPolicy {
 		log.Warnf("unknown DUBBO_DEFAULT_LB_POLICY %q, falling back to ROUND_ROBIN", features.DefaultLoadBalancerPolicy)
 		return cluster.Cluster_ROUND_ROBIN
 	}
-}
-
-func (b *clusterBuilder) applyBackendTLSPolicy(c *cluster.Cluster) {
-	if c == nil || c.TransportSocket != nil || b.svc == nil || b.push == nil {
-		return
-	}
-	if b.svc.Resolution != model.Alias || b.svc.Attributes.ExternalName == "" {
-		return
-	}
-	settings, found := b.push.BackendTLSForService(b.svc.Attributes.Namespace, b.svc.Attributes.Name)
-	if !found || settings.SNI == "" {
-		return
-	}
-	tlsContext := &tlsv1.UpstreamTlsContext{
-		CommonTlsContext: &tlsv1.CommonTlsContext{},
-		Sni:              settings.SNI,
-	}
-	c.TransportSocket = &core.TransportSocket{
-		Name:       "transport_sockets.tls",
-		ConfigType: &core.TransportSocket_TypedConfig{TypedConfig: protoconv.MessageToAny(tlsContext)},
-	}
-	log.Debugf("applied BackendTLSPolicy simple TLS transport socket to cluster %s (SNI=%s)", c.Name, settings.SNI)
 }
 
 // buildUpstreamTLSContext builds an UpstreamTlsContext that conforms to gRPC xDS expectations,

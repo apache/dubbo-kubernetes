@@ -225,10 +225,6 @@ func (node *Proxy) DeleteWatchedResource(typeURL string) {
 	delete(node.WatchedResources, typeURL)
 }
 
-func (node *Proxy) IsRouter() bool {
-	return node != nil && node.Type == Router
-}
-
 func (node *Proxy) IsInherent() bool {
 	return node != nil && node.Type == Inherent
 }

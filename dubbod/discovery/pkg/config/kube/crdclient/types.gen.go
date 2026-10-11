@@ -94,11 +94,6 @@ func create(c kube.Client, cfg config.Config, objMeta metav1.ObjectMeta) (metav1
 			ObjectMeta: objMeta,
 			Spec:       *(cfg.Spec.(*githubcomdubmlapitelemetryv1alpha3.Telemetry)),
 		}, metav1.CreateOptions{})
-	case gvk.TransitService:
-		return c.Dubbo().NetworkingV1alpha3().TransitServices(cfg.Namespace).Create(context.TODO(), &apigithubcomapachedubbokubernetesapinetworkingv1alpha3.TransitService{
-			ObjectMeta: objMeta,
-			Spec:       *(cfg.Spec.(*githubcomdubmlapinetworkingv1alpha3.TransitService)),
-		}, metav1.CreateOptions{})
 	case gvk.WorkloadEntry:
 		return c.Dubbo().NetworkingV1alpha3().WorkloadEntries(cfg.Namespace).Create(context.TODO(), &apigithubcomapachedubbokubernetesapinetworkingv1alpha3.WorkloadEntry{
 			ObjectMeta: objMeta,
@@ -171,11 +166,6 @@ func update(c kube.Client, cfg config.Config, objMeta metav1.ObjectMeta) (metav1
 			ObjectMeta: objMeta,
 			Spec:       *(cfg.Spec.(*githubcomdubmlapitelemetryv1alpha3.Telemetry)),
 		}, metav1.UpdateOptions{})
-	case gvk.TransitService:
-		return c.Dubbo().NetworkingV1alpha3().TransitServices(cfg.Namespace).Update(context.TODO(), &apigithubcomapachedubbokubernetesapinetworkingv1alpha3.TransitService{
-			ObjectMeta: objMeta,
-			Spec:       *(cfg.Spec.(*githubcomdubmlapinetworkingv1alpha3.TransitService)),
-		}, metav1.UpdateOptions{})
 	case gvk.WorkloadEntry:
 		return c.Dubbo().NetworkingV1alpha3().WorkloadEntries(cfg.Namespace).Update(context.TODO(), &apigithubcomapachedubbokubernetesapinetworkingv1alpha3.WorkloadEntry{
 			ObjectMeta: objMeta,
@@ -240,11 +230,6 @@ func updateStatus(c kube.Client, cfg config.Config, objMeta metav1.ObjectMeta) (
 		}, metav1.UpdateOptions{})
 	case gvk.Telemetry:
 		return c.Dubbo().TelemetryV1alpha3().Telemetries(cfg.Namespace).UpdateStatus(context.TODO(), &apigithubcomapachedubbokubernetesapitelemetryv1alpha3.Telemetry{
-			ObjectMeta: objMeta,
-			Status:     *(cfg.Status.(*githubcomdubmlapimetav1alpha1.DubboStatus)),
-		}, metav1.UpdateOptions{})
-	case gvk.TransitService:
-		return c.Dubbo().NetworkingV1alpha3().TransitServices(cfg.Namespace).UpdateStatus(context.TODO(), &apigithubcomapachedubbokubernetesapinetworkingv1alpha3.TransitService{
 			ObjectMeta: objMeta,
 			Status:     *(cfg.Status.(*githubcomdubmlapimetav1alpha1.DubboStatus)),
 		}, metav1.UpdateOptions{})
@@ -443,21 +428,6 @@ func patch(c kube.Client, orig config.Config, origMeta metav1.ObjectMeta, mod co
 		}
 		return c.Dubbo().TelemetryV1alpha3().Telemetries(orig.Namespace).
 			Patch(context.TODO(), orig.Name, typ, patchBytes, metav1.PatchOptions{FieldManager: "dubbod"})
-	case gvk.TransitService:
-		oldRes := &apigithubcomapachedubbokubernetesapinetworkingv1alpha3.TransitService{
-			ObjectMeta: origMeta,
-			Spec:       *(orig.Spec.(*githubcomdubmlapinetworkingv1alpha3.TransitService)),
-		}
-		modRes := &apigithubcomapachedubbokubernetesapinetworkingv1alpha3.TransitService{
-			ObjectMeta: modMeta,
-			Spec:       *(mod.Spec.(*githubcomdubmlapinetworkingv1alpha3.TransitService)),
-		}
-		patchBytes, err := genPatchBytes(oldRes, modRes, typ)
-		if err != nil {
-			return nil, err
-		}
-		return c.Dubbo().NetworkingV1alpha3().TransitServices(orig.Namespace).
-			Patch(context.TODO(), orig.Name, typ, patchBytes, metav1.PatchOptions{FieldManager: "dubbod"})
 	case gvk.WorkloadEntry:
 		oldRes := &apigithubcomapachedubbokubernetesapinetworkingv1alpha3.WorkloadEntry{
 			ObjectMeta: origMeta,
@@ -508,8 +478,6 @@ func delete(c kube.Client, typ config.GroupVersionKind, name, namespace string, 
 		return c.Dubbo().NetworkingV1alpha3().ServiceEntries(namespace).Delete(context.TODO(), name, deleteOptions)
 	case gvk.Telemetry:
 		return c.Dubbo().TelemetryV1alpha3().Telemetries(namespace).Delete(context.TODO(), name, deleteOptions)
-	case gvk.TransitService:
-		return c.Dubbo().NetworkingV1alpha3().TransitServices(namespace).Delete(context.TODO(), name, deleteOptions)
 	case gvk.WorkloadEntry:
 		return c.Dubbo().NetworkingV1alpha3().WorkloadEntries(namespace).Delete(context.TODO(), name, deleteOptions)
 	default:
@@ -1021,25 +989,6 @@ var translationMap = map[config.GroupVersionKind]func(r runtime.Object) config.C
 		return config.Config{
 			Meta: config.Meta{
 				GroupVersionKind:  gvk.Telemetry,
-				Name:              obj.Name,
-				Namespace:         obj.Namespace,
-				Labels:            obj.Labels,
-				Annotations:       obj.Annotations,
-				ResourceVersion:   obj.ResourceVersion,
-				CreationTimestamp: obj.CreationTimestamp.Time,
-				OwnerReferences:   obj.OwnerReferences,
-				UID:               string(obj.UID),
-				Generation:        obj.Generation,
-			},
-			Spec:   &obj.Spec,
-			Status: &obj.Status,
-		}
-	},
-	gvk.TransitService: func(r runtime.Object) config.Config {
-		obj := r.(*apigithubcomapachedubbokubernetesapinetworkingv1alpha3.TransitService)
-		return config.Config{
-			Meta: config.Meta{
-				GroupVersionKind:  gvk.TransitService,
 				Name:              obj.Name,
 				Namespace:         obj.Namespace,
 				Labels:            obj.Labels,

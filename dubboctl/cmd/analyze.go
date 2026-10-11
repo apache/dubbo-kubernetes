@@ -159,7 +159,7 @@ func meshCriticalRole(deployment appsv1.Deployment) string {
 	switch {
 	case labels["app"] == "dubbod":
 		return "control plane"
-	case labels["app.kubernetes.io/name"] == "transit":
+	case labels["app.kubernetes.io/name"] == "gateway":
 		return "gateway"
 	default:
 		return ""

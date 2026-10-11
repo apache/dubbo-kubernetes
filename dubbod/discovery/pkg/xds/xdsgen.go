@@ -580,7 +580,7 @@ func shouldSetWatchedResources(w *model.WatchedResource) bool {
 	if w == nil {
 		return false
 	}
-	// RDS is not globally wildcard in xDS, but transit starts with a wildcard
+	// RDS is not globally wildcard in xDS, but some dynamic clients start with a wildcard
 	// Delta subscription and then ACKs without repeating concrete names. Keep
 	// the names we actually sent so later policy pushes can rebuild those routes.
 	return xds.IsWildcardTypeURL(w.TypeUrl) || w.TypeUrl == v1.RouteType

@@ -44,7 +44,6 @@ var (
 	ServiceEntry                   = config.GroupVersionKind{Group: "networking.dubbo.apache.org", Version: "v1alpha3", Kind: "ServiceEntry"}
 	StatefulSet                    = config.GroupVersionKind{Group: "apps", Version: "v1", Kind: "StatefulSet"}
 	Telemetry                      = config.GroupVersionKind{Group: "telemetry.dubbo.apache.org", Version: "v1alpha3", Kind: "Telemetry"}
-	TransitService                 = config.GroupVersionKind{Group: "networking.dubbo.apache.org", Version: "v1alpha3", Kind: "TransitService"}
 	ValidatingWebhookConfiguration = config.GroupVersionKind{Group: "admissionregistration.k8s.io", Version: "v1", Kind: "ValidatingWebhookConfiguration"}
 	WorkloadEntry                  = config.GroupVersionKind{Group: "networking.dubbo.apache.org", Version: "v1alpha3", Kind: "WorkloadEntry"}
 )
@@ -120,8 +119,6 @@ func ToGVR(g config.GroupVersionKind) (schema.GroupVersionResource, bool) {
 		return gvr.StatefulSet, true
 	case Telemetry:
 		return gvr.Telemetry, true
-	case TransitService:
-		return gvr.TransitService, true
 	case ValidatingWebhookConfiguration:
 		return gvr.ValidatingWebhookConfiguration, true
 	case WorkloadEntry:
@@ -191,8 +188,6 @@ func MustToKind(g config.GroupVersionKind) kind.Kind {
 		return kind.StatefulSet
 	case Telemetry:
 		return kind.Telemetry
-	case TransitService:
-		return kind.TransitService
 	case ValidatingWebhookConfiguration:
 		return kind.ValidatingWebhookConfiguration
 	case WorkloadEntry:
@@ -273,8 +268,6 @@ func FromGVR(g schema.GroupVersionResource) (config.GroupVersionKind, bool) {
 		return StatefulSet, true
 	case gvr.Telemetry:
 		return Telemetry, true
-	case gvr.TransitService:
-		return TransitService, true
 	case gvr.ValidatingWebhookConfiguration:
 		return ValidatingWebhookConfiguration, true
 	case gvr.WorkloadEntry:

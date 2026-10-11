@@ -47,7 +47,7 @@ const (
 	InherentGRPCKeepaliveTimeout                = "10s"
 	InherentGRPCConfigFileName                  = "dubbo-grpc-xds.json"
 	InherentGRPCConfigPath                      = InherentXDSMountPath + "/" + InherentGRPCConfigFileName
-	// InherentGatewayInboundPort is the managed transit listener. Application
+	// InherentGatewayInboundPort is the managed gateway listener. Application
 	// workloads keep their own declared ports in proxyless mode.
 	InherentGatewayInboundPort = 15080
 )

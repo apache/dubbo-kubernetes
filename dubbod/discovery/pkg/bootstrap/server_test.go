@@ -21,16 +21,6 @@ import (
 	"github.com/apache/dubbo-kubernetes/pkg/config/schema/kind"
 )
 
-func TestConfigKindForSchemaIdentifierIncludesTransitService(t *testing.T) {
-	got, found := configKindForSchemaIdentifier("TransitService")
-	if !found {
-		t.Fatal("TransitService schema identifier was not mapped")
-	}
-	if got != kind.TransitService {
-		t.Fatalf("kind = %v, want %v", got, kind.TransitService)
-	}
-}
-
 func TestConfigKindForSchemaIdentifierIncludesTelemetry(t *testing.T) {
 	got, found := configKindForSchemaIdentifier("Telemetry")
 	if !found {

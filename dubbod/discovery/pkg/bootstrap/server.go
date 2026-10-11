@@ -234,7 +234,6 @@ func NewServer(args *DubboArgs, initFuncs ...func(*Server)) (*Server, error) {
 	}
 
 	InitGenerators(s.XDSServer)
-	s.XDSServer.Generators["grpc/"+sec_model.SecretType] = workloadSecretGenerator{lookup: s.lookupXDSWorkloadSecret}
 
 	if err := s.initManagement(); err != nil {
 		return nil, fmt.Errorf("error initializing management API: %v", err)
@@ -515,8 +514,7 @@ func (s *Server) initRegistryEventHandlers() {
 			configKind == kind.BackendTLSPolicy ||
 			configKind == kind.ReferenceGrant ||
 			configKind == kind.CircuitBreakerPolicy ||
-			configKind == kind.FaultInjectionPolicy ||
-			configKind == kind.TransitService
+			configKind == kind.FaultInjectionPolicy
 
 		// Trigger ConfigUpdate to push changes to all connected proxies
 		pushRequest := &model.PushRequest{
@@ -589,8 +587,6 @@ func configKindForSchemaIdentifier(schemaID string) (kind.Kind, bool) {
 		return kind.CircuitBreakerPolicy, true
 	case "FaultInjectionPolicy":
 		return kind.FaultInjectionPolicy, true
-	case "TransitService":
-		return kind.TransitService, true
 	case "Telemetry":
 		return kind.Telemetry, true
 	default:

@@ -478,21 +478,6 @@ var (
 		ValidateProto: validation.ValidateTelemetry,
 	}.MustBuild()
 
-	TransitService = resource.Builder{
-		Identifier: "TransitService",
-		Group:      "networking.dubbo.apache.org",
-		Kind:       "TransitService",
-		Plural:     "transitservices",
-		Version:    "v1alpha3",
-		Proto:      "dubbo.networking.v1alpha3.TransitService", StatusProto: "dubbo.meta.v1alpha1.DubboStatus",
-		ReflectType: reflect.TypeOf(&githubcomdubmlapinetworkingv1alpha3.TransitService{}).Elem(), StatusType: reflect.TypeOf(&githubcomdubmlapimetav1alpha1.DubboStatus{}).Elem(),
-		ProtoPackage: "github.com/dubml/api/networking/v1alpha3", StatusPackage: "github.com/dubml/api/meta/v1alpha1",
-		ClusterScoped: false,
-		Synthetic:     false,
-		Builtin:       false,
-		ValidateProto: validation.ValidateTransitService,
-	}.MustBuild()
-
 	ValidatingWebhookConfiguration = resource.Builder{
 		Identifier:    "ValidatingWebhookConfiguration",
 		Group:         "admissionregistration.k8s.io",
@@ -554,7 +539,6 @@ var (
 		MustAdd(ServiceEntry).
 		MustAdd(StatefulSet).
 		MustAdd(Telemetry).
-		MustAdd(TransitService).
 		MustAdd(ValidatingWebhookConfiguration).
 		MustAdd(WorkloadEntry).
 		Build()
@@ -594,7 +578,6 @@ var (
 		MustAdd(RequestAuthentication).
 		MustAdd(ServiceEntry).
 		MustAdd(Telemetry).
-		MustAdd(TransitService).
 		MustAdd(WorkloadEntry).
 		Build()
 
@@ -612,7 +595,6 @@ var (
 			MustAdd(RequestAuthentication).
 			MustAdd(ServiceEntry).
 			MustAdd(Telemetry).
-			MustAdd(TransitService).
 			MustAdd(WorkloadEntry).
 			Build()
 
@@ -630,7 +612,6 @@ var (
 				MustAdd(RequestAuthentication).
 				MustAdd(ServiceEntry).
 				MustAdd(Telemetry).
-				MustAdd(TransitService).
 				MustAdd(WorkloadEntry).
 				Build()
 )

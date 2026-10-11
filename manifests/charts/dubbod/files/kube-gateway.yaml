@@ -19,7 +19,7 @@ metadata:
   name: {{ .DeploymentName }}-bootstrap
   namespace: {{ .Gateway.Namespace }}
   labels:
-    app.kubernetes.io/name: transit
+    app.kubernetes.io/name: gateway
     app.kubernetes.io/instance: {{ .DeploymentName }}
     app.kubernetes.io/managed-by: dubbod
     gateway.networking.k8s.io/gateway-name: {{ .Gateway.Name }}
@@ -33,7 +33,7 @@ metadata:
   name: {{ .ServiceAccount }}
   namespace: {{ .Gateway.Namespace }}
   labels:
-    app.kubernetes.io/name: transit
+    app.kubernetes.io/name: gateway
     app.kubernetes.io/instance: {{ .DeploymentName }}
     app.kubernetes.io/managed-by: dubbod
     gateway.networking.k8s.io/gateway-name: {{ .Gateway.Name }}
@@ -45,7 +45,7 @@ metadata:
   name: {{ .ServiceAccount }}-credentials
   namespace: {{ .Gateway.Namespace }}
   labels:
-    app.kubernetes.io/name: transit
+    app.kubernetes.io/name: gateway
     app.kubernetes.io/instance: {{ .DeploymentName }}
     app.kubernetes.io/managed-by: dubbod
     gateway.networking.k8s.io/gateway-name: {{ .Gateway.Name }}
@@ -60,7 +60,7 @@ metadata:
   name: {{ .ServiceAccount }}-credentials
   namespace: {{ .Gateway.Namespace }}
   labels:
-    app.kubernetes.io/name: transit
+    app.kubernetes.io/name: gateway
     app.kubernetes.io/instance: {{ .DeploymentName }}
     app.kubernetes.io/managed-by: dubbod
     gateway.networking.k8s.io/gateway-name: {{ .Gateway.Name }}
@@ -79,7 +79,7 @@ metadata:
   name: {{ .DeploymentName }}
   namespace: {{ .Gateway.Namespace }}
   labels:
-    app.kubernetes.io/name: transit
+    app.kubernetes.io/name: gateway
     app.kubernetes.io/instance: {{ .DeploymentName }}
     app.kubernetes.io/managed-by: dubbod
     gateway.networking.k8s.io/gateway-name: {{ .Gateway.Name }}
@@ -87,12 +87,12 @@ spec:
   replicas: {{ .Replicas }}
   selector:
     matchLabels:
-      app.kubernetes.io/name: transit
+      app.kubernetes.io/name: gateway
       app.kubernetes.io/instance: {{ .DeploymentName }}
   template:
     metadata:
       labels:
-        app.kubernetes.io/name: transit
+        app.kubernetes.io/name: gateway
         app.kubernetes.io/instance: {{ .DeploymentName }}
         app.kubernetes.io/managed-by: dubbod
         gateway.dubbo.apache.org/managed: dubbo.apache.org-gateway-controller
@@ -116,7 +116,7 @@ spec:
                 topologyKey: kubernetes.io/hostname
                 labelSelector:
                   matchLabels:
-                    app.kubernetes.io/name: transit
+                    app.kubernetes.io/name: gateway
                     app.kubernetes.io/instance: {{ .DeploymentName }}
       # Advisory spread: a single-node or single-zone cluster still schedules
       # every replica rather than leaving the gateway short.
@@ -126,59 +126,59 @@ spec:
           whenUnsatisfiable: ScheduleAnyway
           labelSelector:
             matchLabels:
-              app.kubernetes.io/name: transit
+              app.kubernetes.io/name: gateway
               app.kubernetes.io/instance: {{ .DeploymentName }}
         - maxSkew: 1
           topologyKey: kubernetes.io/hostname
           whenUnsatisfiable: ScheduleAnyway
           labelSelector:
             matchLabels:
-              app.kubernetes.io/name: transit
+              app.kubernetes.io/name: gateway
               app.kubernetes.io/instance: {{ .DeploymentName }}
 {{- end }}
       containers:
-      - name: transit
-        image: {{ .TransitImage }}
+      - name: gateway
+        image: {{ .GatewayImage }}
         imagePullPolicy: IfNotPresent
         env:
-        - name: TRANSIT_BOOTSTRAP
-          value: /etc/transit/bootstrap.json
-        - name: TRANSIT_HTTP_ADDR
+        - name: GATEWAY_BOOTSTRAP
+          value: /etc/gateway/bootstrap.json
+        - name: GATEWAY_HTTP_ADDR
           value: 0.0.0.0:15080
-        - name: TRANSIT_UI_ADDR
+        - name: GATEWAY_UI_ADDR
           value: 0.0.0.0:26021
-        - name: TRANSIT_GATEWAY_NAME
+        - name: GATEWAY_NAME
           value: {{ .Gateway.Name | quote }}
-        - name: TRANSIT_OTEL_SERVICE_NAME
+        - name: GATEWAY_OTEL_SERVICE_NAME
           value: {{ .OtelServiceName | quote }}
-        - name: TRANSIT_OTEL_SAMPLING_PERCENTAGE
+        - name: GATEWAY_OTEL_SAMPLING_PERCENTAGE
           value: {{ .OtelSampling | quote }}
 {{- if .OtelTags }}
-        - name: TRANSIT_OTEL_TAGS
+        - name: GATEWAY_OTEL_TAGS
           value: {{ .OtelTags | quote }}
 {{- end }}
 {{- if .OtelEndpoint }}
-        - name: TRANSIT_OTEL_ENDPOINT
+        - name: GATEWAY_OTEL_ENDPOINT
           value: {{ .OtelEndpoint | quote }}
 {{- end }}
 {{- if .OtelLogsEndpoint }}
-        - name: TRANSIT_OTEL_LOGS_ENDPOINT
+        - name: GATEWAY_OTEL_LOGS_ENDPOINT
           value: {{ .OtelLogsEndpoint | quote }}
 {{- end }}
-        - name: TRANSIT_ACCESS_LOG
+        - name: GATEWAY_ACCESS_LOG
           value: {{ .AccessLog | quote }}
-        - name: TRANSIT_ACCESS_LOG_FORMAT
+        - name: GATEWAY_ACCESS_LOG_FORMAT
           value: {{ .AccessLogFormat | quote }}
 {{- if .AccessLogMode }}
-        - name: TRANSIT_ACCESS_LOG_MODE
+        - name: GATEWAY_ACCESS_LOG_MODE
           value: {{ .AccessLogMode | quote }}
 {{- end }}
 {{- if .AccessLogFilter }}
-        - name: TRANSIT_ACCESS_LOG_FILTER
+        - name: GATEWAY_ACCESS_LOG_FILTER
           value: {{ .AccessLogFilter | quote }}
 {{- end }}
 {{- if .AccessLogTags }}
-        - name: TRANSIT_ACCESS_LOG_TAGS
+        - name: GATEWAY_ACCESS_LOG_TAGS
           value: {{ .AccessLogTags | quote }}
 {{- end }}
         - name: POD_NAME
@@ -216,7 +216,7 @@ spec:
           periodSeconds: 10
         volumeMounts:
         - name: bootstrap
-          mountPath: /etc/transit
+          mountPath: /etc/gateway
           readOnly: true
         securityContext:
           allowPrivilegeEscalation: false
@@ -247,7 +247,7 @@ metadata:
   name: {{ .DeploymentName }}
   namespace: {{ .Gateway.Namespace }}
   labels:
-    app.kubernetes.io/name: transit
+    app.kubernetes.io/name: gateway
     app.kubernetes.io/instance: {{ .DeploymentName }}
     app.kubernetes.io/managed-by: dubbod
     gateway.networking.k8s.io/gateway-name: {{ .Gateway.Name }}
@@ -255,7 +255,7 @@ metadata:
 spec:
   type: {{ .ServiceType }}
   selector:
-    app.kubernetes.io/name: transit
+    app.kubernetes.io/name: gateway
     app.kubernetes.io/instance: {{ .DeploymentName }}
   ports:
 {{- range .Ports }}
@@ -275,7 +275,7 @@ metadata:
   name: {{ .DeploymentName }}
   namespace: {{ .Gateway.Namespace }}
   labels:
-    app.kubernetes.io/name: transit
+    app.kubernetes.io/name: gateway
     app.kubernetes.io/instance: {{ .DeploymentName }}
     app.kubernetes.io/managed-by: dubbod
     gateway.networking.k8s.io/gateway-name: {{ .Gateway.Name }}
@@ -283,6 +283,6 @@ spec:
   minAvailable: 1
   selector:
     matchLabels:
-      app.kubernetes.io/name: transit
+      app.kubernetes.io/name: gateway
       app.kubernetes.io/instance: {{ .DeploymentName }}
 {{- end }}
