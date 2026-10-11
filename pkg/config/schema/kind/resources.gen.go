@@ -35,7 +35,6 @@ const (
 	ServiceEntry
 	StatefulSet
 	Telemetry
-	TransitService
 	ValidatingWebhookConfiguration
 	WorkloadEntry
 )
@@ -104,8 +103,6 @@ func (k Kind) String() string {
 		return "StatefulSet"
 	case Telemetry:
 		return "Telemetry"
-	case TransitService:
-		return "TransitService"
 	case ValidatingWebhookConfiguration:
 		return "ValidatingWebhookConfiguration"
 	case WorkloadEntry:
@@ -179,8 +176,6 @@ func FromString(s string) Kind {
 		return StatefulSet
 	case "Telemetry":
 		return Telemetry
-	case "TransitService":
-		return TransitService
 	case "ValidatingWebhookConfiguration":
 		return ValidatingWebhookConfiguration
 	case "WorkloadEntry":

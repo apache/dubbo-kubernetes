@@ -230,16 +230,6 @@ resources:
     statusProto: "dubbo.meta.v1alpha1.DubboStatus"
     statusProtoPackage: "github.com/dubml/api/meta/v1alpha1"
 
-  - kind: TransitService
-    plural: "transitservices"
-    group: "networking.dubbo.apache.org"
-    version: "v1alpha3"
-    proto: "dubbo.networking.v1alpha3.TransitService"
-    protoPackage: "github.com/dubml/api/networking/v1alpha3"
-    validate: "validation.ValidateTransitService"
-    statusProto: "dubbo.meta.v1alpha1.DubboStatus"
-    statusProtoPackage: "github.com/dubml/api/meta/v1alpha1"
-
   - kind: ServiceEntry
     plural: "serviceentries"
     group: "networking.dubbo.apache.org"

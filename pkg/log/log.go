@@ -418,6 +418,11 @@ func (l *Logger) Infof(format string, args ...interface{}) {
 	l.log(InfoLevel, format, args...)
 }
 
+// InfoBlock logs a title followed by a multiline message block.
+func (l *Logger) InfoBlock(title, body string) {
+	l.logMessage(InfoLevel, sanitizeLogLine(title)+"\n"+body, true)
+}
+
 // InfoJSON logs a title followed by an indented JSON document.
 func (l *Logger) InfoJSON(title string, value interface{}) {
 	l.logJSON(InfoLevel, title, value)
@@ -525,6 +530,11 @@ func Info(args ...interface{}) {
 // Infof logs a formatted info message using the default scope
 func Infof(format string, args ...interface{}) {
 	getDefaultLogger().Infof(format, args...)
+}
+
+// InfoBlock logs a title followed by a multiline message block using the default scope.
+func InfoBlock(title, body string) {
+	getDefaultLogger().InfoBlock(title, body)
 }
 
 // InfoJSON logs a title followed by an indented JSON document using the default scope.

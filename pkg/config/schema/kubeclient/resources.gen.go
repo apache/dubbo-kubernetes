@@ -89,8 +89,6 @@ func GetWriteClient[T runtime.Object](c ClientGetter, namespace string) ktypes.W
 		return c.Kube().AppsV1().StatefulSets(namespace).(ktypes.WriteAPI[T])
 	case *apigithubcomapachedubbokubernetesapitelemetryv1alpha3.Telemetry:
 		return c.Dubbo().TelemetryV1alpha3().Telemetries(namespace).(ktypes.WriteAPI[T])
-	case *apigithubcomapachedubbokubernetesapinetworkingv1alpha3.TransitService:
-		return c.Dubbo().NetworkingV1alpha3().TransitServices(namespace).(ktypes.WriteAPI[T])
 	case *k8sioapiadmissionregistrationv1.ValidatingWebhookConfiguration:
 		return c.Kube().AdmissionregistrationV1().ValidatingWebhookConfigurations().(ktypes.WriteAPI[T])
 	case *apigithubcomapachedubbokubernetesapinetworkingv1alpha3.WorkloadEntry:
@@ -158,8 +156,6 @@ func GetClient[T, TL runtime.Object](c ClientGetter, namespace string) ktypes.Re
 		return c.Kube().AppsV1().StatefulSets(namespace).(ktypes.ReadWriteAPI[T, TL])
 	case *apigithubcomapachedubbokubernetesapitelemetryv1alpha3.Telemetry:
 		return c.Dubbo().TelemetryV1alpha3().Telemetries(namespace).(ktypes.ReadWriteAPI[T, TL])
-	case *apigithubcomapachedubbokubernetesapinetworkingv1alpha3.TransitService:
-		return c.Dubbo().NetworkingV1alpha3().TransitServices(namespace).(ktypes.ReadWriteAPI[T, TL])
 	case *k8sioapiadmissionregistrationv1.ValidatingWebhookConfiguration:
 		return c.Kube().AdmissionregistrationV1().ValidatingWebhookConfigurations().(ktypes.ReadWriteAPI[T, TL])
 	case *apigithubcomapachedubbokubernetesapinetworkingv1alpha3.WorkloadEntry:
@@ -227,8 +223,6 @@ func gvrToObject(g schema.GroupVersionResource) runtime.Object {
 		return &k8sioapiappsv1.StatefulSet{}
 	case gvr.Telemetry:
 		return &apigithubcomapachedubbokubernetesapitelemetryv1alpha3.Telemetry{}
-	case gvr.TransitService:
-		return &apigithubcomapachedubbokubernetesapinetworkingv1alpha3.TransitService{}
 	case gvr.ValidatingWebhookConfiguration:
 		return &k8sioapiadmissionregistrationv1.ValidatingWebhookConfiguration{}
 	case gvr.WorkloadEntry:
@@ -438,13 +432,6 @@ func getInformerFiltered(c ClientGetter, opts ktypes.InformerOptions, g schema.G
 		}
 		w = func(options metav1.ListOptions) (watch.Interface, error) {
 			return c.Dubbo().TelemetryV1alpha3().Telemetries(opts.Namespace).Watch(context.Background(), options)
-		}
-	case gvr.TransitService:
-		l = func(options metav1.ListOptions) (runtime.Object, error) {
-			return c.Dubbo().NetworkingV1alpha3().TransitServices(opts.Namespace).List(context.Background(), options)
-		}
-		w = func(options metav1.ListOptions) (watch.Interface, error) {
-			return c.Dubbo().NetworkingV1alpha3().TransitServices(opts.Namespace).Watch(context.Background(), options)
 		}
 	case gvr.ValidatingWebhookConfiguration:
 		l = func(options metav1.ListOptions) (runtime.Object, error) {

@@ -22,7 +22,6 @@ Dubbo’s control plane provides an abstraction layer over the underlying cluste
 Dubbo component composition:
 
 - **dubbod** — Dubbo xDS control plane. It provides service discovery, configuration and certificate issuance.
-- **transit** — Dubbo delegated gateway for Gateway API. It consumes routing configuration from dubbod over xDS and proxies north-south traffic into the mesh.
 
 ## Repositories
 
@@ -39,8 +38,6 @@ Projects are distributed across the code directory repositories:
 - [dubboctl](https://github.com/dubml/dubboctl). — Provides dubboctl command line tools for control plane management and other operations.
 
 - [operator](https://github.com/dubml/operator). — Provides user friendly options for operating the service mesh.
-
-- [transit](https://github.com/dubml/transit) — Provides the delegated gateway that serves Gateway API traffic at the mesh edge.
 
 ## License
 

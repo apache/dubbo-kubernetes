@@ -30,7 +30,6 @@ import (
 
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	klabels "k8s.io/apimachinery/pkg/labels"
@@ -43,7 +42,6 @@ import (
 	"github.com/apache/dubbo-kubernetes/dubbod/discovery/pkg/features"
 	"github.com/apache/dubbo-kubernetes/dubbod/discovery/pkg/model"
 	"github.com/apache/dubbo-kubernetes/pkg/cluster"
-	"github.com/apache/dubbo-kubernetes/pkg/config"
 	"github.com/apache/dubbo-kubernetes/pkg/config/constants"
 	"github.com/apache/dubbo-kubernetes/pkg/config/schema/gvr"
 	telemetryconfig "github.com/apache/dubbo-kubernetes/pkg/config/telemetry"
@@ -53,11 +51,8 @@ import (
 	"github.com/apache/dubbo-kubernetes/pkg/kube/inject"
 	"github.com/apache/dubbo-kubernetes/pkg/kube/kclient"
 	dubbolog "github.com/apache/dubbo-kubernetes/pkg/log"
-	networking "github.com/dubml/api/networking/v1alpha3"
 	clientnetworking "github.com/dubml/client-go/pkg/apis/networking/v1alpha3"
 	clienttelemetry "github.com/dubml/client-go/pkg/apis/telemetry/v1alpha3"
-	"google.golang.org/protobuf/types/known/durationpb"
-	"google.golang.org/protobuf/types/known/wrapperspb"
 )
 
 var logger = dubbolog.RegisterScope("gateway-deployment-controller", "gateway deployment controller debugging")
@@ -74,8 +69,6 @@ type classInfo struct {
 	addressType            gateway.AddressType
 }
 
-const legacyTransitGatewayName = "transit-gateway"
-
 const (
 	serviceTypeAnnotation       = "gateway.dubbo.apache.org/service-type"
 	serviceTargetPortAnnotation = "gateway.dubbo.apache.org/target-port"
@@ -88,7 +81,7 @@ const (
 // defaultGatewayReplicas keeps a gateway serving while one replica is drained,
 // upgraded or evicted. A single replica turns any of those into an outage for
 // every route the gateway fronts. The installed default comes from
-// features.TransitReplicas; this is the floor used when that value is unusable.
+// features.GatewayReplicas; this is the floor used when that value is unusable.
 const defaultGatewayReplicas = 2
 
 var builtinClasses = getBuiltinClasses()
@@ -394,12 +387,12 @@ func (d *DeploymentController) configureGateway(log *dubbolog.Logger, gw gateway
 	// Extract service ports from Gateway listeners
 	ports := extractServicePorts(gw)
 	if len(ports) == 0 {
-		log.Infof("gateway has no supported HTTP listeners, skipping transit deployment")
+		log.Infof("gateway has no supported HTTP listeners, skipping gateway deployment")
 		return nil
 	}
-	bootstrapConfig, bootstrapConfigHash, err := d.buildTransitBootstrapConfig(gw, defaultName, ports)
+	bootstrapConfig, bootstrapConfigHash, err := d.buildGatewayBootstrapConfig(gw, defaultName, ports)
 	if err != nil {
-		log.Errorf("failed building transit bootstrap config: %v", err)
+		log.Errorf("failed building gateway bootstrap config: %v", err)
 		return err
 	}
 
@@ -416,7 +409,7 @@ func (d *DeploymentController) configureGateway(log *dubbolog.Logger, gw gateway
 		ControllerLabel:     gi.controllerLabel,
 		BootstrapConfig:     bootstrapConfig,
 		BootstrapConfigHash: bootstrapConfigHash,
-		TransitImage:        features.TransitImage,
+		GatewayImage:        features.GatewayImage,
 		SystemNamespace:     d.systemNamespace,
 		ClusterID:           string(d.clusterID),
 		DomainSuffix:        d.domainSuffix(),
@@ -432,8 +425,8 @@ func (d *DeploymentController) configureGateway(log *dubbolog.Logger, gw gateway
 		AccessLogTags:       observability.AccessLogTags,
 	}
 
-	log.Infof("desired transit deployment=%s/%s gatewayClass=%s serviceType=%s ports=%s image=%s",
-		gw.Namespace, defaultName, input.GatewayClass, serviceType, formatGatewayServicePorts(ports), input.TransitImage)
+	log.Infof("desired gateway deployment=%s/%s gatewayClass=%s serviceType=%s ports=%s image=%s",
+		gw.Namespace, defaultName, input.GatewayClass, serviceType, formatGatewayServicePorts(ports), input.GatewayImage)
 
 	log.Debugf("rendering template %q for gateway %s/%s", gi.templates, gw.Namespace, gw.Name)
 	rendered, err := d.render(gi.templates, input)
@@ -456,20 +449,6 @@ func (d *DeploymentController) configureGateway(log *dubbolog.Logger, gw gateway
 		}
 	}
 
-	if defaultName != legacyTransitGatewayName {
-		if err := d.cleanupLegacyGatewayResources(
-			context.TODO(),
-			log,
-			gw.Namespace,
-			legacyTransitGatewayName,
-			defaultName,
-			gw.Name,
-		); err != nil {
-			log.Warnf("failed cleaning up fixed-name transit resources %s/%s: %v",
-				gw.Namespace, legacyTransitGatewayName, err)
-		}
-	}
-
 	log.Infof("gateway updated successfully")
 	return nil
 }
@@ -487,9 +466,7 @@ type TemplateInput struct {
 
 	BootstrapConfig     string
 	BootstrapConfigHash string
-	RuntimeConfig       string
-	RuntimeConfigHash   string
-	TransitImage        string
+	GatewayImage        string
 	SystemNamespace     string
 	ClusterID           string
 	DomainSuffix        string
@@ -527,7 +504,7 @@ func (d *DeploymentController) observabilityConfigForGateway(gw gateway.Gateway)
 
 func resolveGatewayObservability(gw gateway.Gateway, meshNamespace string, resources []telemetryconfig.Resource) gatewayObservabilityConfig {
 	labels := map[string]string{
-		"app.kubernetes.io/name":                 "transit",
+		"app.kubernetes.io/name":                 "gateway",
 		"gateway.networking.k8s.io/gateway-name": gw.Name,
 	}
 	for key, value := range gw.Labels {
@@ -535,7 +512,7 @@ func resolveGatewayObservability(gw gateway.Gateway, meshNamespace string, resou
 	}
 	effective := telemetryconfig.Resolve(resources, meshNamespace, gw.Namespace, labels)
 	cfg := gatewayObservabilityConfig{
-		OtelServiceName: fmt.Sprintf("transit.%s.%s", gw.Namespace, gw.Name),
+		OtelServiceName: fmt.Sprintf("gateway.%s.%s", gw.Namespace, gw.Name),
 		OtelSampling:    effective.SamplingPercentageString(),
 		OtelTags:        effective.TagsJSON(),
 		AccessLog:       gatewayAccessLog(gw),
@@ -589,100 +566,11 @@ func gatewayAccessLogFormat(gw gateway.Gateway) string {
 	}
 }
 
-type transitBootstrapConfig struct {
+type gatewayBootstrapConfig struct {
 	XDSAddress    string   `json:"xds_address" yaml:"xds_address"`
 	ListenerNames []string `json:"listener_names" yaml:"listener_names"`
 	ClusterID     string   `json:"cluster_id" yaml:"cluster_id"`
 	DNSDomain     string   `json:"dns_domain" yaml:"dns_domain"`
-}
-
-type transitRuntimeConfig struct {
-	Version   string            `json:"version" yaml:"version"`
-	Listeners []transitListener `json:"listeners" yaml:"listeners"`
-	Clusters  []transitCluster  `json:"clusters" yaml:"clusters"`
-	Secrets   []transitSecret   `json:"secrets" yaml:"secrets"`
-}
-
-type transitListener struct {
-	Name         string               `json:"name" yaml:"name"`
-	Bind         string               `json:"bind" yaml:"bind"`
-	Protocol     string               `json:"protocol" yaml:"protocol"`
-	VirtualHosts []transitVirtualHost `json:"virtual_hosts" yaml:"virtual_hosts"`
-	TLSSecret    *string              `json:"tls_secret,omitempty" yaml:"tls_secret,omitempty"`
-}
-
-type transitVirtualHost struct {
-	Name    string         `json:"name" yaml:"name"`
-	Domains []string       `json:"domains" yaml:"domains"`
-	Routes  []transitRoute `json:"routes" yaml:"routes"`
-}
-
-type transitRoute struct {
-	Name             string                   `json:"name" yaml:"name"`
-	Matches          []transitRouteMatch      `json:"matches" yaml:"matches"`
-	WeightedClusters []transitWeightedCluster `json:"weighted_clusters" yaml:"weighted_clusters"`
-}
-
-type transitRouteMatch struct {
-	Path    transitPathMatch     `json:"path" yaml:"path"`
-	Headers []transitHeaderMatch `json:"headers" yaml:"headers"`
-}
-
-type transitPathMatch struct {
-	Type  string `json:"type" yaml:"type"`
-	Value string `json:"value" yaml:"value"`
-}
-
-type transitHeaderMatch struct {
-	Name  string `json:"name" yaml:"name"`
-	Value string `json:"value" yaml:"value"`
-}
-
-type transitWeightedCluster struct {
-	Name   string `json:"name" yaml:"name"`
-	Weight uint32 `json:"weight" yaml:"weight"`
-}
-
-type transitCluster struct {
-	Name           string                   `json:"name" yaml:"name"`
-	Endpoints      []transitEndpoint        `json:"endpoints" yaml:"endpoints"`
-	TLS            *transitUpstreamTLS      `json:"tls,omitempty" yaml:"tls,omitempty"`
-	CircuitBreaker *transitCircuitBreaker   `json:"circuit_breaker,omitempty" yaml:"circuit_breaker,omitempty"`
-	Outlier        *transitOutlierDetection `json:"outlier_detection,omitempty" yaml:"outlier_detection,omitempty"`
-}
-
-type transitUpstreamTLS struct {
-	Mode string `json:"mode" yaml:"mode"`
-	SNI  string `json:"sni,omitempty" yaml:"sni,omitempty"`
-}
-
-type transitCircuitBreaker struct {
-	MaxConnections           int32 `json:"max_connections,omitempty" yaml:"max_connections,omitempty"`
-	HTTP1MaxPendingRequests  int32 `json:"http1_max_pending_requests,omitempty" yaml:"http1_max_pending_requests,omitempty"`
-	HTTP2MaxRequests         int32 `json:"http2_max_requests,omitempty" yaml:"http2_max_requests,omitempty"`
-	MaxRequestsPerConnection int32 `json:"max_requests_per_connection,omitempty" yaml:"max_requests_per_connection,omitempty"`
-	MaxRetries               int32 `json:"max_retries,omitempty" yaml:"max_retries,omitempty"`
-}
-
-type transitOutlierDetection struct {
-	Consecutive5xxErrors uint32 `json:"consecutive_5xx_errors,omitempty" yaml:"consecutive_5xx_errors,omitempty"`
-	Interval             string `json:"interval,omitempty" yaml:"interval,omitempty"`
-	BaseEjectionTime     string `json:"base_ejection_time,omitempty" yaml:"base_ejection_time,omitempty"`
-	MaxEjectionPercent   int32  `json:"max_ejection_percent,omitempty" yaml:"max_ejection_percent,omitempty"`
-	MinHealthPercent     int32  `json:"min_health_percent,omitempty" yaml:"min_health_percent,omitempty"`
-}
-
-type transitEndpoint struct {
-	Address  string  `json:"address" yaml:"address"`
-	Port     uint16  `json:"port" yaml:"port"`
-	Healthy  bool    `json:"healthy" yaml:"healthy"`
-	NodeName *string `json:"node_name,omitempty" yaml:"node_name,omitempty"`
-}
-
-type transitSecret struct {
-	Name                string `json:"name" yaml:"name"`
-	CertificateChainPEM string `json:"certificate_chain_pem" yaml:"certificate_chain_pem"`
-	PrivateKeyPEM       string `json:"private_key_pem" yaml:"private_key_pem"`
 }
 
 func (d *DeploymentController) domainSuffix() string {
@@ -692,27 +580,27 @@ func (d *DeploymentController) domainSuffix() string {
 	return constants.DefaultClusterLocalDomain
 }
 
-func (d *DeploymentController) buildTransitBootstrapConfig(gw gateway.Gateway, serviceName string, ports []corev1.ServicePort) (string, string, error) {
+func (d *DeploymentController) buildGatewayBootstrapConfig(gw gateway.Gateway, serviceName string, ports []corev1.ServicePort) (string, string, error) {
 	systemNamespace := d.systemNamespace
 	if systemNamespace == "" {
 		systemNamespace = constants.DubboSystemNamespace
 	}
 	xdsAddress := fmt.Sprintf("https://dubbod.%s.svc:26012", systemNamespace)
-	return buildTransitBootstrapConfig(
+	return buildGatewayBootstrapConfig(
 		xdsAddress,
-		transitListenerNames(gw.Namespace, serviceName, d.domainSuffix(), ports),
+		gatewayListenerNames(gw.Namespace, serviceName, d.domainSuffix(), ports),
 		string(d.clusterID),
 		d.domainSuffix(),
 	)
 }
 
-func buildTransitBootstrapConfig(xdsAddress string, listenerNames []string, clusterID, dnsDomain string) (string, string, error) {
+func buildGatewayBootstrapConfig(xdsAddress string, listenerNames []string, clusterID, dnsDomain string) (string, string, error) {
 	if xdsAddress == "" {
-		return "", "", fmt.Errorf("transit bootstrap xDS address is empty")
+		return "", "", fmt.Errorf("gateway bootstrap xDS address is empty")
 	}
 	endpoint, err := url.Parse(xdsAddress)
 	if err != nil || endpoint.Scheme != "https" || endpoint.Hostname() == "" {
-		return "", "", fmt.Errorf("transit ADS address must be an https URL with workload credentials")
+		return "", "", fmt.Errorf("gateway ADS address must be an https URL with workload credentials")
 	}
 	if clusterID == "" {
 		clusterID = string(cluster.ID("Kubernetes"))
@@ -720,7 +608,7 @@ func buildTransitBootstrapConfig(xdsAddress string, listenerNames []string, clus
 	if dnsDomain == "" {
 		dnsDomain = constants.DefaultClusterLocalDomain
 	}
-	cfg := transitBootstrapConfig{
+	cfg := gatewayBootstrapConfig{
 		XDSAddress:    xdsAddress,
 		ListenerNames: listenerNames,
 		ClusterID:     clusterID,
@@ -728,14 +616,14 @@ func buildTransitBootstrapConfig(xdsAddress string, listenerNames []string, clus
 	}
 	rendered, err := json.MarshalIndent(cfg, "", "  ")
 	if err != nil {
-		return "", "", fmt.Errorf("marshal transit bootstrap config: %v", err)
+		return "", "", fmt.Errorf("marshal gateway bootstrap config: %v", err)
 	}
 	rendered = append(rendered, '\n')
 	sum := sha256.Sum256(rendered)
 	return string(rendered), hex.EncodeToString(sum[:]), nil
 }
 
-func transitListenerNames(namespace, serviceName, domainSuffix string, ports []corev1.ServicePort) []string {
+func gatewayListenerNames(namespace, serviceName, domainSuffix string, ports []corev1.ServicePort) []string {
 	out := make([]string, 0, len(ports))
 	for _, port := range ports {
 		targetPort := port.TargetPort.IntValue()
@@ -754,435 +642,6 @@ func formatGatewayServicePorts(ports []corev1.ServicePort) string {
 		out = append(out, fmt.Sprintf("%s:%d->%s", port.Name, port.Port, port.TargetPort.String()))
 	}
 	return strings.Join(out, ",")
-}
-
-func buildTransitRuntimeConfig(gw gateway.Gateway, routes []*gateway.HTTPRoute, services []*corev1.Service, backendTLSPolicies []*gateway.BackendTLSPolicy, policies []config.Config, domainSuffix string) (string, string, error) {
-	if domainSuffix == "" {
-		domainSuffix = constants.DefaultClusterLocalDomain
-	}
-	circuitBreakers := circuitBreakerPoliciesByTarget(policies)
-	backendTLS := backendTLSPoliciesByTarget(backendTLSPolicies)
-	servicesByKey := servicesByNamespacedName(services)
-
-	sort.Slice(routes, func(i, j int) bool {
-		if routes[i].Namespace != routes[j].Namespace {
-			return routes[i].Namespace < routes[j].Namespace
-		}
-		return routes[i].Name < routes[j].Name
-	})
-
-	cfg := transitRuntimeConfig{
-		Version: transitRuntimeVersion(gw, routes),
-		Listeners: []transitListener{
-			{
-				Name:         "http-80",
-				Bind:         "0.0.0.0:80",
-				Protocol:     "http",
-				VirtualHosts: []transitVirtualHost{},
-			},
-		},
-		Clusters: []transitCluster{},
-		Secrets:  []transitSecret{},
-	}
-
-	clusterNames := map[string]struct{}{}
-	for _, hr := range routes {
-		if !httpRouteReferencesGateway(hr, &gw) {
-			continue
-		}
-		vh, clusters := buildTransitVirtualHost(gw, hr, servicesByKey, backendTLS, circuitBreakers, domainSuffix)
-		if len(vh.Routes) == 0 {
-			continue
-		}
-		cfg.Listeners[0].VirtualHosts = append(cfg.Listeners[0].VirtualHosts, vh)
-		for _, cluster := range clusters {
-			if _, found := clusterNames[cluster.Name]; found {
-				continue
-			}
-			clusterNames[cluster.Name] = struct{}{}
-			cfg.Clusters = append(cfg.Clusters, cluster)
-		}
-	}
-
-	rendered, err := yaml.Marshal(cfg)
-	if err != nil {
-		return "", "", fmt.Errorf("marshal transit runtime config: %v", err)
-	}
-	sum := sha256.Sum256(rendered)
-	return string(rendered), hex.EncodeToString(sum[:]), nil
-}
-
-func transitRuntimeVersion(gw gateway.Gateway, routes []*gateway.HTTPRoute) string {
-	parts := []string{
-		fmt.Sprintf("gateway/%s/%s/%s", gw.Namespace, gw.Name, gw.ResourceVersion),
-	}
-	for _, hr := range routes {
-		if httpRouteReferencesGateway(hr, &gw) {
-			parts = append(parts, fmt.Sprintf("httproute/%s/%s/%s", hr.Namespace, hr.Name, hr.ResourceVersion))
-		}
-	}
-	return strings.Join(parts, ";")
-}
-
-func buildTransitVirtualHost(gw gateway.Gateway, hr *gateway.HTTPRoute, services map[string]*corev1.Service, backendTLS map[string]*transitUpstreamTLS, circuitBreakers map[string]transitBackendCircuitBreaker, domainSuffix string) (transitVirtualHost, []transitCluster) {
-	vh := transitVirtualHost{
-		Name:    fmt.Sprintf("%s-%s", hr.Namespace, hr.Name),
-		Domains: transitRouteDomains(gw, hr),
-		Routes:  []transitRoute{},
-	}
-	clusters := []transitCluster{}
-
-	for ruleIdx, rule := range hr.Spec.Rules {
-		for matchIdx, match := range transitMatches(rule.Matches) {
-			route := transitRoute{
-				Name:             fmt.Sprintf("%s-%s-%d-%d", hr.Namespace, hr.Name, ruleIdx, matchIdx),
-				Matches:          []transitRouteMatch{match},
-				WeightedClusters: []transitWeightedCluster{},
-			}
-			for backendIdx, backendRef := range rule.BackendRefs {
-				if !isServiceBackend(backendRef) || backendRef.Port == nil {
-					continue
-				}
-				weight := uint32(1)
-				if backendRef.Weight != nil {
-					if *backendRef.Weight == 0 {
-						continue
-					}
-					weight = uint32(*backendRef.Weight)
-				}
-
-				backendNamespace := hr.Namespace
-				if backendRef.Namespace != nil {
-					backendNamespace = string(*backendRef.Namespace)
-				}
-				port := uint16(*backendRef.Port)
-				clusterName := fmt.Sprintf("%s-%s-%d-%d", hr.Namespace, hr.Name, ruleIdx, backendIdx)
-				backendKey := namespacedServiceKey(backendNamespace, string(backendRef.Name))
-				policy := circuitBreakers[backendKey]
-				upstreamTLS := backendTLS[backendKey]
-
-				route.WeightedClusters = append(route.WeightedClusters, transitWeightedCluster{
-					Name:   clusterName,
-					Weight: weight,
-				})
-				clusters = append(clusters, transitCluster{
-					Name:           clusterName,
-					TLS:            upstreamTLS,
-					CircuitBreaker: policy.CircuitBreaker,
-					Outlier:        policy.Outlier,
-					Endpoints: []transitEndpoint{
-						{
-							Address: transitBackendAddress(backendNamespace, string(backendRef.Name), domainSuffix, services),
-							Port:    port,
-							Healthy: true,
-						},
-					},
-				})
-			}
-			if len(route.WeightedClusters) > 0 {
-				vh.Routes = append(vh.Routes, route)
-			}
-		}
-	}
-	return vh, clusters
-}
-
-func servicesByNamespacedName(services []*corev1.Service) map[string]*corev1.Service {
-	out := map[string]*corev1.Service{}
-	for _, svc := range services {
-		if svc == nil {
-			continue
-		}
-		out[namespacedServiceKey(svc.Namespace, svc.Name)] = svc
-	}
-	return out
-}
-
-func transitBackendAddress(namespace, name, domainSuffix string, services map[string]*corev1.Service) string {
-	if svc := services[namespacedServiceKey(namespace, name)]; svc != nil && svc.Spec.Type == corev1.ServiceTypeExternalName && svc.Spec.ExternalName != "" {
-		return svc.Spec.ExternalName
-	}
-	return fmt.Sprintf("%s.%s.svc.%s", name, namespace, domainSuffix)
-}
-
-func backendTLSPoliciesByTarget(policies []*gateway.BackendTLSPolicy) map[string]*transitUpstreamTLS {
-	out := map[string]*transitUpstreamTLS{}
-	sort.Slice(policies, func(i, j int) bool {
-		if !policies[i].CreationTimestamp.Time.Equal(policies[j].CreationTimestamp.Time) {
-			return policies[i].CreationTimestamp.Time.Before(policies[j].CreationTimestamp.Time)
-		}
-		if policies[i].Namespace != policies[j].Namespace {
-			return policies[i].Namespace < policies[j].Namespace
-		}
-		return policies[i].Name < policies[j].Name
-	})
-	for _, policy := range policies {
-		if policy == nil || !supportsSystemBackendTLS(policy) {
-			continue
-		}
-		upstreamTLS := &transitUpstreamTLS{
-			Mode: "simple",
-			SNI:  string(policy.Spec.Validation.Hostname),
-		}
-		for _, target := range policy.Spec.TargetRefs {
-			if !isBackendTLSPolicyServiceTarget(target) {
-				continue
-			}
-			key := namespacedServiceKey(policy.Namespace, string(target.Name))
-			if _, found := out[key]; !found {
-				out[key] = upstreamTLS
-			}
-		}
-	}
-	return out
-}
-
-func supportsSystemBackendTLS(policy *gateway.BackendTLSPolicy) bool {
-	if policy.Spec.Validation.Hostname == "" {
-		return false
-	}
-	wellKnown := policy.Spec.Validation.WellKnownCACertificates
-	return wellKnown != nil && *wellKnown == gateway.WellKnownCACertificatesSystem
-}
-
-func isBackendTLSPolicyServiceTarget(target gateway.LocalPolicyTargetReferenceWithSectionName) bool {
-	if target.SectionName != nil {
-		return false
-	}
-	group := strings.TrimSpace(string(target.Group))
-	kind := strings.TrimSpace(string(target.Kind))
-	return (group == "" || group == "core") && strings.EqualFold(kind, "Service")
-}
-
-type transitBackendCircuitBreaker struct {
-	CircuitBreaker *transitCircuitBreaker
-	Outlier        *transitOutlierDetection
-}
-
-func circuitBreakerPoliciesByTarget(policies []config.Config) map[string]transitBackendCircuitBreaker {
-	out := map[string]transitBackendCircuitBreaker{}
-	sort.Slice(policies, func(i, j int) bool {
-		if policies[i].CreationTimestamp != policies[j].CreationTimestamp {
-			return policies[i].CreationTimestamp.Before(policies[j].CreationTimestamp)
-		}
-		if policies[i].Namespace != policies[j].Namespace {
-			return policies[i].Namespace < policies[j].Namespace
-		}
-		return policies[i].Name < policies[j].Name
-	})
-	for _, cfg := range policies {
-		spec, ok := cfg.Spec.(*networking.CircuitBreakerPolicy)
-		if !ok || spec == nil {
-			continue
-		}
-		policy := transitCircuitBreakerFromPolicy(spec)
-		if policy.CircuitBreaker == nil && policy.Outlier == nil {
-			continue
-		}
-		for _, target := range spec.TargetRefs {
-			if !isCircuitBreakerServiceTarget(target) {
-				continue
-			}
-			key := namespacedServiceKey(cfg.Namespace, target.Name)
-			if _, found := out[key]; !found {
-				out[key] = policy
-			}
-		}
-	}
-	return out
-}
-
-func isCircuitBreakerServiceTarget(target *networking.PolicyTargetReference) bool {
-	if target == nil || target.Name == "" || target.SectionName != "" {
-		return false
-	}
-	group := strings.TrimSpace(target.Group)
-	kind := strings.TrimSpace(target.Kind)
-	return (group == "" || group == "core") && strings.EqualFold(kind, "Service")
-}
-
-func transitCircuitBreakerFromPolicy(policy *networking.CircuitBreakerPolicy) transitBackendCircuitBreaker {
-	out := transitBackendCircuitBreaker{}
-	if cp := policy.GetConnectionPool(); cp != nil {
-		cb := &transitCircuitBreaker{
-			MaxConnections:           positiveInt32(cp.GetMaxConnections()),
-			HTTP1MaxPendingRequests:  positiveInt32(cp.GetHttp1MaxPendingRequests()),
-			HTTP2MaxRequests:         positiveInt32(cp.GetHttp2MaxRequests()),
-			MaxRequestsPerConnection: positiveInt32(cp.GetMaxRequestsPerConnection()),
-			MaxRetries:               positiveInt32(cp.GetMaxRetries()),
-		}
-		if cb.MaxConnections > 0 || cb.HTTP1MaxPendingRequests > 0 || cb.HTTP2MaxRequests > 0 || cb.MaxRequestsPerConnection > 0 || cb.MaxRetries > 0 {
-			out.CircuitBreaker = cb
-		}
-	}
-	if od := policy.GetOutlierDetection(); od != nil {
-		outlier := &transitOutlierDetection{
-			Consecutive5xxErrors: uint32Value(od.GetConsecutive_5XxErrors()),
-			Interval:             durationString(od.GetInterval()),
-			BaseEjectionTime:     durationString(od.GetBaseEjectionTime()),
-			MaxEjectionPercent:   positiveInt32(od.GetMaxEjectionPercent()),
-			MinHealthPercent:     positiveInt32(od.GetMinHealthPercent()),
-		}
-		if outlier.Consecutive5xxErrors > 0 || outlier.Interval != "" || outlier.BaseEjectionTime != "" || outlier.MaxEjectionPercent > 0 || outlier.MinHealthPercent > 0 {
-			out.Outlier = outlier
-		}
-	}
-	return out
-}
-
-func positiveInt32(value int32) int32 {
-	if value <= 0 {
-		return 0
-	}
-	return value
-}
-
-func uint32Value(value *wrapperspb.UInt32Value) uint32 {
-	if value == nil {
-		return 0
-	}
-	return value.GetValue()
-}
-
-func durationString(value *durationpb.Duration) string {
-	if value == nil {
-		return ""
-	}
-	return value.AsDuration().String()
-}
-
-func namespacedServiceKey(namespace, name string) string {
-	return namespace + "/" + name
-}
-
-func transitRouteDomains(gw gateway.Gateway, hr *gateway.HTTPRoute) []string {
-	domains := map[string]struct{}{}
-	for _, hostname := range hr.Spec.Hostnames {
-		if hostname != "" {
-			domains[string(hostname)] = struct{}{}
-		}
-	}
-	if len(domains) == 0 {
-		for _, listener := range gw.Spec.Listeners {
-			if listener.Protocol != gateway.HTTPProtocolType || listener.Hostname == nil || *listener.Hostname == "" {
-				continue
-			}
-			domains[string(*listener.Hostname)] = struct{}{}
-		}
-	}
-	if len(domains) == 0 {
-		return []string{"*"}
-	}
-	out := make([]string, 0, len(domains))
-	for domain := range domains {
-		out = append(out, domain)
-	}
-	sort.Strings(out)
-	return out
-}
-
-func transitMatches(matches []gateway.HTTPRouteMatch) []transitRouteMatch {
-	if len(matches) == 0 {
-		return []transitRouteMatch{defaultTransitRouteMatch()}
-	}
-	out := make([]transitRouteMatch, 0, len(matches))
-	for _, match := range matches {
-		out = append(out, transitRouteMatch{
-			Path:    transitPath(match.Path),
-			Headers: transitHeaders(match.Headers),
-		})
-	}
-	return out
-}
-
-func defaultTransitRouteMatch() transitRouteMatch {
-	return transitRouteMatch{
-		Path: transitPathMatch{
-			Type:  "prefix",
-			Value: "/",
-		},
-		Headers: []transitHeaderMatch{},
-	}
-}
-
-func transitPath(path *gateway.HTTPPathMatch) transitPathMatch {
-	if path == nil {
-		return defaultTransitRouteMatch().Path
-	}
-	value := "/"
-	if path.Value != nil && *path.Value != "" {
-		value = *path.Value
-	}
-	if path.Type != nil && *path.Type == gateway.PathMatchExact {
-		return transitPathMatch{Type: "exact", Value: value}
-	}
-	return transitPathMatch{Type: "prefix", Value: value}
-}
-
-func transitHeaders(headers []gateway.HTTPHeaderMatch) []transitHeaderMatch {
-	out := make([]transitHeaderMatch, 0, len(headers))
-	for _, header := range headers {
-		if header.Type != nil && *header.Type != gateway.HeaderMatchExact {
-			continue
-		}
-		out = append(out, transitHeaderMatch{
-			Name:  string(header.Name),
-			Value: header.Value,
-		})
-	}
-	return out
-}
-
-func httpRouteReferencesGateway(hr *gateway.HTTPRoute, gw *gateway.Gateway) bool {
-	if hr == nil || gw == nil {
-		return false
-	}
-	for _, parentRef := range hr.Spec.ParentRefs {
-		if parentRef.Group != nil && string(*parentRef.Group) != gateway.GroupName {
-			continue
-		}
-		if parentRef.Kind != nil && string(*parentRef.Kind) != "Gateway" {
-			continue
-		}
-		namespace := hr.Namespace
-		if parentRef.Namespace != nil {
-			namespace = string(*parentRef.Namespace)
-		}
-		if string(parentRef.Name) != gw.Name || namespace != gw.Namespace {
-			continue
-		}
-		if !parentRefMatchesHTTPListener(parentRef, gw) {
-			continue
-		}
-		return true
-	}
-	return false
-}
-
-func parentRefMatchesHTTPListener(parentRef gateway.ParentReference, gw *gateway.Gateway) bool {
-	for _, listener := range gw.Spec.Listeners {
-		if listener.Protocol != gateway.HTTPProtocolType {
-			continue
-		}
-		if parentRef.SectionName != nil && *parentRef.SectionName != listener.Name {
-			continue
-		}
-		if parentRef.Port != nil && *parentRef.Port != listener.Port {
-			continue
-		}
-		return true
-	}
-	return false
-}
-
-func isServiceBackend(ref gateway.HTTPBackendRef) bool {
-	if ref.Group != nil && string(*ref.Group) != "" {
-		return false
-	}
-	if ref.Kind != nil && string(*ref.Kind) != "" && string(*ref.Kind) != "Service" {
-		return false
-	}
-	return true
 }
 
 func (d *DeploymentController) render(templateName string, mi TemplateInput) ([]string, error) {
@@ -1277,113 +736,6 @@ func (d *DeploymentController) canManage(gvr schema.GroupVersionResource, name, 
 	return managed, obj.GetResourceVersion()
 }
 
-func (d *DeploymentController) cleanupLegacyGatewayResources(
-	ctx context.Context,
-	log *dubbolog.Logger,
-	namespace,
-	legacyName,
-	currentName,
-	gatewayName string,
-) error {
-	if d.client == nil || legacyName == "" || legacyName == currentName {
-		return nil
-	}
-
-	var errs []string
-	for _, cleanup := range []struct {
-		kind string
-		name string
-		fn   func(context.Context, string, string, string) error
-	}{
-		{kind: "ConfigMap", name: legacyName + "-bootstrap", fn: d.deleteManagedConfigMap},
-		{kind: "ServiceAccount", name: legacyName, fn: d.deleteManagedServiceAccount},
-		{kind: "Deployment", name: legacyName, fn: d.deleteManagedDeployment},
-		{kind: "Service", name: legacyName, fn: d.deleteManagedService},
-	} {
-		if err := cleanup.fn(ctx, namespace, cleanup.name, gatewayName); err != nil {
-			errs = append(errs, fmt.Sprintf("%s/%s: %v", cleanup.kind, cleanup.name, err))
-		}
-	}
-	if len(errs) > 0 {
-		return fmt.Errorf("%s", strings.Join(errs, "; "))
-	}
-
-	log.Debugf("checked legacy transit resources %s/%s", namespace, legacyName)
-	return nil
-}
-
-func (d *DeploymentController) deleteManagedConfigMap(ctx context.Context, namespace, name, gatewayName string) error {
-	obj, err := d.client.Kube().CoreV1().ConfigMaps(namespace).Get(ctx, name, metav1.GetOptions{})
-	if apierrors.IsNotFound(err) {
-		return nil
-	}
-	if err != nil {
-		return err
-	}
-	if !isManagedGatewayResourceFor(obj.Labels, gatewayName) {
-		return nil
-	}
-	err = d.client.Kube().CoreV1().ConfigMaps(namespace).Delete(ctx, name, metav1.DeleteOptions{})
-	if apierrors.IsNotFound(err) {
-		return nil
-	}
-	return err
-}
-
-func (d *DeploymentController) deleteManagedServiceAccount(ctx context.Context, namespace, name, gatewayName string) error {
-	obj, err := d.client.Kube().CoreV1().ServiceAccounts(namespace).Get(ctx, name, metav1.GetOptions{})
-	if apierrors.IsNotFound(err) {
-		return nil
-	}
-	if err != nil {
-		return err
-	}
-	if !isManagedGatewayResourceFor(obj.Labels, gatewayName) {
-		return nil
-	}
-	err = d.client.Kube().CoreV1().ServiceAccounts(namespace).Delete(ctx, name, metav1.DeleteOptions{})
-	if apierrors.IsNotFound(err) {
-		return nil
-	}
-	return err
-}
-
-func (d *DeploymentController) deleteManagedDeployment(ctx context.Context, namespace, name, gatewayName string) error {
-	obj, err := d.client.Kube().AppsV1().Deployments(namespace).Get(ctx, name, metav1.GetOptions{})
-	if apierrors.IsNotFound(err) {
-		return nil
-	}
-	if err != nil {
-		return err
-	}
-	if !isManagedGatewayResourceFor(obj.Labels, gatewayName) {
-		return nil
-	}
-	err = d.client.Kube().AppsV1().Deployments(namespace).Delete(ctx, name, metav1.DeleteOptions{})
-	if apierrors.IsNotFound(err) {
-		return nil
-	}
-	return err
-}
-
-func (d *DeploymentController) deleteManagedService(ctx context.Context, namespace, name, gatewayName string) error {
-	obj, err := d.client.Kube().CoreV1().Services(namespace).Get(ctx, name, metav1.GetOptions{})
-	if apierrors.IsNotFound(err) {
-		return nil
-	}
-	if err != nil {
-		return err
-	}
-	if !isManagedGatewayResourceFor(obj.Labels, gatewayName) {
-		return nil
-	}
-	err = d.client.Kube().CoreV1().Services(namespace).Delete(ctx, name, metav1.DeleteOptions{})
-	if apierrors.IsNotFound(err) {
-		return nil
-	}
-	return err
-}
-
 func isManagedGatewayResource(labels map[string]string) bool {
 	_, ok := labels["gateway.dubbo.apache.org/managed"]
 	return ok
@@ -1474,7 +826,7 @@ func gatewayServiceNodePort(gw gateway.Gateway) int32 {
 	return int32(port)
 }
 
-// gatewayReplicas reports how many transit pods to run. Zero is allowed so a
+// gatewayReplicas reports how many gateway pods to run. Zero is allowed so a
 // gateway can be scaled down deliberately, which is why this does not reuse
 // positiveIntAnnotation.
 func gatewayReplicas(gw gateway.Gateway) int32 {
@@ -1496,10 +848,10 @@ func gatewayReplicasWithDefault(gw gateway.Gateway, fallback int32) int32 {
 // meaningless and a zero one would make every gateway default to serving no
 // traffic, so both fall back to the highly available floor.
 func installedGatewayReplicas() int32 {
-	if features.TransitReplicas < 1 {
+	if features.GatewayReplicas < 1 {
 		return defaultGatewayReplicas
 	}
-	return int32(features.TransitReplicas)
+	return int32(features.GatewayReplicas)
 }
 
 func positiveIntAnnotation(gw gateway.Gateway, name string) (int, bool) {

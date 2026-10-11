@@ -153,12 +153,12 @@ func TestAnalyzeHighAvailabilityFlagsSingleReplicaGateway(t *testing.T) {
 		Spec: appsv1.DeploymentSpec{
 			Replicas: &replicas,
 			Selector: &metav1.LabelSelector{MatchLabels: map[string]string{
-				"app.kubernetes.io/name":     "transit",
+				"app.kubernetes.io/name":     "gateway",
 				"app.kubernetes.io/instance": "public-dubbo",
 			}},
 			Template: corev1.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{Labels: map[string]string{
-					"app.kubernetes.io/name":     "transit",
+					"app.kubernetes.io/name":     "gateway",
 					"app.kubernetes.io/instance": "public-dubbo",
 				}},
 			},

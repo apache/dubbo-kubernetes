@@ -149,7 +149,7 @@ func loadSelfSignedCaSecret(client corev1.CoreV1Interface, namespace string, caC
 		); err != nil {
 			return fmt.Errorf("failed to create CA KeyCertBundle (%v)", err)
 		}
-		pkiCaLog.Infof("Using existing public key summary: %s", certificateSummary(rootCerts))
+		pkiCaLog.InfoBlock("Using existing public key summary: |-", certificateSummary(rootCerts))
 	}
 	return err
 }
@@ -238,13 +238,13 @@ func NewSelfSignedDubboCAOptions(ctx context.Context,
 			if err != nil {
 				if apierror.IsMethodNotSupported(err) {
 					pkiCaLog.Warnf("Server rejected creating secret %s/%s, continuing with in-memory self-signed CA: %v", namespace, caCertName, err)
-					pkiCaLog.Infof("Using self-generated public key summary: %s", certificateSummary(rootCerts))
+					pkiCaLog.InfoBlock("Using self-generated public key summary: |-", certificateSummary(rootCerts))
 					return nil
 				}
 				pkiCaLog.Errorf("Failed to create secret %s (%v)", caCertName, err)
 				return err
 			}
-			pkiCaLog.Infof("Using self-generated public key summary: %s", certificateSummary(rootCerts))
+			pkiCaLog.InfoBlock("Using self-generated public key summary: |-", certificateSummary(rootCerts))
 			return nil
 		}
 		return err
@@ -257,13 +257,13 @@ func NewSelfSignedDubboCAOptions(ctx context.Context,
 func certificateSummary(certPEM []byte) string {
 	certs, _, err := util.ParsePemEncodedCertificateChain(certPEM)
 	if err != nil {
-		return fmt.Sprintf("bundle_bytes=%d parse_error=%v", len(certPEM), err)
+		return fmt.Sprintf("bundle_bytes: %d\nparse_error: %q", len(certPEM), err.Error())
 	}
 
 	parts := make([]string, 0, len(certs))
 	for i, cert := range certs {
 		parts = append(parts, fmt.Sprintf(
-			"cert[%d]{subject=%q issuer=%q serial=%x not_after=%q}",
+			"cert[%d]: |-\n  subject: %q\n  issuer: %q\n  serial: %x\n  not_after: %q",
 			i,
 			cert.Subject.String(),
 			cert.Issuer.String(),
@@ -271,7 +271,7 @@ func certificateSummary(certPEM []byte) string {
 			cert.NotAfter.Format(time.RFC3339),
 		))
 	}
-	return strings.Join(parts, ", ")
+	return strings.Join(parts, "\n")
 }
 
 func NewPluggedCertDubboCAOptions(fileBundle SigningCAFileBundle, defaultCertTTL, maxCertTTL time.Duration, caRSAKeySize int) (caOpts *DubboCAOptions, err error) {

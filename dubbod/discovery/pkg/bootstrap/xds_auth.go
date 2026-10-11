@@ -67,9 +67,6 @@ func authorizeXDSPod(proxy *model.Proxy, identities []string, pod *corev1.Pod, t
 	if len(proxy.IPAddresses) != 1 || !podHasIP(pod, proxy.IPAddresses[0]) {
 		return fmt.Errorf("xDS node IP does not match workload")
 	}
-	if proxy.IsRouter() && pod.Labels["gateway.networking.k8s.io/gateway-name"] == "" {
-		return fmt.Errorf("xDS router is not a managed gateway")
-	}
 	serviceAccount := pod.Spec.ServiceAccountName
 	if serviceAccount == "" {
 		serviceAccount = "default"

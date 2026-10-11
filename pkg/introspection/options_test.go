@@ -67,6 +67,10 @@ func TestDefaultOptionsListenAddress(t *testing.T) {
 }
 
 func TestAttachCobraFlagsHasNoLegacyIntrospectionIdentifiers(t *testing.T) {
+	if PortFlagName != "diag_port" || AddressFlagName != "diag_address" {
+		t.Fatalf("diagnostic flag names = (%q, %q), want (diag_port, diag_address)", PortFlagName, AddressFlagName)
+	}
+
 	cmd := &cobra.Command{Use: "dubbo-discovery"}
 	opts := DefaultOptions()
 	opts.AttachCobraFlags(cmd)

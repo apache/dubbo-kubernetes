@@ -37,7 +37,7 @@ import (
 
 func (g *GrpcConfigGenerator) BuildHTTPRoutes(node *model.Proxy, req *model.PushRequest, routeNames []string) ([]*discovery.Resource, model.XdsLogDetails) {
 	resp := []*discovery.Resource{}
-	log.Debugf("node=%s, isRouter=%v, routeNames=%v", node.ID, node.IsRouter(), routeNames)
+	log.Debugf("node=%s, routeNames=%v", node.ID, routeNames)
 	if len(routeNames) == 0 {
 		log.Warnf("no routeNames requested for node=%s", node.ID)
 	}
@@ -59,12 +59,10 @@ func (g *GrpcConfigGenerator) BuildHTTPRoutes(node *model.Proxy, req *model.Push
 }
 
 func buildHTTPRoute(node *model.Proxy, push *model.PushContext, routeName string) *route.RouteConfiguration {
-	log.Debugf("called with routeName=%s, node.ID=%s, node.Type=%v, node.IsRouter()=%v", routeName, node.ID, node.Type, node.IsRouter())
-	// For Gateway Pod inbound listeners, routeName is just the port number (e.g., "80")
-	// For Inherent gRPC inbound routes, routeName is just the port number (e.g., "17070")
+	log.Debugf("called with routeName=%s, node.ID=%s, node.Type=%v", routeName, node.ID, node.Type)
+	// For inbound routes, routeName is just the port number (e.g., "17070")
 	// For outbound routes, routeName is cluster format (outbound|port||hostname)
-	parsedPort, err := strconv.Atoi(routeName)
-	if err != nil {
+	if _, err := strconv.Atoi(routeName); err != nil {
 		// Try to parse as cluster naming format (outbound|port||hostname)
 		_, _, hostname, parsedPort := model.ParseSubsetKey(routeName)
 		if hostname == "" || parsedPort == 0 {
@@ -101,50 +99,7 @@ func buildHTTPRoute(node *model.Proxy, push *model.PushContext, routeName string
 			defaultSingleClusterRoute(routeName, faultPolicy),
 		}
 
-		if node.IsRouter() {
-			// Gateway routers use Gateway API HTTPRoute; service-to-service Inherent clients
-			// must not let an unrelated north-south HTTPRoute shadow their service route.
-			httpRoutes := push.HTTPRouteForHost(host.Name("*"))
-			if len(httpRoutes) == 0 {
-				log.Debugf("no HTTPRoute found for router host %s, using default route", hostStr)
-			} else {
-				log.Infof("found %d HTTPRoute(s) for Gateway Pod (using wildcard match)", len(httpRoutes))
-				// For Gateway Pods, collect all HTTPRoute hostnames and add them to domains
-				httpRouteHostnames := make(map[string]bool)
-				for _, hr := range httpRoutes {
-					hrSpec, ok := hr.Spec.(*sigsk8siogatewayapiapisv1.HTTPRouteSpec)
-					if !ok {
-						continue
-					}
-					if len(hrSpec.Hostnames) == 0 {
-						// No hostnames means match all
-						httpRouteHostnames["*"] = true
-					} else {
-						for _, hostname := range hrSpec.Hostnames {
-							hostnameStr := string(hostname)
-							if hostnameStr == "" || hostnameStr == "*" {
-								httpRouteHostnames["*"] = true
-							} else {
-								httpRouteHostnames[hostnameStr] = true
-							}
-						}
-					}
-				}
-				for hostnameStr := range httpRouteHostnames {
-					if hostnameStr != "*" {
-						domains = append(domains, hostnameStr)
-						domains = append(domains, fmt.Sprintf("%s:%d", hostnameStr, parsedPort))
-					}
-				}
-
-				if routes := buildRoutesFromGatewayHTTPRoute(httpRoutes, host.Name("*"), parsedPort, faultPolicy); len(routes) > 0 {
-					log.Infof("built %d routes from Gateway API HTTPRoute", len(routes))
-					outboundRoutes = routes
-				} else {
-					log.Warnf("HTTPRoute found but no routes built")
-				}
-			}
-		} else if httpRoutes := filterHTTPRoutesByService(push.HTTPRouteForHost(host.Name(hostStr)), svc, parsedPort); len(httpRoutes) > 0 {
+		if httpRoutes := filterHTTPRoutesByService(push.HTTPRouteForHost(host.Name(hostStr)), svc, parsedPort); len(httpRoutes) > 0 {
 			log.Infof("found %d service-attached HTTPRoute(s) for host %s", len(httpRoutes), hostStr)
 			if routes := buildRoutesFromGatewayHTTPRoute(httpRoutes, host.Name(hostStr), parsedPort, faultPolicy); len(routes) > 0 {
 				log.Infof("built %d routes from service-attached HTTPRoute for host %s", len(routes), hostStr)
@@ -166,143 +121,7 @@ func buildHTTPRoute(node *model.Proxy, push *model.PushContext, routeName string
 		return &route.RouteConfiguration{Name: routeName, VirtualHosts: virtualHosts}
 	}
 
-	// Build route configuration for inbound listener
-	// For Gateway Pods (router type), this should route traffic based on HTTPRoute rules
-	// For regular service Pods, use NonForwardingAction to handle requests directly
-	// Also check if this is a Gateway Pod by checking service name (fallback for when node.Type is not Router)
-	isGatewayPod := false
-	isGatewayDataPort := parsedPort == 80
-	gatewayListenerPort := parsedPort
-	var gatewayName, gatewayNamespace string
-	// Resolve the listener's Service port from the generated Gateway Service.
-	// transit binds the Service targetPort (15080 by default), while Gateway API
-	// parentRefs and HTTPRoutes refer to the public listener port (for example 80).
-	for _, st := range node.ServiceTargets {
-		if st.Service == nil {
-			continue
-		}
-		if name, ok := st.Service.Attributes.Labels["gateway.networking.k8s.io/gateway-name"]; ok {
-			isGatewayPod = true
-			if st.Port.ServicePort != nil && st.Port.TargetPort == uint32(parsedPort) {
-				gatewayName = name
-				gatewayNamespace = st.Service.Attributes.Namespace
-				gatewayListenerPort = st.Port.Port
-				isGatewayDataPort = true
-				break
-			}
-		}
-	}
-	if node.IsRouter() || isGatewayPod {
-		if isGatewayPod && !node.IsRouter() {
-			log.Warnf("Gateway Pod detected but node.Type is not Router (node.Type=%v, node.ID=%s), treating as router anyway", node.Type, node.ID)
-		}
-		log.Infof("Gateway Pod inbound listener, routeName=%s, port=%d, gateway=%s/%s", routeName, parsedPort, gatewayNamespace, gatewayName)
-
-		if !isGatewayDataPort {
-			log.Debugf("Gateway Pod inbound listener port %d is not a Gateway Service targetPort, skipping HTTPRoute", parsedPort)
-			// Return empty route config for non-Gateway ports
-			return &route.RouteConfiguration{
-				Name: routeName,
-				VirtualHosts: []*route.VirtualHost{
-					{
-						Name:    "inbound|http|" + routeName,
-						Domains: []string{"*"},
-						Routes:  []*route.Route{}, // Empty routes for service ports
-					},
-				},
-			}
-		}
-
-		// Gateway Pod inbound listener: route external traffic based on HTTPRoute
-		domains := []string{"*"}           // Match all hostnames by default
-		outboundRoutes := []*route.Route{} // Don't use fallback route, only use HTTPRoute routes
-		if gatewayNamespace == "" {
-			gatewayNamespace = node.ConfigNamespace
-			if node.Metadata != nil && node.Metadata.Namespace != "" {
-				gatewayNamespace = node.Metadata.Namespace
-			}
-		}
-
-		// Try to find HTTPRoutes for Gateway Pod
-		// Gateway Pods receive traffic with arbitrary hostnames, so we need to collect all HTTPRoutes
-		// For Gateway Pod inbound listener, we need ALL HTTPRoutes that could route traffic
-		// First try wildcard match to get HTTPRoutes with no hostnames or wildcard hostnames
-		allHTTPRoutes := push.HTTPRouteForHost(host.Name("*"))
-		log.Debugf("Gateway Pod inbound listener, found %d HTTPRoute(s) with wildcard match", len(allHTTPRoutes))
-
-		// Filter HTTPRoutes by parentRef to match this Gateway
-		httpRoutes := filterHTTPRoutesByGateway(allHTTPRoutes, gatewayName, gatewayNamespace, gatewayListenerPort)
-		agentConfig := buildAgentConfig(push, httpRoutes)
-		log.Debugf("Gateway Pod inbound listener, filtered to %d HTTPRoute(s) matching gateway %s/%s listener port %d", len(httpRoutes), gatewayNamespace, gatewayName, gatewayListenerPort)
-
-		// For Gateway Pod, we also need to collect HTTPRoutes with specific hostnames
-		// because Gateway Pods route traffic based on HTTPRoute hostnames in the request
-		if len(httpRoutes) > 0 {
-			log.Infof("Gateway Pod inbound listener found %d HTTPRoute(s) for port %s", len(httpRoutes), routeName)
-			// Collect all HTTPRoute hostnames and add them to domains
-			httpRouteHostnames := make(map[string]bool)
-			for _, hr := range httpRoutes {
-				hrSpec, ok := hr.Spec.(*sigsk8siogatewayapiapisv1.HTTPRouteSpec)
-				if !ok {
-					continue
-				}
-				if len(hrSpec.Hostnames) == 0 {
-					httpRouteHostnames["*"] = true
-				} else {
-					for _, hostname := range hrSpec.Hostnames {
-						hostnameStr := string(hostname)
-						if hostnameStr == "" || hostnameStr == "*" {
-							httpRouteHostnames["*"] = true
-						} else {
-							httpRouteHostnames[hostnameStr] = true
-						}
-					}
-				}
-			}
-			// Add HTTPRoute hostnames to domains
-			for hostnameStr := range httpRouteHostnames {
-				if hostnameStr != "*" {
-					domains = append(domains, hostnameStr)
-					domains = append(domains, fmt.Sprintf("%s:%d", hostnameStr, parsedPort))
-				}
-			}
-
-			if routes := buildRoutesFromGatewayHTTPRoute(httpRoutes, host.Name("*"), gatewayListenerPort, nil); len(routes) > 0 {
-				log.Infof("Gateway Pod inbound listener built %d routes from HTTPRoute", len(routes))
-				outboundRoutes = routes
-			} else {
-				log.Warnf("Gateway Pod inbound listener HTTPRoute found but no routes built")
-			}
-		} else {
-			log.Warnf("Gateway Pod inbound listener no HTTPRoute found for port %s", routeName)
-			return &route.RouteConfiguration{
-				Name: routeName,
-				VirtualHosts: []*route.VirtualHost{
-					{
-						Name:    "inbound|http|" + routeName,
-						Domains: []string{"*"},
-						Routes:  []*route.Route{}, // Empty routes - no HTTPRoute found
-					},
-				},
-			}
-		}
-
-		log.Infof("Gateway Pod inbound listener returning route config with %d domains, %d routes", len(domains), len(outboundRoutes))
-		virtualHosts := []*route.VirtualHost{
-			{
-				Name:    "inbound|http|" + routeName,
-				Domains: domains,
-				Routes:  outboundRoutes,
-			},
-		}
-		return &route.RouteConfiguration{
-			Name:         routeName,
-			VirtualHosts: virtualHosts,
-			AgentConfig:  agentConfig,
-		}
-	}
-
-	// Regular service Pod inbound listener: NonForwardingAction indicates this is an inbound listener that should handle requests directly
+	// Inbound listener: NonForwardingAction indicates this is an inbound listener that should handle requests directly
 	return &route.RouteConfiguration{
 		Name: routeName,
 		VirtualHosts: []*route.VirtualHost{
@@ -360,13 +179,6 @@ func buildRoutesFromGatewayHTTPRoute(httpRoutes []config.Config, hostName host.N
 		for ruleIdx, rule := range hrSpec.Rules {
 			if len(rule.BackendRefs) == 0 {
 				log.Debugf("HTTPRoute %s/%s rule[%d] has no backendRefs, skipping", hrConfig.Namespace, hrConfig.Name, ruleIdx)
-				continue
-			}
-			if ruleUsesTransitService(rule) {
-				// Mesh-native LLM/MCP/A2A backends are carried in AgentConfig.
-				// Emitting them as ordinary clusters would fabricate a
-				// Kubernetes Service with the same name and bypass protocol
-				// translation.
 				continue
 			}
 
@@ -537,55 +349,6 @@ func gatewayAPIDurationToProto(duration *sigsk8siogatewayapiapisv1.Duration) *du
 		return nil
 	}
 	return durationpb.New(parsed)
-}
-
-// filterHTTPRoutesByGateway filters HTTPRoutes by parentRef to match the given Gateway
-func filterHTTPRoutesByGateway(httpRoutes []config.Config, gatewayName, gatewayNamespace string, port int) []config.Config {
-	if gatewayName == "" {
-		// If we can't determine the Gateway name, return all HTTPRoutes
-		// This is a fallback for when Gateway Pod doesn't have proper labels
-		log.Warnf("gateway name is empty, returning all HTTPRoutes")
-		return httpRoutes
-	}
-
-	var filtered []config.Config
-	for _, hr := range httpRoutes {
-		hrSpec, ok := hr.Spec.(*sigsk8siogatewayapiapisv1.HTTPRouteSpec)
-		if !ok {
-			continue
-		}
-
-		// Check if any parentRef matches this Gateway
-		matches := false
-		for _, parentRef := range hrSpec.ParentRefs {
-			refName := string(parentRef.Name)
-			refNamespace := hr.Namespace // Default to HTTPRoute namespace
-			if parentRef.Namespace != nil {
-				refNamespace = string(*parentRef.Namespace)
-			}
-
-			// Check if parentRef matches Gateway name and namespace
-			if refName == gatewayName && refNamespace == gatewayNamespace {
-				// Check if parentRef has a section name (listener name)
-				// If section name is specified, we should match it, but for now we accept all listeners
-				// TODO: Match listener name if specified
-				if parentRef.SectionName != nil {
-					log.Debugf("HTTPRoute %s/%s matches Gateway %s/%s with listener %s",
-						hr.Namespace, hr.Name, gatewayNamespace, gatewayName, *parentRef.SectionName)
-				}
-				matches = true
-				break
-			}
-		}
-
-		if matches {
-			filtered = append(filtered, hr)
-			log.Debugf("HTTPRoute %s/%s matches Gateway %s/%s",
-				hr.Namespace, hr.Name, gatewayNamespace, gatewayName)
-		}
-	}
-
-	return filtered
 }
 
 func filterHTTPRoutesByService(httpRoutes []config.Config, svc *model.Service, port int) []config.Config {

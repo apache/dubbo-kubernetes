@@ -27,10 +27,10 @@ func TestManagementGatewayInstanceUsesDeploymentIdentity(t *testing.T) {
 	desired := int32(2)
 	deployment := appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      "transit-gateway",
+			Name:      "test-gateway",
 			Namespace: "default",
 			Labels: map[string]string{
-				"gateway.networking.k8s.io/gateway-name": "transit-gateway",
+				"gateway.networking.k8s.io/gateway-name": "test-gateway",
 			},
 		},
 		Spec: appsv1.DeploymentSpec{
@@ -42,11 +42,11 @@ func TestManagementGatewayInstanceUsesDeploymentIdentity(t *testing.T) {
 	}
 
 	got := managementGatewayInstanceFromDeployment(deployment)
-	if got.Name != "transit-gateway" {
+	if got.Name != "test-gateway" {
 		t.Fatalf("Name = %q, want deployment name without pod hash", got.Name)
 	}
-	if got.GatewayName != "transit-gateway" {
-		t.Fatalf("GatewayName = %q, want transit-gateway", got.GatewayName)
+	if got.GatewayName != "test-gateway" {
+		t.Fatalf("GatewayName = %q, want test-gateway", got.GatewayName)
 	}
 	if got.ReadyReplicas != 2 || got.DesiredReplicas != 2 || !got.IsReady {
 		t.Fatalf("readiness = ready:%d desired:%d isReady:%v, want 2/2 true",
@@ -71,18 +71,18 @@ func TestManagementLogContainersPrefersNamedContainer(t *testing.T) {
 		Spec: corev1.PodSpec{
 			Containers: []corev1.Container{
 				{Name: "setup"},
-				{Name: "transit"},
+				{Name: "gateway"},
 			},
 		},
 	}
 
-	got := managementLogContainers(pod, "transit")
-	if len(got) != 1 || got[0] != "transit" {
-		t.Fatalf("containers = %v, want [transit]", got)
+	got := managementLogContainers(pod, "gateway")
+	if len(got) != 1 || got[0] != "gateway" {
+		t.Fatalf("containers = %v, want [gateway]", got)
 	}
 
 	got = managementLogContainers(pod, "missing")
-	if len(got) != 2 || got[0] != "setup" || got[1] != "transit" {
+	if len(got) != 2 || got[0] != "setup" || got[1] != "gateway" {
 		t.Fatalf("fallback containers = %v, want all containers", got)
 	}
 }

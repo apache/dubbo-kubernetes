@@ -29,7 +29,7 @@ message ManagementConfig {
 }
 
 message GatewayConfig {
-  // Default replica count for managed transit deployments. Individual Gateways
+  // Default replica count for managed gateway deployments. Individual Gateways
   // override it with the gateway.dubbo.apache.org/replicas annotation.
   google.protobuf.Int32Value replicaCount = 1;
 }

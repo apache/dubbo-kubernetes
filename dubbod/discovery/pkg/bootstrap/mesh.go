@@ -19,11 +19,11 @@ package bootstrap
 import (
 	"fmt"
 	"os"
-	"reflect"
 	"strings"
 
 	"github.com/apache/dubbo-kubernetes/pkg/util/ptr"
 	meshv1alpha1 "github.com/dubml/api/mesh/v1alpha1"
+	"google.golang.org/protobuf/types/known/durationpb"
 
 	"github.com/apache/dubbo-kubernetes/dubbod/discovery/pkg/features"
 	"github.com/apache/dubbo-kubernetes/pkg/config/mesh/kubemesh"
@@ -43,8 +43,8 @@ func (s *Server) initMeshConfig(args *DubboArgs, fileWatcher filewatcher.FileWat
 	col := s.getMeshConfig(args, fileWatcher)
 	col.AsCollection().WaitUntilSynced(s.internalStop)
 	s.environment.Watcher = meshwatcher.ConfigAdapter(col)
-	log.Infof("mesh config: %s", compactMeshConfig(s.environment.Mesh()))
-	log.Infof("flags: %s", compactDubboArgs(args))
+	log.InfoBlock("mesh config: |-", formatConfigFields(meshConfigSummary(s.environment.Mesh())))
+	log.InfoBlock("flags: |-", formatConfigFields(compactDubboArgs(args)))
 }
 
 func (s *Server) getMeshConfig(args *DubboArgs, fileWatcher filewatcher.FileWatcher) krt.Singleton[meshwatcher.MeshConfigResource] {
@@ -93,7 +93,7 @@ func getMeshConfigMapName(revision string) string {
 	return name + "-" + revision
 }
 
-func compactMeshConfig(cfg *meshv1alpha1.MeshConfig) string {
+func meshConfigSummary(cfg *meshv1alpha1.MeshConfig) string {
 	if cfg == nil {
 		return "<nil>"
 	}
@@ -115,7 +115,21 @@ func compactMeshConfig(cfg *meshv1alpha1.MeshConfig) string {
 		)
 	}
 
-	return compactParts(parts...)
+	lines := make([]string, 0, len(parts))
+	for _, part := range parts {
+		if part != "" {
+			lines = append(lines, part)
+		}
+	}
+	return strings.Join(lines, "\n")
+}
+
+func formatConfigFields(config string) string {
+	lines := strings.Split(config, "\n")
+	for i, line := range lines {
+		lines[i] = strings.Replace(line, "=", ": ", 1)
+	}
+	return strings.Join(lines, "\n")
 }
 
 func compactDubboArgs(args *DubboArgs) string {
@@ -138,7 +152,7 @@ func compactDubboArgs(args *DubboArgs) string {
 		formatCompositeField("keepalive", keepaliveSummary(args)),
 	}
 
-	return compactParts(parts...)
+	return strings.Join(nonEmptyParts(parts...), "\n")
 }
 
 func introspectionAddress(args *DubboArgs) string {
@@ -152,7 +166,7 @@ func serverAddressSummary(args *DubboArgs) string {
 	if args == nil {
 		return ""
 	}
-	return compactParts(
+	return multilineParts(
 		formatStringField("http", args.ServerOptions.HTTPAddr),
 		formatStringField("management", args.ServerOptions.ManagementAddr),
 		formatStringField("https", args.ServerOptions.HTTPSAddr),
@@ -165,7 +179,7 @@ func kubeOptionsSummary(args *DubboArgs) string {
 	if args == nil {
 		return ""
 	}
-	return compactParts(
+	return multilineParts(
 		formatEnumField("cluster_id", string(args.RegistryOptions.KubeOptions.ClusterID)),
 		formatStringField("domain", args.RegistryOptions.KubeOptions.DomainSuffix),
 		formatFloat32Field("qps", args.RegistryOptions.KubeOptions.KubernetesAPIQPS),
@@ -181,7 +195,7 @@ func keepaliveSummary(args *DubboArgs) string {
 	if args.KeepaliveOptions.MaxServerConnectionAge == dubbokeepalive.Infinity {
 		maxAge = "infinity"
 	}
-	return compactParts(
+	return multilineParts(
 		formatEnumField("time", args.KeepaliveOptions.Time.String()),
 		formatEnumField("timeout", args.KeepaliveOptions.Timeout.String()),
 		formatEnumField("max_age", maxAge),
@@ -189,14 +203,18 @@ func keepaliveSummary(args *DubboArgs) string {
 	)
 }
 
-func compactParts(parts ...string) string {
+func multilineParts(parts ...string) string {
+	return strings.Join(nonEmptyParts(parts...), "\n")
+}
+
+func nonEmptyParts(parts ...string) []string {
 	nonEmpty := make([]string, 0, len(parts))
 	for _, part := range parts {
 		if part != "" {
 			nonEmpty = append(nonEmpty, part)
 		}
 	}
-	return strings.Join(nonEmpty, " ")
+	return nonEmpty
 }
 
 func formatStringField(name, value string) string {
@@ -221,18 +239,14 @@ func formatCompositeField(name, value string) string {
 	if value == "" {
 		return ""
 	}
-	return fmt.Sprintf("%s={%s}", name, value)
+	return fmt.Sprintf("%s=|-\n  %s", name, strings.ReplaceAll(value, "\n", "\n  "))
 }
 
-func formatDurationField(name string, value interface{ String() string }) string {
+func formatDurationField(name string, value *durationpb.Duration) string {
 	if value == nil {
 		return ""
 	}
-	rv := reflect.ValueOf(value)
-	if rv.Kind() == reflect.Pointer && rv.IsNil() {
-		return ""
-	}
-	return fmt.Sprintf("%s=%s", name, value.String())
+	return fmt.Sprintf("%s=%s", name, value.AsDuration().String())
 }
 
 func formatStringSliceField(name string, values []string) string {

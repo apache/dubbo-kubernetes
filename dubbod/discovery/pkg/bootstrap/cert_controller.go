@@ -148,7 +148,7 @@ func (s *Server) initDNSCertsDubbod() error {
 	if err != nil {
 		return fmt.Errorf("failed generating dubbod key cert %v", err)
 	}
-	log.Infof("Generating dubbod-signed cert for %v: %s", s.dnsNames, certificateChainSummary(certChain))
+	log.InfoBlock(fmt.Sprintf("Generating dubbod-signed cert for %v: |-", s.dnsNames), certificateChainSummary(certChain))
 
 	fileBundle, err := detectSigningCABundleAndCRL()
 	if err != nil {
@@ -199,13 +199,13 @@ func (s *Server) initDNSCertsDubbod() error {
 func certificateChainSummary(certPEM []byte) string {
 	certs, _, err := pkiutil.ParsePemEncodedCertificateChain(certPEM)
 	if err != nil {
-		return fmt.Sprintf("bundle_bytes=%d parse_error=%v", len(certPEM), err)
+		return fmt.Sprintf("bundle_bytes: %d\nparse_error: %q", len(certPEM), err.Error())
 	}
 
 	parts := make([]string, 0, len(certs))
 	for i, cert := range certs {
 		parts = append(parts, fmt.Sprintf(
-			"cert[%d]{subject=%q issuer=%q serial=%x not_after=%q}",
+			"cert[%d]: |-\n  subject: %q\n  issuer: %q\n  serial: %x\n  not_after: %q",
 			i,
 			cert.Subject.String(),
 			cert.Issuer.String(),
@@ -213,7 +213,7 @@ func certificateChainSummary(certPEM []byte) string {
 			cert.NotAfter.Format(time.RFC3339),
 		))
 	}
-	return strings.Join(parts, ", ")
+	return strings.Join(parts, "\n")
 }
 
 func (s *Server) watchRootCertAndGenKeyCert(stop <-chan struct{}) {

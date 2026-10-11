@@ -37,7 +37,7 @@ _internal_default_values_not_set:
   gateway:
     # Image used by managed Gateway deployments. Keep it independently
     # configurable from dubbod so a gateway can be rolled independently.
-    image: "dubml/transit:latest"
+    image: "apache/dubbo-gateway:latest"
     # Individual Gateways can override this with the
     # gateway.dubbo.apache.org/replicas annotation.
     replicaCount: 2

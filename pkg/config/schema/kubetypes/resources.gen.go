@@ -97,10 +97,6 @@ func getGvk(obj any) (config.GroupVersionKind, bool) {
 		return gvk.Telemetry, true
 	case *apigithubcomapachedubbokubernetesapitelemetryv1alpha3.Telemetry:
 		return gvk.Telemetry, true
-	case *githubcomdubmlapinetworkingv1alpha3.TransitService:
-		return gvk.TransitService, true
-	case *apigithubcomapachedubbokubernetesapinetworkingv1alpha3.TransitService:
-		return gvk.TransitService, true
 	case *k8sioapiadmissionregistrationv1.ValidatingWebhookConfiguration:
 		return gvk.ValidatingWebhookConfiguration, true
 	case *githubcomdubmlapinetworkingv1alpha3.WorkloadEntry:
