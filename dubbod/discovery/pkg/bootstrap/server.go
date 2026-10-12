@@ -85,13 +85,11 @@ type Server struct {
 	secureGrpcServer  *grpc.Server
 	secureGrpcAddress string
 
-	httpsServer    *http.Server // webhooks HTTPS Server.
-	httpAddr       string
-	managementAddr string
-	httpsAddr      string
-	httpMux        *http.ServeMux
-	managementMux  *http.ServeMux
-	httpsMux       *http.ServeMux // webhooks
+	httpsServer *http.Server // webhooks HTTPS Server.
+	httpAddr    string
+	httpsAddr   string
+	httpMux     *http.ServeMux
+	httpsMux    *http.ServeMux // webhooks
 
 	monitoringMux *http.ServeMux
 
@@ -174,7 +172,6 @@ func NewServer(args *DubboArgs, initFuncs ...func(*Server)) (*Server, error) {
 		server:                  server.New(),
 		clusterID:               getClusterID(args),
 		httpMux:                 http.NewServeMux(),
-		managementMux:           http.NewServeMux(),
 		monitoringMux:           http.NewServeMux(),
 		dubbodCertBundleWatcher: keycertbundle.NewWatcher(),
 		fileWatcher:             filewatcher.NewWatcher(),
@@ -234,13 +231,6 @@ func NewServer(args *DubboArgs, initFuncs ...func(*Server)) (*Server, error) {
 	}
 
 	InitGenerators(s.XDSServer)
-
-	if err := s.initManagement(); err != nil {
-		return nil, fmt.Errorf("error initializing management API: %v", err)
-	}
-	if err := s.initManagementServer(args.ServerOptions.ManagementAddr); err != nil {
-		return nil, fmt.Errorf("error initializing Management Server: %v", err)
-	}
 
 	// Initialize monitoring server
 	if err := s.initMonitor(args.ServerOptions.HTTPAddr); err != nil {

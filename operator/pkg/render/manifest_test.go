@@ -28,6 +28,9 @@ func TestGenerateManifestUsesEmbeddedInstallerAssets(t *testing.T) {
 	if err != nil {
 		t.Fatalf("GenerateManifest() error = %v", err)
 	}
+	if hasManifest(manifests, "Service", "dubbod-admin") || hasManifest(manifests, "Service", "dubbod-management") {
+		t.Fatal("removed management Service was rendered")
+	}
 	if len(manifests) == 0 {
 		t.Fatal("GenerateManifest() returned zero manifest sets")
 	}
@@ -213,7 +216,6 @@ func TestGenerateManifestExposesDubbodPrometheusScrapeEndpoint(t *testing.T) {
 
 func TestGenerateManifestSetOverridesHelmValues(t *testing.T) {
 	manifests, _, err := GenerateManifest(nil, []string{
-		"values.global.management.port=26081",
 		"values.global.trustDomain=example.local",
 		"values.global.statusPort=26021",
 		"values.global.configValidation=false",
@@ -221,28 +223,6 @@ func TestGenerateManifestSetOverridesHelmValues(t *testing.T) {
 	}, nil, nil)
 	if err != nil {
 		t.Fatalf("GenerateManifest() error = %v", err)
-	}
-
-	managementService := findManifest(t, manifests, "Service", "dubbod-management")
-	managementPort := findPort(t, managementService, "management")
-	port, _, _ := unstructured.NestedInt64(managementPort, "port")
-	targetPort, _, _ := unstructured.NestedInt64(managementPort, "targetPort")
-	if port != 26081 || targetPort != 26081 {
-		t.Fatalf("dubbod-management port=%d targetPort=%d, want 26081/26081", port, targetPort)
-	}
-
-	deployment := findManifest(t, manifests, "Deployment", "dubbod")
-	containers, ok, err := unstructured.NestedSlice(deployment.Object, "spec", "template", "spec", "containers")
-	if err != nil || !ok || len(containers) == 0 {
-		t.Fatalf("deployment containers missing: ok=%v err=%v", ok, err)
-	}
-	execute := containers[0].(map[string]interface{})
-	containerPorts, ok, err := unstructured.NestedSlice(execute, "ports")
-	if err != nil || !ok {
-		t.Fatalf("container ports missing: ok=%v err=%v", ok, err)
-	}
-	if !hasContainerPort(containerPorts, "management", 26081) {
-		t.Fatal("dubbod deployment missing management containerPort 26081")
 	}
 
 	configMap := findManifest(t, manifests, "ConfigMap", "dubbo")

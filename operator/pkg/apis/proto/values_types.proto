@@ -20,13 +20,10 @@ syntax = 'proto3';
 package dubbo.operator.v1alpha1;
 
 import "google/protobuf/wrappers.proto";
+import "google/protobuf/struct.proto";
 
 // Package-wide variables from generator "generated".
 option go_package = "dubbo.apache.org/dubbo/operator/pkg/apis";
-
-message ManagementConfig {
-  int64 port = 1;
-}
 
 message GatewayConfig {
   // Default replica count for managed gateway deployments. Individual Gateways
@@ -39,7 +36,8 @@ message GlobalConfig {
 
   int64 statusPort = 2;
 
-  ManagementConfig management = 3;
+  reserved 3;
+  reserved "admin", "management";
 
   bool configValidation = 4;
 
@@ -50,6 +48,12 @@ message GlobalConfig {
   GatewayConfig gateway = 7;
 
   reserved 8;
+
+  // Root for docker image paths.
+  string repo = 9;
+
+  // Version tag for docker images; supports numeric tags.
+  google.protobuf.Value tag = 10;
 }
 
 message Values {
@@ -64,8 +68,14 @@ message Values {
   // 1 is distinguishable from an unset field.
   google.protobuf.Int32Value replicaCount = 3;
 
-  // Control-plane image used by dubbod and its admission webhook.
+  // Control-plane image name, or a full repo/image:tag.
   string image = 4;
+
+  // Version tag for control-plane docker images; supports numeric tags.
+  google.protobuf.Value tag = 5;
+
+  // Root for control-plane docker image paths.
+  string repo = 6;
 }
 
 // IntOrString is a type that can hold an int32 or a string.  When used in

@@ -43,6 +43,10 @@ type DubboOperatorSpec struct {
 	// Path or name for the profile.
 	// default profile is used if this field is unset.
 	Profile string `json:"profile,omitempty"`
+	// Root for docker image paths.
+	Repo string `json:"repo,omitempty"`
+	// Version tag for docker images.
+	Tag any `json:"tag,omitempty"`
 	// enablement and component-specific settings that are not internal to the component.
 	Components *DubboComponentSpec `json:"components,omitempty"`
 	// Overrides for default `values.yaml`. This is a validated pass-through to Helm templates.

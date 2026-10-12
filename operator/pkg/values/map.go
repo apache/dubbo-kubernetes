@@ -381,7 +381,11 @@ func extractKeyValue(seg string) (string, string, bool) {
 }
 
 // alwaysString represents types that should always be decoded as strings
-var alwaysString = []string{}
+var alwaysString = []string{
+	"spec.tag",
+	"spec.values.global.tag",
+	"spec.values.tag",
+}
 
 func isAlwaysString(s string) bool {
 	for _, a := range alwaysString {

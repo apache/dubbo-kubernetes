@@ -28,7 +28,17 @@ var (
 	buildGitRevision = "unknown"
 	buildStatus      = "unknown"
 	buildTag         = "unknown"
+	buildRepo        = "unknown"
+	buildRepoTag     = "unknown"
 )
+
+// DockerBuildInfo contains the compiled docker image root and version tag.
+type DockerBuildInfo struct {
+	Repo string
+	Tag  string
+}
+
+var DockerInfo DockerBuildInfo
 
 type BuildVersion struct {
 	Version       string `json:"version"`
@@ -164,6 +174,7 @@ func commandVersion() string {
 }
 
 func init() {
+	DockerInfo = DockerBuildInfo{Repo: buildRepo, Tag: buildRepoTag}
 	Build = BuildInfo{
 		Product:      Product,
 		Version:      version,

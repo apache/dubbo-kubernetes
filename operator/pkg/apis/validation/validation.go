@@ -24,6 +24,7 @@ import (
 	"github.com/apache/dubbo-kubernetes/operator/pkg/util"
 	"github.com/apache/dubbo-kubernetes/operator/pkg/values"
 	"github.com/apache/dubbo-kubernetes/pkg/kube"
+	"github.com/google/go-containerregistry/pkg/name"
 	"sigs.k8s.io/yaml"
 )
 
@@ -43,7 +44,33 @@ func ParseAndValidateDubboOperator(dopMap values.Map, _ kube.CLIClient) (Warning
 	warnings = util.AppendErrs(warnings, vw)
 	errors = util.AppendErrs(errors, ve)
 	errors = util.AppendErr(errors, validateComponentNames(iop.Spec.Components))
+	errors = util.AppendErr(errors, ValidateRepo(iop.Spec.Repo))
+	errors = util.AppendErr(errors, ValidateTag(iop.Spec.Tag))
 	return warnings, errors
+}
+
+// ValidateRepo validates the root for docker image paths.
+func ValidateRepo(repo string) error {
+	if repo == "" {
+		return nil
+	}
+	_, err := name.NewRepository(repo + "/dubbod")
+	if err != nil {
+		return fmt.Errorf("bad repo: %v", err)
+	}
+	return nil
+}
+
+// ValidateTag validates a string or numeric docker image tag.
+func ValidateTag(tag any) error {
+	if tag == nil {
+		return nil
+	}
+	_, err := name.NewTag(fmt.Sprintf("dubml/dubbod:%v", tag))
+	if err != nil {
+		return fmt.Errorf("bad tag: %v", err)
+	}
+	return nil
 }
 
 type FeatureValidator func(*apis.Values, apis.DubboOperatorSpec) (Warnings, util.Errors)

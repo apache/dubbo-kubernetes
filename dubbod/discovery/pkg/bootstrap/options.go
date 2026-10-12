@@ -52,7 +52,6 @@ type DubboArgs struct {
 
 type DiscoveryServerOptions struct {
 	HTTPAddr       string
-	ManagementAddr string
 	HTTPSAddr      string
 	GRPCAddr       string
 	SecureGRPCAddr string

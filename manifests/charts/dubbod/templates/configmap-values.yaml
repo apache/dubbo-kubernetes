@@ -14,13 +14,20 @@
 # limitations under the License.
 
 {{- $defaults := .Values._internal_default_values_not_set | default dict }}
-{{- $defaultManagement := $defaults.management | default dict }}
-{{- $management := .Values.management | default dict }}
 {{- $trustDomain := coalesce .Values.trustDomain $defaults.trustDomain "cluster.local" }}
 {{- $revision := .Values.revision | default "default" }}
 {{- $statusPort := coalesce .Values.statusPort $defaults.statusPort 26020 }}
-{{- $managementPort := int (coalesce $management.port $defaultManagement.port 26080) }}
-{{- $image := coalesce .Values.image $defaults.image (printf "ghcr.io/apache/dubbo-kubernetes/dubbod:%s" .Chart.AppVersion) }}
+{{- $repo := coalesce .Values.repo $defaults.repo "ghcr.io/apache/dubbo-kubernetes" }}
+{{- $tag := .Chart.AppVersion }}
+{{- if and (hasKey .Values "tag") (ne (.Values.tag | toString) "") }}
+{{- $tag = .Values.tag }}
+{{- else if and (hasKey $defaults "tag") (ne ($defaults.tag | toString) "") }}
+{{- $tag = $defaults.tag }}
+{{- end }}
+{{- $image := coalesce .Values.image $defaults.image "dubbod" }}
+{{- if not (contains "/" $image) }}
+{{- $image = printf "%s/%s:%v" $repo $image $tag }}
+{{- end }}
 {{- $original := omit .Values "_internal_default_values_not_set" }}
 apiVersion: v1
 kind: ConfigMap
@@ -35,8 +42,6 @@ data:
     revision: {{ $revision | quote }}
     image: {{ $image | quote }}
     trustDomain: {{ $trustDomain | quote }}
-    management:
-      port: {{ $managementPort }}
     statusPort: {{ $statusPort }}
   original-values: |-
 {{ $original | toYaml | nindent 4 }}
