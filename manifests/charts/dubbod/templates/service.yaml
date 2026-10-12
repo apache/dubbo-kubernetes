@@ -14,9 +14,6 @@
 # limitations under the License.
 
 {{- $defaults := .Values._internal_default_values_not_set | default dict }}
-{{- $defaultManagement := $defaults.management | default dict }}
-{{- $management := .Values.management | default dict }}
-{{- $managementPort := int (coalesce $management.port $defaultManagement.port 26080) }}
 apiVersion: v1
 kind: Service
 metadata:
@@ -42,22 +39,6 @@ spec:
     - port: 443
       name: https-webhook
       targetPort: 26017
-      protocol: TCP
-  selector:
-    app: dubbod
----
-apiVersion: v1
-kind: Service
-metadata:
-  name: dubbod-management
-  namespace: dubbo-system
-  labels:
-    app: dubbod
-spec:
-  ports:
-    - port: {{ $managementPort }}
-      name: management
-      targetPort: {{ $managementPort }}
       protocol: TCP
   selector:
     app: dubbod

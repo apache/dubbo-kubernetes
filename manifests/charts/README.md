@@ -1,4 +1,4 @@
-# Dubbo Helm Charts
+# Dubbod Helm Charts
 
 The charts in this directory are the source for every
 supported install path:

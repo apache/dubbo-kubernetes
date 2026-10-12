@@ -21,6 +21,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/apache/dubbo-kubernetes/operator/pkg/apis"
+	apisvalidation "github.com/apache/dubbo-kubernetes/operator/pkg/apis/validation"
 	"github.com/apache/dubbo-kubernetes/operator/pkg/util"
 	"github.com/apache/dubbo-kubernetes/operator/pkg/values"
 	"sigs.k8s.io/yaml"
@@ -41,6 +42,8 @@ func ParseAndValidateDubboOperator(dopMap values.Map) (Warnings, util.Errors) {
 	warnings = util.AppendErrs(warnings, vw)
 	errors = util.AppendErrs(errors, ve)
 	errors = util.AppendErr(errors, validateComponentNames(dop.Spec.Components))
+	errors = util.AppendErr(errors, apisvalidation.ValidateRepo(dop.Spec.Repo))
+	errors = util.AppendErr(errors, apisvalidation.ValidateTag(dop.Spec.Tag))
 	return warnings, errors
 }
 

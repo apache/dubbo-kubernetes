@@ -168,7 +168,6 @@ func serverAddressSummary(args *DubboArgs) string {
 	}
 	return multilineParts(
 		formatStringField("http", args.ServerOptions.HTTPAddr),
-		formatStringField("management", args.ServerOptions.ManagementAddr),
 		formatStringField("https", args.ServerOptions.HTTPSAddr),
 		formatStringField("grpc", args.ServerOptions.GRPCAddr),
 		formatStringField("secure_grpc", args.ServerOptions.SecureGRPCAddr),

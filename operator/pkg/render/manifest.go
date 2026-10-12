@@ -32,6 +32,7 @@ import (
 	"github.com/apache/dubbo-kubernetes/operator/pkg/util/clog"
 	"github.com/apache/dubbo-kubernetes/operator/pkg/values"
 	"github.com/apache/dubbo-kubernetes/pkg/kube"
+	pkgversion "github.com/apache/dubbo-kubernetes/pkg/version"
 )
 
 // MergeInputs merges the various configuration inputs into one single DubboOperator.
@@ -89,13 +90,57 @@ func MergeInputs(filenames []string, flags []string) (values.Map, error) {
 
 	path := ConfigBase.GetPathString("")
 	profile := ConfigBase.GetPathString("spec.profile")
+	userValues, _ := ConfigBase.GetPathMap("spec.values")
+	if userValues != nil {
+		userValues, err = values.MapFromJSON([]byte(userValues.JSON()))
+		if err != nil {
+			return nil, err
+		}
+	}
 	// Now we have the base
 	base, err := readProfile(path, profile)
 	if err != nil {
 		return base, err
 	}
+	if err := base.SetSpecPaths(repoTagOverlay()...); err != nil {
+		return nil, err
+	}
 	// Merge the user values on top
 	base.MergeFrom(ConfigBase)
+	base, err = translateDubboOperatorToHelm(base)
+	if err != nil {
+		return nil, err
+	}
+	// Explicit Helm values take precedence over top level settings.
+	if userValues != nil {
+		base.MergeFrom(values.Map{"spec": values.Map{"values": userValues}})
+	}
+	return base, nil
+}
+
+// repoTagOverlay overrides profile defaults with compiled repo/tag settings.
+func repoTagOverlay() []string {
+	repo := pkgversion.DockerInfo.Repo
+	tag := pkgversion.DockerInfo.Tag
+	if repo != "unknown" && tag != "unknown" {
+		return []string{"repo=" + repo, "tag=" + tag}
+	}
+	return nil
+}
+
+func translateDubboOperatorToHelm(base values.Map) (values.Map, error) {
+	for in, out := range map[string]string{
+		"spec.repo": "global.repo",
+		"spec.tag":  "global.tag",
+	} {
+		v, found := base.GetPath(in)
+		if !found {
+			continue
+		}
+		if err := base.SetSpecPaths(fmt.Sprintf("values.%s=%v", out, v)); err != nil {
+			return nil, err
+		}
+	}
 	return base, nil
 }
 

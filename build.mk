@@ -28,8 +28,14 @@ build: $(addprefix build-,$(BINARIES)) ## Build all binaries into bin/ (host OS/
 $(addprefix build-,$(BINARIES)): build-%:
 	$(GO_BUILD) -o $(BIN_DIR)/$* $(main_path_$*)
 
-.PHONY: docker-build
-docker-build: ## Build the dubbod container image (override with HUB=/IMAGE_TAG=).
+.PHONY: docker-build docker.dubbod
+docker.dubbod: ## Build a local Linux dubbod image (REPO=/TAG=; BUILD_ALL=false builds only dubbod).
+	$(MAKE) $(addprefix build-,$(if $(filter true,$(BUILD_ALL)),$(BINARIES),dubbod)) GOOS=linux BIN_DIR=$(BIN_DIR)/docker/dubbod
+	rm -rf $(BIN_DIR)/docker/dubbod/legal
+	go run ./tools/licenses -binary dubbod -goos linux -goarch $(GOARCH) -out $(BIN_DIR)/docker/dubbod/legal
+	docker build --platform linux/$(GOARCH) --build-arg BUILD_MODE=prebuilt -f dubbod/discovery/docker/dockerfile.dubbod -t $(IMAGE) $(BIN_DIR)/docker/dubbod
+
+docker-build: ## Build the dubbod container image (override with HUB=/TAG= or IMAGE_TAG=).
 	docker build -f dubbod/discovery/docker/dockerfile.dubbod -t $(IMAGE) .
 
 .PHONY: clone-examples

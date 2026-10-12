@@ -35,11 +35,13 @@ TOOL_BIN               ?= $(CURDIR)/$(BIN_DIR)/tools
 OPERATOR_APIS_DIR      := operator/pkg/apis
 
 HUB       ?= dubml
-IMAGE_TAG ?= debug
+TAG       ?= debug
+IMAGE_TAG ?= $(TAG)
 IMAGE     ?= $(HUB)/dubbod:$(IMAGE_TAG)
+BUILD_ALL ?= true
 
 VERSION_PKG := github.com/apache/dubbo-kubernetes/pkg/version
-LDFLAGS     ?= -X $(VERSION_PKG).gitTag=$(GIT_VERSION) -X $(VERSION_PKG).buildVersion=$(GIT_VERSION)
+LDFLAGS     ?= -X $(VERSION_PKG).gitTag=$(GIT_VERSION) -X $(VERSION_PKG).buildVersion=$(GIT_VERSION) -X $(VERSION_PKG).buildRepo=$(HUB) -X $(VERSION_PKG).buildRepoTag=$(IMAGE_TAG)
 GO_BUILD     = CGO_ENABLED=0 GOOS=$(GOOS) GOARCH=$(GOARCH) go build -ldflags "$(LDFLAGS)"
 
 CHARTS := manifests/charts/base manifests/charts/dubbod

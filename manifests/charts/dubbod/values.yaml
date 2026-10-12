@@ -16,6 +16,8 @@
 _internal_default_values_not_set:
   revision: ""
 
+  trustDomain: "cluster.local"
+
   # Number of dubbod replicas. Two by default: a single replica makes every
   # node drain, upgrade or eviction a full control-plane outage, during which
   # no workload can be injected and no xDS update is served. At >= 2 a
@@ -23,24 +25,20 @@ _internal_default_values_not_set:
   # automatically. Set to 1 only for local development.
   replicaCount: 2
 
-  # Control-plane image. An empty value resolves to
-  # ghcr.io/apache/dubbo-kubernetes/dubbod:<Chart.appVersion>.
-  image: ""
+  # Root for control-plane docker image paths. The rendered image is
+  # <repo>/<image>:<tag>; an unset tag uses Chart.appVersion.
+  repo: ""
+  tag: ""
 
-  trustDomain: "cluster.local"
-
-  statusPort: 26020
-
-  management:
-    port: 26080
+  # Can be a full repo/image:tag
+  image: dubbod
 
   gateway:
     # Image used by managed Gateway deployments. Keep it independently
     # configurable from dubbod so a gateway can be rolled independently.
-    image: "apache/dubbo-gateway:latest"
+    image: ""
     # Individual Gateways can override this with the
     # gateway.dubbo.apache.org/replicas annotation.
     replicaCount: 2
-
 
   configValidation: true

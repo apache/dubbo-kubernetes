@@ -25,6 +25,7 @@ package apis
 import (
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
+	structpb "google.golang.org/protobuf/types/known/structpb"
 	wrapperspb "google.golang.org/protobuf/types/known/wrapperspb"
 	reflect "reflect"
 	sync "sync"
@@ -38,50 +39,6 @@ const (
 	_ = protoimpl.EnforceVersion(protoimpl.MaxVersion - 20)
 )
 
-type ManagementConfig struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Port          int64                  `protobuf:"varint,1,opt,name=port,proto3" json:"port,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *ManagementConfig) Reset() {
-	*x = ManagementConfig{}
-	mi := &file_values_types_proto_msgTypes[0]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *ManagementConfig) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*ManagementConfig) ProtoMessage() {}
-
-func (x *ManagementConfig) ProtoReflect() protoreflect.Message {
-	mi := &file_values_types_proto_msgTypes[0]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use ManagementConfig.ProtoReflect.Descriptor instead.
-func (*ManagementConfig) Descriptor() ([]byte, []int) {
-	return file_values_types_proto_rawDescGZIP(), []int{0}
-}
-
-func (x *ManagementConfig) GetPort() int64 {
-	if x != nil {
-		return x.Port
-	}
-	return 0
-}
-
 type GatewayConfig struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	// Default replica count for managed gateway deployments. Individual Gateways
@@ -93,7 +50,7 @@ type GatewayConfig struct {
 
 func (x *GatewayConfig) Reset() {
 	*x = GatewayConfig{}
-	mi := &file_values_types_proto_msgTypes[1]
+	mi := &file_values_types_proto_msgTypes[0]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -105,7 +62,7 @@ func (x *GatewayConfig) String() string {
 func (*GatewayConfig) ProtoMessage() {}
 
 func (x *GatewayConfig) ProtoReflect() protoreflect.Message {
-	mi := &file_values_types_proto_msgTypes[1]
+	mi := &file_values_types_proto_msgTypes[0]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -118,7 +75,7 @@ func (x *GatewayConfig) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GatewayConfig.ProtoReflect.Descriptor instead.
 func (*GatewayConfig) Descriptor() ([]byte, []int) {
-	return file_values_types_proto_rawDescGZIP(), []int{1}
+	return file_values_types_proto_rawDescGZIP(), []int{0}
 }
 
 func (x *GatewayConfig) GetReplicaCount() *wrapperspb.Int32Value {
@@ -132,16 +89,19 @@ type GlobalConfig struct {
 	state            protoimpl.MessageState `protogen:"open.v1"`
 	TrustDomain      string                 `protobuf:"bytes,1,opt,name=trustDomain,proto3" json:"trustDomain,omitempty"`
 	StatusPort       int64                  `protobuf:"varint,2,opt,name=statusPort,proto3" json:"statusPort,omitempty"`
-	Management       *ManagementConfig      `protobuf:"bytes,3,opt,name=management,proto3" json:"management,omitempty"`
 	ConfigValidation bool                   `protobuf:"varint,4,opt,name=configValidation,proto3" json:"configValidation,omitempty"`
 	Gateway          *GatewayConfig         `protobuf:"bytes,7,opt,name=gateway,proto3" json:"gateway,omitempty"`
-	unknownFields    protoimpl.UnknownFields
-	sizeCache        protoimpl.SizeCache
+	// Root for docker image paths.
+	Repo string `protobuf:"bytes,9,opt,name=repo,proto3" json:"repo,omitempty"`
+	// Version tag for docker images; supports numeric tags.
+	Tag           *structpb.Value `protobuf:"bytes,10,opt,name=tag,proto3" json:"tag,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
 }
 
 func (x *GlobalConfig) Reset() {
 	*x = GlobalConfig{}
-	mi := &file_values_types_proto_msgTypes[2]
+	mi := &file_values_types_proto_msgTypes[1]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -153,7 +113,7 @@ func (x *GlobalConfig) String() string {
 func (*GlobalConfig) ProtoMessage() {}
 
 func (x *GlobalConfig) ProtoReflect() protoreflect.Message {
-	mi := &file_values_types_proto_msgTypes[2]
+	mi := &file_values_types_proto_msgTypes[1]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -166,7 +126,7 @@ func (x *GlobalConfig) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GlobalConfig.ProtoReflect.Descriptor instead.
 func (*GlobalConfig) Descriptor() ([]byte, []int) {
-	return file_values_types_proto_rawDescGZIP(), []int{2}
+	return file_values_types_proto_rawDescGZIP(), []int{1}
 }
 
 func (x *GlobalConfig) GetTrustDomain() string {
@@ -183,13 +143,6 @@ func (x *GlobalConfig) GetStatusPort() int64 {
 	return 0
 }
 
-func (x *GlobalConfig) GetManagement() *ManagementConfig {
-	if x != nil {
-		return x.Management
-	}
-	return nil
-}
-
 func (x *GlobalConfig) GetConfigValidation() bool {
 	if x != nil {
 		return x.ConfigValidation
@@ -204,6 +157,20 @@ func (x *GlobalConfig) GetGateway() *GatewayConfig {
 	return nil
 }
 
+func (x *GlobalConfig) GetRepo() string {
+	if x != nil {
+		return x.Repo
+	}
+	return ""
+}
+
+func (x *GlobalConfig) GetTag() *structpb.Value {
+	if x != nil {
+		return x.Tag
+	}
+	return nil
+}
+
 type Values struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	// Global configuration for dubbo components.
@@ -214,15 +181,19 @@ type Values struct {
 	// topology spread are added automatically above one. Wrapped so an explicit
 	// 1 is distinguishable from an unset field.
 	ReplicaCount *wrapperspb.Int32Value `protobuf:"bytes,3,opt,name=replicaCount,proto3" json:"replicaCount,omitempty"`
-	// Control-plane image used by dubbod and its admission webhook.
-	Image         string `protobuf:"bytes,4,opt,name=image,proto3" json:"image,omitempty"`
+	// Control-plane image name, or a full repo/image:tag.
+	Image string `protobuf:"bytes,4,opt,name=image,proto3" json:"image,omitempty"`
+	// Version tag for control-plane docker images; supports numeric tags.
+	Tag *structpb.Value `protobuf:"bytes,5,opt,name=tag,proto3" json:"tag,omitempty"`
+	// Root for control-plane docker image paths.
+	Repo          string `protobuf:"bytes,6,opt,name=repo,proto3" json:"repo,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
 func (x *Values) Reset() {
 	*x = Values{}
-	mi := &file_values_types_proto_msgTypes[3]
+	mi := &file_values_types_proto_msgTypes[2]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -234,7 +205,7 @@ func (x *Values) String() string {
 func (*Values) ProtoMessage() {}
 
 func (x *Values) ProtoReflect() protoreflect.Message {
-	mi := &file_values_types_proto_msgTypes[3]
+	mi := &file_values_types_proto_msgTypes[2]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -247,7 +218,7 @@ func (x *Values) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Values.ProtoReflect.Descriptor instead.
 func (*Values) Descriptor() ([]byte, []int) {
-	return file_values_types_proto_rawDescGZIP(), []int{3}
+	return file_values_types_proto_rawDescGZIP(), []int{2}
 }
 
 func (x *Values) GetGlobal() *GlobalConfig {
@@ -278,6 +249,20 @@ func (x *Values) GetImage() string {
 	return ""
 }
 
+func (x *Values) GetTag() *structpb.Value {
+	if x != nil {
+		return x.Tag
+	}
+	return nil
+}
+
+func (x *Values) GetRepo() string {
+	if x != nil {
+		return x.Repo
+	}
+	return ""
+}
+
 // IntOrString is a type that can hold an int32 or a string.  When used in
 // JSON or YAML marshalling and unmarshalling, it produces or consumes the
 // inner type.  This allows you to have, for example, a JSON field that can
@@ -298,7 +283,7 @@ type IntOrString struct {
 
 func (x *IntOrString) Reset() {
 	*x = IntOrString{}
-	mi := &file_values_types_proto_msgTypes[4]
+	mi := &file_values_types_proto_msgTypes[3]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -310,7 +295,7 @@ func (x *IntOrString) String() string {
 func (*IntOrString) ProtoMessage() {}
 
 func (x *IntOrString) ProtoReflect() protoreflect.Message {
-	mi := &file_values_types_proto_msgTypes[4]
+	mi := &file_values_types_proto_msgTypes[3]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -323,7 +308,7 @@ func (x *IntOrString) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use IntOrString.ProtoReflect.Descriptor instead.
 func (*IntOrString) Descriptor() ([]byte, []int) {
-	return file_values_types_proto_rawDescGZIP(), []int{4}
+	return file_values_types_proto_rawDescGZIP(), []int{3}
 }
 
 func (x *IntOrString) GetType() int64 {
@@ -351,26 +336,27 @@ var File_values_types_proto protoreflect.FileDescriptor
 
 const file_values_types_proto_rawDesc = "" +
 	"\n" +
-	"\x12values_types.proto\x12\x17dubbo.operator.v1alpha1\x1a\x1egoogle/protobuf/wrappers.proto\"&\n" +
-	"\x10ManagementConfig\x12\x12\n" +
-	"\x04port\x18\x01 \x01(\x03R\x04port\"P\n" +
+	"\x12values_types.proto\x12\x17dubbo.operator.v1alpha1\x1a\x1egoogle/protobuf/wrappers.proto\x1a\x1cgoogle/protobuf/struct.proto\"P\n" +
 	"\rGatewayConfig\x12?\n" +
-	"\freplicaCount\x18\x01 \x01(\v2\x1b.google.protobuf.Int32ValueR\freplicaCount\"\x9b\x02\n" +
+	"\freplicaCount\x18\x01 \x01(\v2\x1b.google.protobuf.Int32ValueR\freplicaCount\"\xa7\x02\n" +
 	"\fGlobalConfig\x12 \n" +
 	"\vtrustDomain\x18\x01 \x01(\tR\vtrustDomain\x12\x1e\n" +
 	"\n" +
 	"statusPort\x18\x02 \x01(\x03R\n" +
-	"statusPort\x12I\n" +
-	"\n" +
-	"management\x18\x03 \x01(\v2).dubbo.operator.v1alpha1.ManagementConfigR\n" +
-	"management\x12*\n" +
+	"statusPort\x12*\n" +
 	"\x10configValidation\x18\x04 \x01(\bR\x10configValidation\x12@\n" +
-	"\agateway\x18\a \x01(\v2&.dubbo.operator.v1alpha1.GatewayConfigR\agatewayJ\x04\b\x05\x10\x06J\x04\b\x06\x10\aJ\x04\b\b\x10\t\"\xba\x01\n" +
+	"\agateway\x18\a \x01(\v2&.dubbo.operator.v1alpha1.GatewayConfigR\agateway\x12\x12\n" +
+	"\x04repo\x18\t \x01(\tR\x04repo\x12(\n" +
+	"\x03tag\x18\n" +
+	" \x01(\v2\x16.google.protobuf.ValueR\x03tagJ\x04\b\x03\x10\x04J\x04\b\x05\x10\x06J\x04\b\x06\x10\aJ\x04\b\b\x10\tR\x05adminR\n" +
+	"management\"\xf8\x01\n" +
 	"\x06Values\x12=\n" +
 	"\x06global\x18\x01 \x01(\v2%.dubbo.operator.v1alpha1.GlobalConfigR\x06global\x12\x1a\n" +
 	"\brevision\x18\x02 \x01(\tR\brevision\x12?\n" +
 	"\freplicaCount\x18\x03 \x01(\v2\x1b.google.protobuf.Int32ValueR\freplicaCount\x12\x14\n" +
-	"\x05image\x18\x04 \x01(\tR\x05image\"\x8c\x01\n" +
+	"\x05image\x18\x04 \x01(\tR\x05image\x12(\n" +
+	"\x03tag\x18\x05 \x01(\v2\x16.google.protobuf.ValueR\x03tag\x12\x12\n" +
+	"\x04repo\x18\x06 \x01(\tR\x04repo\"\x8c\x01\n" +
 	"\vIntOrString\x12\x12\n" +
 	"\x04type\x18\x01 \x01(\x03R\x04type\x123\n" +
 	"\x06intVal\x18\x02 \x01(\v2\x1b.google.protobuf.Int32ValueR\x06intVal\x124\n" +
@@ -388,29 +374,30 @@ func file_values_types_proto_rawDescGZIP() []byte {
 	return file_values_types_proto_rawDescData
 }
 
-var file_values_types_proto_msgTypes = make([]protoimpl.MessageInfo, 5)
+var file_values_types_proto_msgTypes = make([]protoimpl.MessageInfo, 4)
 var file_values_types_proto_goTypes = []any{
-	(*ManagementConfig)(nil),       // 0: dubbo.operator.v1alpha1.ManagementConfig
-	(*GatewayConfig)(nil),          // 1: dubbo.operator.v1alpha1.GatewayConfig
-	(*GlobalConfig)(nil),           // 2: dubbo.operator.v1alpha1.GlobalConfig
-	(*Values)(nil),                 // 3: dubbo.operator.v1alpha1.Values
-	(*IntOrString)(nil),            // 4: dubbo.operator.v1alpha1.IntOrString
-	(*wrapperspb.Int32Value)(nil),  // 5: google.protobuf.Int32Value
+	(*GatewayConfig)(nil),          // 0: dubbo.operator.v1alpha1.GatewayConfig
+	(*GlobalConfig)(nil),           // 1: dubbo.operator.v1alpha1.GlobalConfig
+	(*Values)(nil),                 // 2: dubbo.operator.v1alpha1.Values
+	(*IntOrString)(nil),            // 3: dubbo.operator.v1alpha1.IntOrString
+	(*wrapperspb.Int32Value)(nil),  // 4: google.protobuf.Int32Value
+	(*structpb.Value)(nil),         // 5: google.protobuf.Value
 	(*wrapperspb.StringValue)(nil), // 6: google.protobuf.StringValue
 }
 var file_values_types_proto_depIdxs = []int32{
-	5, // 0: dubbo.operator.v1alpha1.GatewayConfig.replicaCount:type_name -> google.protobuf.Int32Value
-	0, // 1: dubbo.operator.v1alpha1.GlobalConfig.management:type_name -> dubbo.operator.v1alpha1.ManagementConfig
-	1, // 2: dubbo.operator.v1alpha1.GlobalConfig.gateway:type_name -> dubbo.operator.v1alpha1.GatewayConfig
-	2, // 3: dubbo.operator.v1alpha1.Values.global:type_name -> dubbo.operator.v1alpha1.GlobalConfig
-	5, // 4: dubbo.operator.v1alpha1.Values.replicaCount:type_name -> google.protobuf.Int32Value
-	5, // 5: dubbo.operator.v1alpha1.IntOrString.intVal:type_name -> google.protobuf.Int32Value
-	6, // 6: dubbo.operator.v1alpha1.IntOrString.strVal:type_name -> google.protobuf.StringValue
-	7, // [7:7] is the sub-list for method output_type
-	7, // [7:7] is the sub-list for method input_type
-	7, // [7:7] is the sub-list for extension type_name
-	7, // [7:7] is the sub-list for extension extendee
-	0, // [0:7] is the sub-list for field type_name
+	4, // 0: dubbo.operator.v1alpha1.GatewayConfig.replicaCount:type_name -> google.protobuf.Int32Value
+	0, // 1: dubbo.operator.v1alpha1.GlobalConfig.gateway:type_name -> dubbo.operator.v1alpha1.GatewayConfig
+	5, // 2: dubbo.operator.v1alpha1.GlobalConfig.tag:type_name -> google.protobuf.Value
+	1, // 3: dubbo.operator.v1alpha1.Values.global:type_name -> dubbo.operator.v1alpha1.GlobalConfig
+	4, // 4: dubbo.operator.v1alpha1.Values.replicaCount:type_name -> google.protobuf.Int32Value
+	5, // 5: dubbo.operator.v1alpha1.Values.tag:type_name -> google.protobuf.Value
+	4, // 6: dubbo.operator.v1alpha1.IntOrString.intVal:type_name -> google.protobuf.Int32Value
+	6, // 7: dubbo.operator.v1alpha1.IntOrString.strVal:type_name -> google.protobuf.StringValue
+	8, // [8:8] is the sub-list for method output_type
+	8, // [8:8] is the sub-list for method input_type
+	8, // [8:8] is the sub-list for extension type_name
+	8, // [8:8] is the sub-list for extension extendee
+	0, // [0:8] is the sub-list for field type_name
 }
 
 func init() { file_values_types_proto_init() }
@@ -424,7 +411,7 @@ func file_values_types_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_values_types_proto_rawDesc), len(file_values_types_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   5,
+			NumMessages:   4,
 			NumExtensions: 0,
 			NumServices:   0,
 		},
