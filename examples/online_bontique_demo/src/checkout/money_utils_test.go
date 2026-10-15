@@ -33,7 +33,7 @@ type MoneyVectorFile struct {
 }
 
 func loadVectors(t *testing.T) MoneyVectorFile {
-	data, err := os.ReadFile("../../contracts/money_vectors.json")
+	data, err := os.ReadFile("../../api/money_vectors.json")
 	if err != nil {
 		t.Fatalf("failed to read money_vectors.json: %v", err)
 	}

@@ -28,6 +28,12 @@ import (
 
 const (
 	InherentGRPCTemplateName                    = "grpc-engine"
+	InherentTripleTemplateName                  = "triple-engine"
+	InherentTripleBootstrapEnvName              = "TRIPLE_XDS_BOOTSTRAP"
+	InherentTripleBootstrapFileName             = "triple-bootstrap.json"
+	InherentTripleBootstrapPath                 = InherentXDSMountPath + "/" + InherentTripleBootstrapFileName
+	InherentTripleStatusAddressEnvName          = "DUBBO_TRIPLE_STATUS_ADDRESS"
+	InherentTripleStatusAddress                 = "0.0.0.0:9090"
 	InherentXDSVolumeName                       = "dubbo-xds"
 	InherentXDSMountPath                        = "/etc/dubbo/proxy"
 	InherentGRPCBootstrapFileName               = "grpc-bootstrap.json"

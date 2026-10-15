@@ -138,6 +138,11 @@ func TestShouldManageInherentGRPCPod(t *testing.T) {
 		want bool
 	}{
 		{
+			name: "explicit triple-engine template",
+			pod:  &corev1.Pod{ObjectMeta: metav1.ObjectMeta{Annotations: map[string]string{inject.InherentInjectTemplatesAnnoName: inject.InherentTripleTemplateName}}},
+			want: true,
+		},
+		{
 			name: "explicit grpc-engine template",
 			pod: &corev1.Pod{ObjectMeta: metav1.ObjectMeta{
 				Annotations: map[string]string{

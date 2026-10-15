@@ -117,7 +117,6 @@ jobs:
           mkdir -p "${DIRNAME}/bin"
           cp build/dubboctl/dubboctl "${DIRNAME}/bin"
           cp build/dubboctl/README.md "${DIRNAME}"
-          go run ./tools/licenses -binary dubboctl -goos "${{ matrix.goos }}" -goarch "${{ matrix.goarch }}" -out "${DIRNAME}"
           ls -Rlh "${DIRNAME}"
           if [ "${{ matrix.goos }}" = "windows" ]; then
             zip -r "${FILENAME}.zip" "${DIRNAME}"
@@ -136,7 +135,6 @@ jobs:
           mkdir -p "${DIRNAME}/bin"
           cp build/dubboctl/dubboctl "${DIRNAME}/bin/"
           cp build/README.md "${DIRNAME}"
-          go run ./tools/licenses -binary dubboctl -goos "${{ matrix.goos }}" -goarch "${{ matrix.goarch }}" -out "${DIRNAME}"
           cp -r build/examples "${DIRNAME}"
           ls -Rlh "${DIRNAME}"
           if [ "${{ matrix.goos }}" = "windows" ]; then
@@ -179,6 +177,47 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+
+      - name: Prepare embedded Triple binaries
+        env:
+          AMD64_URL: ${{ vars.TRIPLE_ENGINE_AMD64_URL }}
+          AMD64_SHA256: ${{ vars.TRIPLE_ENGINE_AMD64_SHA256 }}
+          ARM64_URL: ${{ vars.TRIPLE_ENGINE_ARM64_URL }}
+          ARM64_SHA256: ${{ vars.TRIPLE_ENGINE_ARM64_SHA256 }}
+          TAG: ${{ github.ref_name }}
+        run: |
+          set -euo pipefail
+          BINARY_DIR="${RUNNER_TEMP}/triple-binaries"
+          IMAGE_CONTEXT="${RUNNER_TEMP}/dubbod-image"
+          for ARCH in amd64 arm64; do
+            if [[ "${ARCH}" == amd64 ]]; then
+              URL="${AMD64_URL}"
+              EXPECTED_SHA256="${AMD64_SHA256}"
+            else
+              URL="${ARM64_URL}"
+              EXPECTED_SHA256="${ARM64_SHA256}"
+            fi
+            if [[ "${URL}" != https://* || ! "${EXPECTED_SHA256}" =~ ^[0-9a-fA-F]{64}$ ]]; then
+              echo "Set the TRIPLE_ENGINE_${ARCH^^}_URL and TRIPLE_ENGINE_${ARCH^^}_SHA256 repository variables" >&2
+              exit 1
+            fi
+            mkdir -p "${BINARY_DIR}/linux-${ARCH}"
+            BINARY="${BINARY_DIR}/linux-${ARCH}/triple-engine"
+            curl --fail --location --proto '=https' --proto-redir '=https' --retry 3 "${URL}" --output "${BINARY}"
+            printf '%s  %s\n' "${EXPECTED_SHA256}" "${BINARY}" | sha256sum --check -
+          done
+          for ARCH in amd64 arm64; do
+            make build-dubbod GOOS=linux GOARCH="${ARCH}" \
+              GIT_VERSION="${TAG}" \
+              TRIPLE_ENGINE_BINARY_DIR="${BINARY_DIR}" \
+              BIN_DIR="${IMAGE_CONTEXT}/${ARCH}"
+          done
+          echo "IMAGE_CONTEXT=${IMAGE_CONTEXT}" >> "${GITHUB_ENV}"
+
       - name: Set up Docker Buildx
         run: |
           BUILDER="release-builder-${GITHUB_RUN_ID}"
@@ -210,11 +249,10 @@ jobs:
             --label "org.opencontainers.image.source=https://github.com/${GITHUB_REPOSITORY}" \
             --label "org.opencontainers.image.revision=${REVISION}" \
             --label "org.opencontainers.image.version=${TAG}" \
-            --build-arg "GIT_VERSION=${TAG}" \
             --provenance=mode=max \
             --sbom=true \
             --metadata-file "${METADATA}" \
-            .
+            "${IMAGE_CONTEXT}"
 
           DIGEST=$(jq -r '."containerimage.digest" // empty' "${METADATA}")
           if [[ ! "${DIGEST}" =~ ^sha256:[0-9a-f]{64}$ ]]; then

@@ -90,7 +90,7 @@ security:
   - changed-files:
       - any-glob-to-any-file:
           - '**/security/**'
-          - 'tools/ci/govulncheck.py'
+          - '.github/govulncheck.py'
           - '.github/workflows/security.yml'
 
 networking:
@@ -111,7 +111,7 @@ build:
           - 'build.mk'
           - 'common.mk'
           - 'lint.mk'
-          - 'tools/ci/**'
+          - '.github/govulncheck.py'
           - '**/Dockerfile*'
           - '**/dockerfile*'
 
@@ -119,4 +119,4 @@ release:
   - changed-files:
       - any-glob-to-any-file:
           - '.github/workflows/release.yaml'
-          - 'tools/release/**'
+          - 'release/**'

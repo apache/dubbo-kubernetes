@@ -251,8 +251,8 @@ mod tests {
     }
 
     fn load_vectors() -> VectorFile {
-        let content = fs::read_to_string("../../contracts/money_vectors.json")
-            .or_else(|_| fs::read_to_string("contracts/money_vectors.json"))
+        let content = fs::read_to_string("../../api/money_vectors.json")
+            .or_else(|_| fs::read_to_string("api/money_vectors.json"))
             .expect("read money_vectors.json");
         serde_json::from_str(&content).expect("parse money_vectors.json")
     }

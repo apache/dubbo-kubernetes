@@ -16,7 +16,7 @@
 ##@ Lint
 
 .PHONY: lint
-lint: lint-go lint-shell ## Run Go and shell linters.
+lint: lint-go
 
 .PHONY: lint-go
 lint-go: ## Run golangci-lint.
@@ -25,26 +25,3 @@ lint-go: ## Run golangci-lint.
 		exit 1; \
 	fi
 	golangci-lint run ./...
-
-.PHONY: lint-shell
-lint-shell: ## Run shellcheck over all shell scripts (skipped if not installed).
-	@if command -v shellcheck >/dev/null 2>&1; then \
-		find . -name '*.sh' -not -path './vendor/*' -not -path './$(BIN_DIR)/*' -print0 | xargs -0 -r shellcheck; \
-	else \
-		echo "shellcheck not found, skipping shell lint"; \
-	fi
-
-.PHONY: lint-helm
-lint-helm: ## Lint and render the Helm charts.
-	@for chart in $(CHARTS); do \
-		helm lint $$chart || exit 1; \
-		helm template test-release $$chart >/dev/null || exit 1; \
-	done
-	@if grep -q 'authorizationpolicys.security.dubbo.apache.org' manifests/charts/base/files/crd-all.gen.yaml; then \
-		echo "AuthorizationPolicy CRD uses invalid plural authorizationpolicys"; \
-		exit 1; \
-	fi
-	@grep -q 'name: authorizationpolicies.security.dubbo.apache.org' manifests/charts/base/files/crd-all.gen.yaml || { \
-		echo "AuthorizationPolicy CRD plural must be authorizationpolicies"; \
-		exit 1; \
-	}

@@ -288,13 +288,17 @@ func injectRequired(ignored []string, config *Config, podSpec *corev1.PodSpec, m
 	}
 
 	annos := metadata.GetAnnotations()
+	// An explicit opt-out must also override a workload's injection label.
+	if annos[annotation.OrgApacheDubboInherentInject.Name] == "false" {
+		return false
+	}
 
 	var useDefault bool
 	var inject bool
 
 	objectSelector := annos[annotation.OrgApacheDubboInherentInject.Name]
 	if lbl, labelPresent := metadata.GetLabels()[annotation.OrgApacheDubboInherentInject.Name]; labelPresent {
-		// The label is the new API; if both are present we prefer the label
+		// Otherwise, keep label precedence for the existing injection API.
 		objectSelector = lbl
 	}
 	switch objectSelector {

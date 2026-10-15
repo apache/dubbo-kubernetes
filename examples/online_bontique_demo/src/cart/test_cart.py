@@ -43,9 +43,9 @@ def test_cart_operations():
     assert resp.json()["items"] == []
 
 def load_vectors():
-    path = Path("../../contracts/money_vectors.json")
+    path = Path("../../api/money_vectors.json")
     if not path.exists():
-        path = Path("contracts/money_vectors.json")
+        path = Path("api/money_vectors.json")
     with open(path, "r", encoding="utf-8") as f:
         return json.load(f)
 

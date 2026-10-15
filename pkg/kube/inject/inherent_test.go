@@ -184,17 +184,28 @@ func assertDirectXDSConnection(t *testing.T, pod *corev1.Pod, containerName, sec
 	t.Helper()
 
 	container := pod.Spec.Containers[0]
+	isTriple := pod.Annotations[InherentInjectTemplatesAnnoName] == InherentTripleTemplateName
+	bootstrapEnv, bootstrapPath := "GRPC_XDS_BOOTSTRAP", InherentGRPCBootstrapPath
+	if isTriple {
+		bootstrapEnv, bootstrapPath = InherentTripleBootstrapEnvName, InherentTripleBootstrapPath
+	}
 	if container.Name != containerName {
 		t.Fatalf("container name = %q, want %q", container.Name, containerName)
 	}
-	if !hasEnv(container.Env, "GRPC_XDS_BOOTSTRAP", InherentGRPCBootstrapPath) {
-		t.Fatalf("GRPC_XDS_BOOTSTRAP env missing")
+	if !hasEnv(container.Env, bootstrapEnv, bootstrapPath) {
+		t.Fatalf("%s env missing", bootstrapEnv)
 	}
-	if !hasEnv(container.Env, InherentGRPCConfigEnvName, InherentGRPCConfigPath) {
-		t.Fatalf("%s env missing", InherentGRPCConfigEnvName)
-	}
-	if !hasEnv(container.Env, InherentGRPCMetricsAddressEnvName, InherentGRPCMetricsAddress) {
-		t.Fatalf("%s env missing", InherentGRPCMetricsAddressEnvName)
+	if isTriple {
+		if !hasEnv(container.Env, InherentTripleStatusAddressEnvName, InherentTripleStatusAddress) {
+			t.Fatalf("%s env missing", InherentTripleStatusAddressEnvName)
+		}
+	} else {
+		if !hasEnv(container.Env, InherentGRPCConfigEnvName, InherentGRPCConfigPath) {
+			t.Fatalf("%s env missing", InherentGRPCConfigEnvName)
+		}
+		if !hasEnv(container.Env, InherentGRPCMetricsAddressEnvName, InherentGRPCMetricsAddress) {
+			t.Fatalf("%s env missing", InherentGRPCMetricsAddressEnvName)
+		}
 	}
 	foundMetricsPort := false
 	for _, port := range container.Ports {
@@ -208,29 +219,31 @@ func assertDirectXDSConnection(t *testing.T, pod *corev1.Pod, containerName, sec
 	if got := pod.Annotations["prometheus.io/scrape"]; got != "true" {
 		t.Fatalf("prometheus scrape annotation = %q, want true", got)
 	}
-	if !hasEnv(container.Env, InherentXDSAddressEnvName, "dubbod.dubbo-system.svc:26012") {
-		t.Fatalf("%s env missing", InherentXDSAddressEnvName)
-	}
-	if !hasEnv(container.Env, "DUBBO_GRPC_XDS_RESOLVER", "xds:///") {
-		t.Fatalf("DUBBO_GRPC_XDS_RESOLVER env missing")
-	}
-	if !hasEnv(container.Env, "DUBBO_GRPC_XDS_CREDENTIALS", "true") {
-		t.Fatalf("DUBBO_GRPC_XDS_CREDENTIALS env missing")
-	}
-	if !hasEnv(container.Env, InherentGRPCKeepaliveEnvName, InherentGRPCKeepaliveValue) {
-		t.Fatalf("%s env missing", InherentGRPCKeepaliveEnvName)
-	}
-	if !hasEnv(container.Env, InherentGRPCKeepaliveTimeEnv, InherentGRPCKeepaliveTime) {
-		t.Fatalf("%s env missing", InherentGRPCKeepaliveTimeEnv)
-	}
-	if !hasEnv(container.Env, InherentGRPCKeepaliveTimeoutEnv, InherentGRPCKeepaliveTimeout) {
-		t.Fatalf("%s env missing", InherentGRPCKeepaliveTimeoutEnv)
-	}
-	if !hasEnv(container.Env, InherentGRPCKeepalivePermitWithoutStreamEnv, InherentGRPCKeepaliveValue) {
-		t.Fatalf("%s env missing", InherentGRPCKeepalivePermitWithoutStreamEnv)
-	}
-	if !hasEnv(container.Env, "CA_ADDRESS", "dubbod.dubbo-system.svc:26012") {
-		t.Fatalf("CA_ADDRESS env missing")
+	if !isTriple {
+		if !hasEnv(container.Env, InherentXDSAddressEnvName, "dubbod.dubbo-system.svc:26012") {
+			t.Fatalf("%s env missing", InherentXDSAddressEnvName)
+		}
+		if !hasEnv(container.Env, "DUBBO_GRPC_XDS_RESOLVER", "xds:///") {
+			t.Fatalf("DUBBO_GRPC_XDS_RESOLVER env missing")
+		}
+		if !hasEnv(container.Env, "DUBBO_GRPC_XDS_CREDENTIALS", "true") {
+			t.Fatalf("DUBBO_GRPC_XDS_CREDENTIALS env missing")
+		}
+		if !hasEnv(container.Env, InherentGRPCKeepaliveEnvName, InherentGRPCKeepaliveValue) {
+			t.Fatalf("%s env missing", InherentGRPCKeepaliveEnvName)
+		}
+		if !hasEnv(container.Env, InherentGRPCKeepaliveTimeEnv, InherentGRPCKeepaliveTime) {
+			t.Fatalf("%s env missing", InherentGRPCKeepaliveTimeEnv)
+		}
+		if !hasEnv(container.Env, InherentGRPCKeepaliveTimeoutEnv, InherentGRPCKeepaliveTimeout) {
+			t.Fatalf("%s env missing", InherentGRPCKeepaliveTimeoutEnv)
+		}
+		if !hasEnv(container.Env, InherentGRPCKeepalivePermitWithoutStreamEnv, InherentGRPCKeepaliveValue) {
+			t.Fatalf("%s env missing", InherentGRPCKeepalivePermitWithoutStreamEnv)
+		}
+		if !hasEnv(container.Env, "CA_ADDRESS", "dubbod.dubbo-system.svc:26012") {
+			t.Fatalf("CA_ADDRESS env missing")
+		}
 	}
 	if !hasEnv(container.Env, "TRUST_DOMAIN", "cluster.local") {
 		t.Fatalf("TRUST_DOMAIN env missing")

@@ -14,6 +14,19 @@
 # limitations under the License.
 
 {{- $injectorValues := deepCopy (omit .Values "_internal_default_values_not_set") }}
+{{- $defaults := .Values._internal_default_values_not_set | default dict }}
+{{- $repo := coalesce .Values.repo $defaults.repo "dubml" }}
+{{- $tag := .Chart.AppVersion }}
+{{- if and (hasKey .Values "tag") (ne (.Values.tag | toString) "") }}
+{{- $tag = .Values.tag }}
+{{- else if and (hasKey $defaults "tag") (ne ($defaults.tag | toString) "") }}
+{{- $tag = $defaults.tag }}
+{{- end }}
+{{- $image := coalesce .Values.image $defaults.image "dubbod" }}
+{{- if not (contains "/" $image) }}
+{{- $image = printf "%s/%s:%v" $repo $image $tag }}
+{{- end }}
+{{- $_ := set $injectorValues "image" $image }}
 apiVersion: v1
 kind: ConfigMap
 metadata:
@@ -29,6 +42,8 @@ data:
     templates:
       grpc-engine: |
 {{ .Files.Get "files/grpc-engine.yaml" | trim | indent 8 }}
+      triple-engine: |
+{{ .Files.Get "files/triple-engine.yaml" | trim | indent 8 }}
       gateway: |
 {{ .Files.Get "files/kube-gateway.yaml" | trim | indent 8 }}
   values: |-
