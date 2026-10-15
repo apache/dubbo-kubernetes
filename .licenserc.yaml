@@ -20,6 +20,7 @@ header:
   paths-ignore:
     # Build and dependency files
     - '**/go.sum'
+    - '**/Cargo.lock'
     - '**/*.pb.go'
     - '**/*.gen.go'
     - '**/*.cache'

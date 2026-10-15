@@ -5,7 +5,10 @@ Note on Migration: This system has been migrated from the original Apache Dubbo 
 
 All services listen on `127.0.0.1`.
 All services provide `GET /healthz` returning HTTP 200 `{"status":"ok"}`.
-Inter-service call timeout is 5 seconds. If downstream fails or times out, the service returns HTTP 502 with `{"error":"<message>"}`.
+Each inter-service HTTP request has a 5-second timeout.
+The gateway returns HTTP 502 with `{"error":"<message>"}` on connection errors or timeouts; otherwise it forwards the downstream status code and response body unchanged.
+Checkout returns HTTP 502 when a required downstream call fails. Failures while emptying the cart or sending order confirmation are ignored and do not change the successful checkout response.
+Recommendation returns HTTP 502 for Product Catalog connection errors, timeouts, or non-2xx responses, and HTTP 500 if the catalog response cannot be decoded.
 
 ---
 
@@ -24,6 +27,8 @@ The Go gateway hosts the built Vue 3 Single Page Application static assets from 
 - `POST /api/currencies/convert` -> forwards to Currency Service `POST /convert`
 - `POST /api/shipping/quote` -> forwards to Shipping Service `POST /quote`
 - `POST /api/shipping/ship` -> forwards to Shipping Service `POST /ship`
+- `POST /api/payment/charge` -> forwards to Payment Service `POST /charge`
+- `POST /api/email/confirmation` -> forwards to Email Service `POST /send-order-confirmation`
 - `POST /api/recommendations` -> forwards to Recommendation Service `POST /recommendations`
 - `POST /api/ads` -> forwards to Ad Service `POST /ads`
 - `GET /*` -> static files from `web/dist`, falling back to `web/dist/index.html` for SPA client-side routing.
@@ -49,6 +54,10 @@ The Go gateway hosts the built Vue 3 Single Page Application static assets from 
         {
           "redirectUrl": "/product/66VCHSJNUP",
           "text": "Tank top for sale. 20% off."
+        },
+        {
+          "redirectUrl": "/product/1YMWWN1N4O",
+          "text": "Watch for sale. Buy one, get second kit for free"
         }
       ]
     }
@@ -149,7 +158,7 @@ Orchestrates order placement by calling Cart, Product Catalog, Currency, Shippin
         "shippingCost": {
           "currencyCode": "USD",
           "units": 8,
-          "nanos": 990000000
+          "nanos": 99000000
         },
         "shippingAddress": {
           "streetAddress": "1600 Amphitheatre Parkway",

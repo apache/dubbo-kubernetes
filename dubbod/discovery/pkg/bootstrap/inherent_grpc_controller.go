@@ -18,7 +18,9 @@ package bootstrap
 import (
 	"bytes"
 	"context"
+	"crypto/x509"
 	"encoding/json"
+	"encoding/pem"
 	"fmt"
 	"reflect"
 	"sort"
@@ -513,10 +515,13 @@ func (c *inherentGRPCWorkloadController) buildSecret(pod *corev1.Pod, current *c
 		return nil, time.Time{}, err
 	}
 
-	services, routes := c.buildRuntimeTrafficConfig()
-	runtimeConfigJSON, err := buildRuntimeConfigJSON(workload, services, routes, c.resolveTelemetry(pod))
-	if err != nil {
-		return nil, time.Time{}, err
+	var runtimeConfigJSON []byte
+	if !isInherentTriplePod(pod) {
+		services, routes := c.buildRuntimeTrafficConfig()
+		runtimeConfigJSON, err = buildRuntimeConfigJSON(workload, services, routes, c.resolveTelemetry(pod))
+		if err != nil {
+			return nil, time.Time{}, err
+		}
 	}
 
 	certChain, keyPEM, rootCert, expireAt, reusedCert := reusableWorkloadCertificate(current, c.activeRootCert())
@@ -525,6 +530,18 @@ func (c *inherentGRPCWorkloadController) buildSecret(pod *corev1.Pod, current *c
 		if err != nil {
 			return nil, time.Time{}, err
 		}
+	} else {
+		// Java's file_watcher accepts PKCS#8. Normalize reused keys without
+		// changing the certificate, identity, or private key material.
+		privateKey, err := pkiutil.ParsePemEncodedKey(keyPEM)
+		if err != nil {
+			return nil, time.Time{}, fmt.Errorf("parse reused workload private key: %w", err)
+		}
+		encodedKey, err := x509.MarshalPKCS8PrivateKey(privateKey)
+		if err != nil {
+			return nil, time.Time{}, fmt.Errorf("encode workload private key as PKCS#8: %w", err)
+		}
+		keyPEM = pem.EncodeToMemory(&pem.Block{Type: "PRIVATE KEY", Bytes: encodedKey})
 	}
 
 	secret := buildInherentGRPCSecret(pod, bootstrapJSON, runtimeConfigJSON, certChain, keyPEM, rootCert)
@@ -548,6 +565,17 @@ func (c *inherentGRPCWorkloadController) resolveTelemetry(pod *corev1.Pod) telem
 }
 
 func buildInherentGRPCSecret(pod *corev1.Pod, bootstrapJSON, runtimeConfigJSON, certChain, keyPEM, rootCert []byte) *corev1.Secret {
+	data := map[string][]byte{
+		constants.CertChainFilename:                certChain,
+		constants.KeyFilename:                      keyPEM,
+		constants.CACertNamespaceConfigMapDataName: rootCert,
+	}
+	if isInherentTriplePod(pod) {
+		data[inject.InherentTripleBootstrapFileName] = bootstrapJSON
+	} else {
+		data[inject.InherentGRPCBootstrapFileName] = bootstrapJSON
+		data[inject.InherentGRPCConfigFileName] = runtimeConfigJSON
+	}
 	return &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      inject.InherentGRPCSecretNameForMeta(pod.ObjectMeta),
@@ -560,13 +588,7 @@ func buildInherentGRPCSecret(pod *corev1.Pod, bootstrapJSON, runtimeConfigJSON, 
 			}},
 		},
 		Type: corev1.SecretTypeOpaque,
-		Data: map[string][]byte{
-			inject.InherentGRPCBootstrapFileName:       bootstrapJSON,
-			inject.InherentGRPCConfigFileName:          runtimeConfigJSON,
-			constants.CertChainFilename:                certChain,
-			constants.KeyFilename:                      keyPEM,
-			constants.CACertNamespaceConfigMapDataName: rootCert,
-		},
+		Data: data,
 	}
 }
 
@@ -1087,6 +1109,7 @@ func (c *inherentGRPCWorkloadController) issueWorkloadCertificate(pod *corev1.Po
 	csrPEM, keyPEM, err := pkiutil.GenCSR(pkiutil.CertOptions{
 		Host:       identity.String(),
 		RSAKeySize: 2048,
+		PKCS8Key:   true,
 	})
 	if err != nil {
 		return nil, nil, nil, time.Time{}, err
@@ -1144,9 +1167,31 @@ func concatPEM(certs []string) []byte {
 	return []byte(b.String())
 }
 
+func isInherentTriplePod(pod *corev1.Pod) bool {
+	if pod == nil {
+		return false
+	}
+	for _, templateName := range strings.Split(pod.Annotations[inject.InherentInjectTemplatesAnnoName], ",") {
+		if strings.TrimSpace(templateName) == inject.InherentTripleTemplateName {
+			return true
+		}
+	}
+	for _, container := range pod.Spec.Containers {
+		for _, envVar := range container.Env {
+			if envVar.Name == inject.InherentTripleBootstrapEnvName && envVar.Value == inject.InherentTripleBootstrapPath {
+				return true
+			}
+		}
+	}
+	return false
+}
+
 func shouldManageInherentGRPCPod(pod *corev1.Pod) bool {
 	if pod == nil {
 		return false
+	}
+	if isInherentTriplePod(pod) {
+		return true
 	}
 	templates := pod.Annotations[inject.InherentInjectTemplatesAnnoName]
 	for _, templateName := range strings.Split(templates, ",") {

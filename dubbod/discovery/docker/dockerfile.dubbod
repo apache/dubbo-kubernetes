@@ -13,45 +13,16 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-FROM --platform=$BUILDPLATFORM golang:1.26.8 AS builder
+ARG BASE_VERSION=latest
+ARG DUBBOD_REGISTRY=docker.io/dubml
+ARG BASE_IMAGE=${DUBBOD_REGISTRY}/distroless:${BASE_VERSION}
 
-ARG TARGETOS
+FROM ${BASE_IMAGE} AS distroless
+
 ARG TARGETARCH
-ARG GIT_VERSION=unknown
+COPY ${TARGETARCH:-amd64}/dubbod /usr/local/bin/dubbod
 
-WORKDIR /src
+USER 2509:2509
+WORKDIR /
 
-ENV CGO_ENABLED=0 \
-    GOOS=${TARGETOS} \
-    GOARCH=${TARGETARCH}
-
-COPY go.mod go.sum ./
-RUN --mount=type=cache,target=/go/pkg/mod \
-    for attempt in 1 2 3; do \
-        if go mod download; then exit 0; fi; \
-        if [ "${attempt}" -eq 3 ]; then exit 1; fi; \
-        sleep "$((attempt * 5))"; \
-    done
-
-COPY . .
-
-RUN --mount=type=cache,target=/go/pkg/mod \
-    --mount=type=cache,target=/root/.cache/go-build \
-    go build -v -trimpath \
-    -ldflags="-s -w -X github.com/apache/dubbo-kubernetes/pkg/version.gitTag=${GIT_VERSION}" \
-    -o /out/dubbod \
-    ./dubbod/discovery/cmd/main.go
-
-RUN --mount=type=cache,target=/go/pkg/mod \
-    --mount=type=cache,target=/root/.cache/go-build \
-    GOOS=$(go env GOHOSTOS) GOARCH=$(go env GOHOSTARCH) \
-    go run ./tools/licenses -binary dubbod \
-    -goos "${TARGETOS}" -goarch "${TARGETARCH}" -out /out/legal
-
-FROM alpine:3.22
-
-COPY --from=builder /out/dubbod /usr/local/bin/dubbod
-COPY --from=builder /out/legal /usr/share/dubbod/
-
-USER 65532:65532
 ENTRYPOINT ["/usr/local/bin/dubbod"]

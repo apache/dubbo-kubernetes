@@ -15,5 +15,5 @@ Accessible after startup is complete：http://127.0.0.1:8080
 Execute the cleanup script：
 
 ```bash
-./scripts/stop-services.sh
+./scripts/stop.sh
 ```

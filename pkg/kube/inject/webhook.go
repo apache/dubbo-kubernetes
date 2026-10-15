@@ -402,9 +402,13 @@ func postProcessPod(pod *corev1.Pod, injectedPod corev1.Pod, req InjectionParame
 
 	removeTemplateOnlyContainers(pod, injectedPod, req.pod)
 
-	if shouldInjectInherentGRPC(req) {
-		// Add Inherent gRPC env and shared bootstrap/cert volume to application containers.
-		ensureInherentGRPCTemplateAnnotation(pod)
+	if shouldInjectInherentGRPC(req) || shouldInjectInherentTriple(req) {
+		// Both engines use the same workload identity and bootstrap/cert Secret.
+		if shouldInjectInherentTriple(req) {
+			ensureInherentTemplateAnnotation(pod, InherentTripleTemplateName)
+		} else {
+			ensureInherentGRPCTemplateAnnotation(pod)
+		}
 		if err := addApplicationContainerConfig(pod, req); err != nil {
 			return err
 		}
@@ -447,6 +451,7 @@ func removeTemplateOnlyContainers(pod *corev1.Pod, injectedPod corev1.Pod, origi
 }
 
 func addApplicationContainerConfig(pod *corev1.Pod, req InjectionParameters) error {
+	isTriple := shouldInjectInherentTriple(req)
 	discoveryAddress := ""
 	trustDomain := constants.DefaultClusterLocalDomain
 	if req.meshConfig != nil {
@@ -493,10 +498,15 @@ func addApplicationContainerConfig(pod *corev1.Pod, req InjectionParameters) err
 
 	if len(pod.Spec.Containers) > 0 {
 		application := &pod.Spec.Containers[0]
-		application.Env = ensureEnvVar(application.Env, corev1.EnvVar{
+		metricsEnv := corev1.EnvVar{
 			Name:  InherentGRPCMetricsAddressEnvName,
 			Value: InherentGRPCMetricsAddress,
-		})
+		}
+		if isTriple {
+			metricsEnv.Name = InherentTripleStatusAddressEnvName
+			metricsEnv.Value = InherentTripleStatusAddress
+		}
+		application.Env = ensureEnvVar(application.Env, metricsEnv)
 		application.Ports = ensureContainerPort(application.Ports, corev1.ContainerPort{
 			Name:          InherentGRPCMetricsPortName,
 			ContainerPort: InherentGRPCMetricsPort,
@@ -506,103 +516,139 @@ func addApplicationContainerConfig(pod *corev1.Pod, req InjectionParameters) err
 	}
 	for i := range pod.Spec.Containers {
 		container := &pod.Spec.Containers[i]
-
-		container.Env = ensureEnvVar(container.Env, corev1.EnvVar{
-			Name:  "GRPC_XDS_BOOTSTRAP",
-			Value: InherentGRPCBootstrapPath,
-		})
-		container.Env = ensureEnvVar(container.Env, corev1.EnvVar{
-			Name:  InherentGRPCConfigEnvName,
-			Value: InherentGRPCConfigPath,
-		})
-		container.Env = ensureEnvVar(container.Env, corev1.EnvVar{
-			Name:  InherentXDSAddressEnvName,
-			Value: discoveryAddress,
-		})
-		container.Env = ensureEnvVar(container.Env, corev1.EnvVar{
-			Name:  "GRPC_XDS_EXPERIMENTAL_SECURITY_SUPPORT",
-			Value: "true",
-		})
-		container.Env = ensureEnvVar(container.Env, corev1.EnvVar{
-			Name:  "DUBBO_GRPC_XDS_CREDENTIALS",
-			Value: "true",
-		})
-		container.Env = ensureEnvVar(container.Env, corev1.EnvVar{
-			Name:  "DUBBO_GRPC_XDS_RESOLVER",
-			Value: "xds:///",
-		})
-		container.Env = ensureEnvVar(container.Env, corev1.EnvVar{
-			Name:  InherentGRPCKeepaliveEnvName,
-			Value: InherentGRPCKeepaliveValue,
-		})
-		container.Env = ensureEnvVar(container.Env, corev1.EnvVar{
-			Name:  InherentGRPCKeepaliveTimeEnv,
-			Value: InherentGRPCKeepaliveTime,
-		})
-		container.Env = ensureEnvVar(container.Env, corev1.EnvVar{
-			Name:  InherentGRPCKeepaliveTimeoutEnv,
-			Value: InherentGRPCKeepaliveTimeout,
-		})
-		container.Env = ensureEnvVar(container.Env, corev1.EnvVar{
-			Name:  InherentGRPCKeepalivePermitWithoutStreamEnv,
-			Value: InherentGRPCKeepaliveValue,
-		})
-		container.Env = ensureEnvVar(container.Env, corev1.EnvVar{
-			Name:  "DUBBO_META_GENERATOR",
-			Value: "grpc",
-		})
-		container.Env = ensureEnvVar(container.Env, corev1.EnvVar{
-			Name:  "DUBBO_META_CLUSTER_ID",
-			Value: constants.DefaultClusterName,
-		})
-		container.Env = ensureEnvVar(container.Env, corev1.EnvVar{
-			Name: "DUBBO_META_NAMESPACE",
-			ValueFrom: &corev1.EnvVarSource{
-				FieldRef: &corev1.ObjectFieldSelector{FieldPath: "metadata.namespace"},
-			},
-		})
-		container.Env = ensureEnvVar(container.Env, corev1.EnvVar{
-			Name:  "CA_ADDRESS",
-			Value: discoveryAddress,
-		})
-		container.Env = ensureEnvVar(container.Env, corev1.EnvVar{
-			Name:  "DUBBO_META_MESH_ID",
-			Value: trustDomain,
-		})
-		container.Env = ensureEnvVar(container.Env, corev1.EnvVar{
-			Name:  "TRUST_DOMAIN",
-			Value: trustDomain,
-		})
-		container.Env = ensureEnvVar(container.Env, corev1.EnvVar{
-			Name: "POD_NAME",
-			ValueFrom: &corev1.EnvVarSource{
-				FieldRef: &corev1.ObjectFieldSelector{FieldPath: "metadata.name"},
-			},
-		})
-		container.Env = ensureEnvVar(container.Env, corev1.EnvVar{
-			Name: "POD_NAMESPACE",
-			ValueFrom: &corev1.EnvVarSource{
-				FieldRef: &corev1.ObjectFieldSelector{FieldPath: "metadata.namespace"},
-			},
-		})
-		container.Env = ensureEnvVar(container.Env, corev1.EnvVar{
-			Name: "INSTANCE_IP",
-			ValueFrom: &corev1.EnvVarSource{
-				FieldRef: &corev1.ObjectFieldSelector{FieldPath: "status.podIP"},
-			},
-		})
-		container.Env = ensureEnvVar(container.Env, corev1.EnvVar{
-			Name: "SERVICE_ACCOUNT",
-			ValueFrom: &corev1.EnvVarSource{
-				FieldRef: &corev1.ObjectFieldSelector{FieldPath: "spec.serviceAccountName"},
-			},
-		})
-		container.Env = ensureEnvVar(container.Env, corev1.EnvVar{
-			Name: "HOST_IP",
-			ValueFrom: &corev1.EnvVarSource{
-				FieldRef: &corev1.ObjectFieldSelector{FieldPath: "status.hostIP"},
-			},
-		})
+		if isTriple {
+			container.Env = ensureEnvVar(container.Env, corev1.EnvVar{
+				Name:  InherentTripleBootstrapEnvName,
+				Value: InherentTripleBootstrapPath,
+			})
+			container.Env = ensureEnvVar(container.Env, corev1.EnvVar{
+				Name:  "TRUST_DOMAIN",
+				Value: trustDomain,
+			})
+			container.Env = ensureEnvVar(container.Env, corev1.EnvVar{
+				Name: "POD_NAMESPACE",
+				ValueFrom: &corev1.EnvVarSource{
+					FieldRef: &corev1.ObjectFieldSelector{FieldPath: "metadata.namespace"},
+				},
+			})
+			container.Env = ensureEnvVar(container.Env, corev1.EnvVar{
+				Name: "INSTANCE_IP",
+				ValueFrom: &corev1.EnvVarSource{
+					FieldRef: &corev1.ObjectFieldSelector{FieldPath: "status.podIP"},
+				},
+			})
+			if discoveryAddress != "" {
+				registryAddress := discoveryAddress
+				if !strings.HasPrefix(registryAddress, "xds://") {
+					registryAddress = "xds://" + registryAddress
+				}
+				container.Env = ensureEnvVar(container.Env, corev1.EnvVar{
+					Name:  "DUBBO_REGISTRY_ADDRESS",
+					Value: registryAddress,
+				})
+			}
+			container.Env = ensureEnvVar(container.Env, corev1.EnvVar{
+				Name:  "DUBBO_PROTOCOL_NAME",
+				Value: "tri",
+			})
+		} else {
+			container.Env = ensureEnvVar(container.Env, corev1.EnvVar{
+				Name:  "GRPC_XDS_BOOTSTRAP",
+				Value: InherentGRPCBootstrapPath,
+			})
+			container.Env = ensureEnvVar(container.Env, corev1.EnvVar{
+				Name:  InherentGRPCConfigEnvName,
+				Value: InherentGRPCConfigPath,
+			})
+			container.Env = ensureEnvVar(container.Env, corev1.EnvVar{
+				Name:  InherentXDSAddressEnvName,
+				Value: discoveryAddress,
+			})
+			container.Env = ensureEnvVar(container.Env, corev1.EnvVar{
+				Name:  "GRPC_XDS_EXPERIMENTAL_SECURITY_SUPPORT",
+				Value: "true",
+			})
+			container.Env = ensureEnvVar(container.Env, corev1.EnvVar{
+				Name:  "DUBBO_GRPC_XDS_CREDENTIALS",
+				Value: "true",
+			})
+			container.Env = ensureEnvVar(container.Env, corev1.EnvVar{
+				Name:  "DUBBO_GRPC_XDS_RESOLVER",
+				Value: "xds:///",
+			})
+			container.Env = ensureEnvVar(container.Env, corev1.EnvVar{
+				Name:  InherentGRPCKeepaliveEnvName,
+				Value: InherentGRPCKeepaliveValue,
+			})
+			container.Env = ensureEnvVar(container.Env, corev1.EnvVar{
+				Name:  InherentGRPCKeepaliveTimeEnv,
+				Value: InherentGRPCKeepaliveTime,
+			})
+			container.Env = ensureEnvVar(container.Env, corev1.EnvVar{
+				Name:  InherentGRPCKeepaliveTimeoutEnv,
+				Value: InherentGRPCKeepaliveTimeout,
+			})
+			container.Env = ensureEnvVar(container.Env, corev1.EnvVar{
+				Name:  InherentGRPCKeepalivePermitWithoutStreamEnv,
+				Value: InherentGRPCKeepaliveValue,
+			})
+			container.Env = ensureEnvVar(container.Env, corev1.EnvVar{
+				Name:  "DUBBO_META_GENERATOR",
+				Value: "grpc",
+			})
+			container.Env = ensureEnvVar(container.Env, corev1.EnvVar{
+				Name:  "DUBBO_META_CLUSTER_ID",
+				Value: constants.DefaultClusterName,
+			})
+			container.Env = ensureEnvVar(container.Env, corev1.EnvVar{
+				Name: "DUBBO_META_NAMESPACE",
+				ValueFrom: &corev1.EnvVarSource{
+					FieldRef: &corev1.ObjectFieldSelector{FieldPath: "metadata.namespace"},
+				},
+			})
+			container.Env = ensureEnvVar(container.Env, corev1.EnvVar{
+				Name:  "CA_ADDRESS",
+				Value: discoveryAddress,
+			})
+			container.Env = ensureEnvVar(container.Env, corev1.EnvVar{
+				Name:  "DUBBO_META_MESH_ID",
+				Value: trustDomain,
+			})
+			container.Env = ensureEnvVar(container.Env, corev1.EnvVar{
+				Name:  "TRUST_DOMAIN",
+				Value: trustDomain,
+			})
+			container.Env = ensureEnvVar(container.Env, corev1.EnvVar{
+				Name: "POD_NAME",
+				ValueFrom: &corev1.EnvVarSource{
+					FieldRef: &corev1.ObjectFieldSelector{FieldPath: "metadata.name"},
+				},
+			})
+			container.Env = ensureEnvVar(container.Env, corev1.EnvVar{
+				Name: "POD_NAMESPACE",
+				ValueFrom: &corev1.EnvVarSource{
+					FieldRef: &corev1.ObjectFieldSelector{FieldPath: "metadata.namespace"},
+				},
+			})
+			container.Env = ensureEnvVar(container.Env, corev1.EnvVar{
+				Name: "INSTANCE_IP",
+				ValueFrom: &corev1.EnvVarSource{
+					FieldRef: &corev1.ObjectFieldSelector{FieldPath: "status.podIP"},
+				},
+			})
+			container.Env = ensureEnvVar(container.Env, corev1.EnvVar{
+				Name: "SERVICE_ACCOUNT",
+				ValueFrom: &corev1.EnvVarSource{
+					FieldRef: &corev1.ObjectFieldSelector{FieldPath: "spec.serviceAccountName"},
+				},
+			})
+			container.Env = ensureEnvVar(container.Env, corev1.EnvVar{
+				Name: "HOST_IP",
+				ValueFrom: &corev1.EnvVarSource{
+					FieldRef: &corev1.ObjectFieldSelector{FieldPath: "status.hostIP"},
+				},
+			})
+		}
 
 		hasProxyVolumeMount := false
 		for _, vm := range container.VolumeMounts {
@@ -648,20 +694,24 @@ func ensureApplicationMetricsAnnotations(pod *corev1.Pod) {
 }
 
 func ensureInherentGRPCTemplateAnnotation(pod *corev1.Pod) {
+	ensureInherentTemplateAnnotation(pod, InherentGRPCTemplateName)
+}
+
+func ensureInherentTemplateAnnotation(pod *corev1.Pod, desired string) {
 	if pod.Annotations == nil {
 		pod.Annotations = map[string]string{}
 	}
 	templates := pod.Annotations[InherentInjectTemplatesAnnoName]
 	for _, templateName := range strings.Split(templates, ",") {
-		if strings.TrimSpace(templateName) == InherentGRPCTemplateName {
+		if strings.TrimSpace(templateName) == desired {
 			return
 		}
 	}
 	if strings.TrimSpace(templates) == "" {
-		pod.Annotations[InherentInjectTemplatesAnnoName] = InherentGRPCTemplateName
+		pod.Annotations[InherentInjectTemplatesAnnoName] = desired
 		return
 	}
-	pod.Annotations[InherentInjectTemplatesAnnoName] = templates + "," + InherentGRPCTemplateName
+	pod.Annotations[InherentInjectTemplatesAnnoName] = templates + "," + desired
 }
 
 func ensureEnvVar(envs []corev1.EnvVar, desired corev1.EnvVar) []corev1.EnvVar {
@@ -674,8 +724,16 @@ func ensureEnvVar(envs []corev1.EnvVar, desired corev1.EnvVar) []corev1.EnvVar {
 }
 
 func shouldInjectInherentGRPC(req InjectionParameters) bool {
+	return selectsInherentTemplate(req, InherentGRPCTemplateName)
+}
+
+func shouldInjectInherentTriple(req InjectionParameters) bool {
+	return selectsInherentTemplate(req, InherentTripleTemplateName)
+}
+
+func selectsInherentTemplate(req InjectionParameters, desired string) bool {
 	for _, templateName := range selectTemplates(req) {
-		if templateName == InherentGRPCTemplateName {
+		if templateName == desired {
 			return true
 		}
 	}

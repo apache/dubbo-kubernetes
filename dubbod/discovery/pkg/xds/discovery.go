@@ -32,6 +32,7 @@ import (
 	"github.com/apache/dubbo-kubernetes/pkg/kube/krt"
 	"github.com/apache/dubbo-kubernetes/pkg/util/sets"
 	discovery "github.com/dubml/xds-api/service/discovery/v1"
+	standard "github.com/envoyproxy/go-control-plane/envoy/service/discovery/v3"
 	"go.uber.org/atomic"
 	"golang.org/x/time/rate"
 	"google.golang.org/grpc"
@@ -97,6 +98,7 @@ func NewDiscoveryServer(env *model.Environment, debugger *krt.DebugHandler) *Dis
 func (s *DiscoveryServer) Register(rpcs *grpc.Server) {
 	// Register xDS server
 	discovery.RegisterAggregatedDiscoveryServiceServer(rpcs, s)
+	standard.RegisterAggregatedDiscoveryServiceServer(rpcs, &standardADS{server: s})
 }
 
 func (s *DiscoveryServer) Start(stopCh <-chan struct{}) {

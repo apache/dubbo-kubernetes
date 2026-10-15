@@ -10,8 +10,7 @@ For additional information about the Apache Software Foundation, please see
 Third-party source attributions
 
 This product contains code derived from the Istio and Kubernetes projects.
-The matching source files and upstream license texts are recorded in
-licenses/manifest.json.
+The upstream license texts are retained in licenses/.
 
 Copyright Istio Authors
 Copyright 2019 Istio Authors

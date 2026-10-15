@@ -89,7 +89,7 @@ def format_trace(finding):
 
 def main():
     patterns = sys.argv[1:] or ["./..."]
-    repository = Path(__file__).resolve().parents[2]
+    repository = Path(__file__).resolve().parents[1]
     try:
         process = subprocess.run(
             ["govulncheck", "-format=json", *patterns],
