@@ -1,0 +1,18 @@
+FROM rust:1-slim-bookworm AS build
+WORKDIR /src
+COPY Cargo.toml Cargo.lock ./
+COPY src/currency/ ./src/currency/
+COPY src/product-catalogs/ ./src/product-catalogs/
+COPY api/money_vectors.json ./api/money_vectors.json
+ARG SERVICE
+RUN cargo test --locked --package ${SERVICE} && cargo build --release --locked --package ${SERVICE} && \
+    mkdir -p /out/data && cp target/release/${SERVICE} /out/service
+
+FROM gcr.io/distroless/cc-debian12:nonroot AS runtime
+WORKDIR /app
+ENV PORT=8080 DB_PATH=/data/store.db
+COPY --from=build /out/service /app/service
+COPY --from=build --chown=65532:65532 /out/data/ /data/
+USER 65532:65532
+EXPOSE 8080
+ENTRYPOINT ["/app/service"]

@@ -16,6 +16,5 @@
 # Thin entrypoint; the real targets live in the root-level .mk files.
 # Run `make help` for the full target list.
 
-include common.mk
-include build.mk
-include lint.mk
+include Makefile.common.mk
+include Makefile.build.mk

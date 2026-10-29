@@ -1,0 +1,19 @@
+FROM python:3.13-slim-bookworm AS build
+WORKDIR /app
+RUN python -m venv /opt/venv
+ENV PATH=/opt/venv/bin:$PATH
+COPY src/cart/requirements.txt ./requirements.txt
+RUN pip install --no-cache-dir -r requirements.txt
+COPY src/cart/ ./src/cart/
+COPY api/money_vectors.json ./api/money_vectors.json
+RUN cd src/cart && DB_PATH=/tmp/cart-test.db python -m pytest -q
+
+FROM python:3.13-slim-bookworm AS runtime
+WORKDIR /app
+ENV PATH=/opt/venv/bin:$PATH PORT=8080 DB_PATH=/data/cart.db PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1
+COPY --from=build /opt/venv/ /opt/venv/
+COPY src/cart/main.py src/cart/money_utils.py ./src/cart/
+RUN mkdir /data && chown 65532:65532 /data
+USER 65532:65532
+EXPOSE 8080
+CMD ["python", "src/cart/main.py"]

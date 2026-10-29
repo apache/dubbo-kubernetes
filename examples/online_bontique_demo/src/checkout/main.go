@@ -322,7 +322,7 @@ func main() {
 	})
 	mux.HandleFunc("/checkout", handleCheckout)
 
-	addr := fmt.Sprintf("127.0.0.1:%s", cfg.Port)
+	addr := fmt.Sprintf(":%s", cfg.Port)
 	log.Printf("checkout listening on %s", addr)
 	if err := http.ListenAndServe(addr, mux); err != nil {
 		log.Fatalf("server error: %v", err)
