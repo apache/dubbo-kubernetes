@@ -48,6 +48,19 @@ CHARTS := manifests/charts/base manifests/charts/dubbod
 
 .DEFAULT_GOAL := build
 
+##@ Lint
+
+.PHONY: lint
+lint: lint-go
+
+.PHONY: lint-go
+lint-go: ## Run golangci-lint.
+	@if ! command -v golangci-lint >/dev/null 2>&1; then \
+		echo "golangci-lint not found; install $(GOLANGCI_LINT_VERSION) from https://golangci-lint.run/welcome/install/"; \
+		exit 1; \
+	fi
+	golangci-lint run ./...
+
 ##@ General
 
 .PHONY: help

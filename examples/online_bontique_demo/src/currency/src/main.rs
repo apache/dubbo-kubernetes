@@ -199,7 +199,7 @@ async fn main() {
         .route("/convert", post(convert))
         .with_state(state);
 
-    let addr = format!("127.0.0.1:{}", port);
+    let addr = format!("0.0.0.0:{}", port);
     println!("currency listening on {}", addr);
     let listener = tokio::net::TcpListener::bind(&addr).await.unwrap();
     axum::serve(listener, app).await.unwrap();

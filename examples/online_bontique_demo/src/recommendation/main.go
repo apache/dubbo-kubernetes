@@ -116,7 +116,7 @@ func main() {
 	})
 	mux.HandleFunc("/recommendations", handleRecommendations)
 
-	addr := fmt.Sprintf("127.0.0.1:%s", port)
+	addr := fmt.Sprintf(":%s", port)
 	log.Printf("recommendation listening on %s", addr)
 	if err := http.ListenAndServe(addr, mux); err != nil {
 		log.Fatalf("server error: %v", err)

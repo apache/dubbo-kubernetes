@@ -186,7 +186,7 @@ async fn main() {
         .route("/products/:id", get(get_product))
         .with_state(state);
 
-    let addr = format!("127.0.0.1:{}", port);
+    let addr = format!("0.0.0.0:{}", port);
     println!("product-catalogs listening on {}", addr);
     let listener = tokio::net::TcpListener::bind(&addr).await.unwrap();
     axum::serve(listener, app).await.unwrap();
