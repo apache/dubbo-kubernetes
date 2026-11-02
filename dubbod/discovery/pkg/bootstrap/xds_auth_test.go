@@ -43,7 +43,7 @@ func TestAuthorizeXDSPod(t *testing.T) {
 		{name: "deleted", change: func(_ *model.Proxy, pod *corev1.Pod) { now := metav1.Now(); pod.DeletionTimestamp = &now }},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			pod := &corev1.Pod{ObjectMeta: metav1.ObjectMeta{Name: "pod", Namespace: "app", Annotations: map[string]string{inject.InherentInjectTemplatesAnnoName: inject.InherentGRPCTemplateName}}, Status: corev1.PodStatus{PodIP: "10.0.0.1"}}
+			pod := &corev1.Pod{ObjectMeta: metav1.ObjectMeta{Name: "pod", Namespace: "app", Annotations: map[string]string{inject.InherentInjectTemplatesAnnoName: inject.InherentTripleTemplateName}}, Status: corev1.PodStatus{PodIP: "10.0.0.1"}}
 			proxy := &model.Proxy{ID: "pod.app", Type: model.Inherent, Metadata: &model.NodeMetadata{Namespace: "app"}, IPAddresses: []string{"10.0.0.1"}}
 			if tc.change != nil {
 				tc.change(proxy, pod)

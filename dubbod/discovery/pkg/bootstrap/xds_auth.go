@@ -50,15 +50,15 @@ func (s *Server) authorizeXDSWorkload(proxy *model.Proxy, identities []string) e
 	return authorizeXDSPod(proxy, identities, pod, trustDomains)
 }
 
-func (s *Server) xdsWorkloadController(proxy *model.Proxy) *inherentGRPCWorkloadController {
+func (s *Server) xdsWorkloadController(proxy *model.Proxy) *inherentXDSWorkloadController {
 	if proxy.Metadata.ClusterID != s.clusterID {
 		return nil
 	}
-	return s.inherentGRPCWorkloadController
+	return s.inherentXDSWorkloadController
 }
 
 func authorizeXDSPod(proxy *model.Proxy, identities []string, pod *corev1.Pod, trustDomains []string) error {
-	if pod == nil || pod.DeletionTimestamp != nil || !shouldManageInherentGRPCPod(pod) {
+	if pod == nil || pod.DeletionTimestamp != nil || !shouldManageInherentXDSPod(pod) {
 		return fmt.Errorf("xDS node is not an active managed workload")
 	}
 	if proxy.Metadata.Namespace != pod.Namespace || proxy.ID != pod.Name+"."+pod.Namespace {

@@ -1,0 +1,15 @@
+# docker.yaml provides details about each Dockerfile in the repo.
+# Unlike standard Dockerfiles, artifacts are built outside of docker and then copied to a temp folder;
+# This folder is then passed as the docker context. This avoids complex .dockerignore or large context loads.
+
+images:
+  # Base images
+  - name: distroless
+    dockerfile: docker/dockerfile.distroless
+    base: true
+
+  # Production images
+  - name: dubbod
+    dockerfile: dubbod/discovery/docker/dockerfile.dubbod
+    targets:
+      - ${BIN_DIR}/dubbod

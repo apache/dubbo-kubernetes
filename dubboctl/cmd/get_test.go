@@ -37,7 +37,7 @@ func TestIsInjectedPod(t *testing.T) {
 			pod: corev1.Pod{
 				ObjectMeta: metav1.ObjectMeta{
 					Annotations: map[string]string{
-						annotation.OrgApacheDubboInjectTemplates.Name: inject.InherentGRPCTemplateName,
+						annotation.OrgApacheDubboInjectTemplates.Name: inject.InherentTripleTemplateName,
 					},
 				},
 			},
@@ -49,7 +49,7 @@ func TestIsInjectedPod(t *testing.T) {
 				Spec: corev1.PodSpec{
 					Containers: []corev1.Container{{
 						Name: "app",
-						Env:  []corev1.EnvVar{{Name: "GRPC_XDS_BOOTSTRAP", Value: inject.InherentGRPCBootstrapPath}},
+						Env:  []corev1.EnvVar{{Name: inject.InherentTripleBootstrapEnvName, Value: inject.InherentTripleBootstrapPath}},
 					}},
 				},
 			},
@@ -81,7 +81,7 @@ func TestPrintInjectedPods(t *testing.T) {
 			Namespace:         "app",
 			CreationTimestamp: metav1.NewTime(time.Unix(100, 0)),
 			Annotations: map[string]string{
-				annotation.OrgApacheDubboInjectTemplates.Name: inject.InherentGRPCTemplateName,
+				annotation.OrgApacheDubboInjectTemplates.Name: inject.InherentTripleTemplateName,
 			},
 		},
 		Spec: corev1.PodSpec{
@@ -102,7 +102,7 @@ func TestPrintInjectedPods(t *testing.T) {
 		t.Fatalf("printInjectedPods() returned error: %v", err)
 	}
 	got := out.String()
-	for _, want := range []string{"NAMESPACE", "app-1", "1/1", "Running", "10.0.0.7", inject.InherentGRPCTemplateName} {
+	for _, want := range []string{"NAMESPACE", "app-1", "1/1", "Running", "10.0.0.7", inject.InherentTripleTemplateName} {
 		if !strings.Contains(got, want) {
 			t.Fatalf("output %q missing %q", got, want)
 		}

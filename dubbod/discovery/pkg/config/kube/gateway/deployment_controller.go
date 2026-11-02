@@ -45,12 +45,12 @@ import (
 	"github.com/apache/dubbo-kubernetes/pkg/config/constants"
 	"github.com/apache/dubbo-kubernetes/pkg/config/schema/gvr"
 	telemetryconfig "github.com/apache/dubbo-kubernetes/pkg/config/telemetry"
-	"github.com/apache/dubbo-kubernetes/pkg/grpcxds"
 	"github.com/apache/dubbo-kubernetes/pkg/kube"
 	"github.com/apache/dubbo-kubernetes/pkg/kube/controllers"
 	"github.com/apache/dubbo-kubernetes/pkg/kube/inject"
 	"github.com/apache/dubbo-kubernetes/pkg/kube/kclient"
 	dubbolog "github.com/apache/dubbo-kubernetes/pkg/log"
+	"github.com/apache/dubbo-kubernetes/pkg/xdsbootstrap"
 	clientnetworking "github.com/dubml/client-go/pkg/apis/networking/v1alpha3"
 	clienttelemetry "github.com/dubml/client-go/pkg/apis/telemetry/v1alpha3"
 )
@@ -630,7 +630,7 @@ func gatewayListenerNames(namespace, serviceName, domainSuffix string, ports []c
 		if targetPort <= 0 {
 			targetPort = int(port.Port)
 		}
-		out = append(out, fmt.Sprintf("%s0.0.0.0:%d", grpcxds.ServerListenerNamePrefix, targetPort))
+		out = append(out, fmt.Sprintf("%s0.0.0.0:%d", xdsbootstrap.ServerListenerNamePrefix, targetPort))
 	}
 	sort.Strings(out)
 	return out

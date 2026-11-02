@@ -28,18 +28,18 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-func TestInstallerGRPCEngineTemplateInjectsDirectXDSConnection(t *testing.T) {
+func TestInstallerDefaultTripleTemplateInjectsDirectXDSConnection(t *testing.T) {
 	_, currentFile, _, ok := runtime.Caller(0)
 	if !ok {
 		t.Fatalf("runtime.Caller() failed")
 	}
-	templatePath := filepath.Join(filepath.Dir(currentFile), "../../..", "manifests/charts/dubbod/files/grpc-engine.yaml")
+	templatePath := filepath.Join(filepath.Dir(currentFile), "../../..", "manifests/charts/dubbod/files/triple-engine.yaml")
 	templateBytes, err := os.ReadFile(templatePath)
 	if err != nil {
-		t.Fatalf("failed to read grpc-engine.yaml: %v", err)
+		t.Fatalf("failed to read triple-engine.yaml: %v", err)
 	}
 	templates, err := ParseTemplates(RawTemplates{
-		InherentGRPCTemplateName: string(templateBytes),
+		InherentTripleTemplateName: string(templateBytes),
 	})
 	if err != nil {
 		t.Fatalf("ParseTemplates() failed: %v", err)
@@ -53,9 +53,6 @@ func TestInstallerGRPCEngineTemplateInjectsDirectXDSConnection(t *testing.T) {
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "grpc-provider-6d4c7b8c9f-abcde",
 			Namespace: "grpc-app",
-			Annotations: map[string]string{
-				InherentInjectTemplatesAnnoName: InherentGRPCTemplateName,
-			},
 		},
 		Spec: corev1.PodSpec{
 			ServiceAccountName: "grpc-sa",
@@ -65,9 +62,10 @@ func TestInstallerGRPCEngineTemplateInjectsDirectXDSConnection(t *testing.T) {
 		},
 	}
 	req := InjectionParameters{
-		pod:          pod,
-		templates:    templates,
-		valuesConfig: valuesConfig,
+		pod:             pod,
+		defaultTemplate: []string{InherentTripleTemplateName},
+		templates:       templates,
+		valuesConfig:    valuesConfig,
 		meshConfig: &meshv1alpha1.MeshConfig{
 			TrustDomain: "cluster.local",
 			DefaultConfig: &meshv1alpha1.ProxyConfig{
@@ -94,21 +92,21 @@ func TestInstallerGRPCEngineTemplateInjectsDirectXDSConnection(t *testing.T) {
 	if len(mergedPod.Spec.Containers) != 1 {
 		t.Fatalf("containers = %d, want original application container only", len(mergedPod.Spec.Containers))
 	}
-	assertDirectXDSConnection(t, mergedPod, "app", InherentGRPCSecretNameForMeta(pod.ObjectMeta))
+	assertDirectXDSConnection(t, mergedPod, "app", InherentXDSSecretNameForMeta(pod.ObjectMeta))
 }
 
-func TestInstallerGRPCEngineTemplateAllocatesUniqueNameForDeploymentPods(t *testing.T) {
+func TestInstallerTripleEngineTemplateAllocatesUniqueNameForDeploymentPods(t *testing.T) {
 	_, currentFile, _, ok := runtime.Caller(0)
 	if !ok {
 		t.Fatalf("runtime.Caller() failed")
 	}
-	templatePath := filepath.Join(filepath.Dir(currentFile), "../../..", "manifests/charts/dubbod/files/grpc-engine.yaml")
+	templatePath := filepath.Join(filepath.Dir(currentFile), "../../..", "manifests/charts/dubbod/files/triple-engine.yaml")
 	templateBytes, err := os.ReadFile(templatePath)
 	if err != nil {
-		t.Fatalf("failed to read grpc-engine.yaml: %v", err)
+		t.Fatalf("failed to read triple-engine.yaml: %v", err)
 	}
 	templates, err := ParseTemplates(RawTemplates{
-		InherentGRPCTemplateName: string(templateBytes),
+		InherentTripleTemplateName: string(templateBytes),
 	})
 	if err != nil {
 		t.Fatalf("ParseTemplates() failed: %v", err)
@@ -123,7 +121,7 @@ func TestInstallerGRPCEngineTemplateAllocatesUniqueNameForDeploymentPods(t *test
 			GenerateName: "nginx-95575cc5d-",
 			Namespace:    "app",
 			Annotations: map[string]string{
-				InherentInjectTemplatesAnnoName: InherentGRPCTemplateName,
+				InherentInjectTemplatesAnnoName: InherentTripleTemplateName,
 			},
 		},
 		Spec: corev1.PodSpec{
@@ -157,7 +155,7 @@ func TestInstallerGRPCEngineTemplateAllocatesUniqueNameForDeploymentPods(t *test
 	if len(mergedPod.Spec.Containers) != 1 {
 		t.Fatalf("containers = %d, want original application container only", len(mergedPod.Spec.Containers))
 	}
-	assertDirectXDSConnection(t, mergedPod, "nginx", InherentGRPCSecretNameForMeta(mergedPod.ObjectMeta))
+	assertDirectXDSConnection(t, mergedPod, "nginx", InherentXDSSecretNameForMeta(mergedPod.ObjectMeta))
 	if mergedPod.Name == "" || !strings.HasPrefix(mergedPod.Name, pod.GenerateName) {
 		t.Fatalf("Pod name = %q, want allocated name with deployment prefix", mergedPod.Name)
 	}
@@ -171,7 +169,7 @@ func TestInstallerGRPCEngineTemplateAllocatesUniqueNameForDeploymentPods(t *test
 	if err := postProcessPod(other, *injectedPod, otherReq); err != nil {
 		t.Fatal(err)
 	}
-	if InherentGRPCSecretNameForMeta(other.ObjectMeta) == InherentGRPCSecretNameForMeta(mergedPod.ObjectMeta) {
+	if InherentXDSSecretNameForMeta(other.ObjectMeta) == InherentXDSSecretNameForMeta(mergedPod.ObjectMeta) {
 		t.Fatal("replicas must not share credentials")
 	}
 	name := mergedPod.Name
@@ -184,67 +182,35 @@ func assertDirectXDSConnection(t *testing.T, pod *corev1.Pod, containerName, sec
 	t.Helper()
 
 	container := pod.Spec.Containers[0]
-	isTriple := pod.Annotations[InherentInjectTemplatesAnnoName] == InherentTripleTemplateName
-	bootstrapEnv, bootstrapPath := "GRPC_XDS_BOOTSTRAP", InherentGRPCBootstrapPath
-	if isTriple {
-		bootstrapEnv, bootstrapPath = InherentTripleBootstrapEnvName, InherentTripleBootstrapPath
-	}
+	bootstrapEnv, bootstrapPath := InherentTripleBootstrapEnvName, InherentTripleBootstrapPath
 	if container.Name != containerName {
 		t.Fatalf("container name = %q, want %q", container.Name, containerName)
 	}
 	if !hasEnv(container.Env, bootstrapEnv, bootstrapPath) {
 		t.Fatalf("%s env missing", bootstrapEnv)
 	}
-	if isTriple {
-		if !hasEnv(container.Env, InherentTripleStatusAddressEnvName, InherentTripleStatusAddress) {
-			t.Fatalf("%s env missing", InherentTripleStatusAddressEnvName)
-		}
-	} else {
-		if !hasEnv(container.Env, InherentGRPCConfigEnvName, InherentGRPCConfigPath) {
-			t.Fatalf("%s env missing", InherentGRPCConfigEnvName)
-		}
-		if !hasEnv(container.Env, InherentGRPCMetricsAddressEnvName, InherentGRPCMetricsAddress) {
-			t.Fatalf("%s env missing", InherentGRPCMetricsAddressEnvName)
+	if !hasEnv(container.Env, InherentTripleStatusAddressEnvName, InherentTripleStatusAddress) {
+		t.Fatalf("%s env missing", InherentTripleStatusAddressEnvName)
+	}
+	for _, env := range container.Env {
+		if strings.HasPrefix(env.Name, "DUBBO_GRPC_") || env.Name == "GRPC_XDS_BOOTSTRAP" {
+			t.Fatalf("legacy gRPC engine env injected: %s", env.Name)
 		}
 	}
+
 	foundMetricsPort := false
 	for _, port := range container.Ports {
-		if port.Name == InherentGRPCMetricsPortName && port.ContainerPort == InherentGRPCMetricsPort {
+		if port.Name == InherentMetricsPortName && port.ContainerPort == InherentMetricsPort {
 			foundMetricsPort = true
 		}
 	}
 	if !foundMetricsPort {
-		t.Fatalf("metrics port %d missing", InherentGRPCMetricsPort)
+		t.Fatalf("metrics port %d missing", InherentMetricsPort)
 	}
 	if got := pod.Annotations["prometheus.io/scrape"]; got != "true" {
 		t.Fatalf("prometheus scrape annotation = %q, want true", got)
 	}
-	if !isTriple {
-		if !hasEnv(container.Env, InherentXDSAddressEnvName, "dubbod.dubbo-system.svc:26012") {
-			t.Fatalf("%s env missing", InherentXDSAddressEnvName)
-		}
-		if !hasEnv(container.Env, "DUBBO_GRPC_XDS_RESOLVER", "xds:///") {
-			t.Fatalf("DUBBO_GRPC_XDS_RESOLVER env missing")
-		}
-		if !hasEnv(container.Env, "DUBBO_GRPC_XDS_CREDENTIALS", "true") {
-			t.Fatalf("DUBBO_GRPC_XDS_CREDENTIALS env missing")
-		}
-		if !hasEnv(container.Env, InherentGRPCKeepaliveEnvName, InherentGRPCKeepaliveValue) {
-			t.Fatalf("%s env missing", InherentGRPCKeepaliveEnvName)
-		}
-		if !hasEnv(container.Env, InherentGRPCKeepaliveTimeEnv, InherentGRPCKeepaliveTime) {
-			t.Fatalf("%s env missing", InherentGRPCKeepaliveTimeEnv)
-		}
-		if !hasEnv(container.Env, InherentGRPCKeepaliveTimeoutEnv, InherentGRPCKeepaliveTimeout) {
-			t.Fatalf("%s env missing", InherentGRPCKeepaliveTimeoutEnv)
-		}
-		if !hasEnv(container.Env, InherentGRPCKeepalivePermitWithoutStreamEnv, InherentGRPCKeepaliveValue) {
-			t.Fatalf("%s env missing", InherentGRPCKeepalivePermitWithoutStreamEnv)
-		}
-		if !hasEnv(container.Env, "CA_ADDRESS", "dubbod.dubbo-system.svc:26012") {
-			t.Fatalf("CA_ADDRESS env missing")
-		}
-	}
+
 	if !hasEnv(container.Env, "TRUST_DOMAIN", "cluster.local") {
 		t.Fatalf("TRUST_DOMAIN env missing")
 	}
@@ -287,237 +253,35 @@ func assertNoArgs(t *testing.T, pod *corev1.Pod) {
 	}
 }
 
-func TestAddApplicationContainerConfigInjectsInherentGRPCContract(t *testing.T) {
-	pod := &corev1.Pod{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "grpc-provider-6d4c7b8c9f-abcde",
-			Namespace: "grpc-app",
-			Annotations: map[string]string{
-				InherentInjectTemplatesAnnoName: InherentGRPCTemplateName,
-			},
-		},
-		Spec: corev1.PodSpec{
-			Containers: []corev1.Container{{
-				Name: "app",
-			}},
-		},
-	}
-
-	req := InjectionParameters{
-		meshConfig: &meshv1alpha1.MeshConfig{
-			TrustDomain: "cluster.local",
-			DefaultConfig: &meshv1alpha1.ProxyConfig{
-				DiscoveryAddress: "dubbod.dubbo-system.svc:26012",
-			},
-		},
-		proxyConfig: &meshv1alpha1.ProxyConfig{
-			DiscoveryAddress: "dubbod.dubbo-system.svc:26012",
-		},
-	}
-
-	if err := addApplicationContainerConfig(pod, req); err != nil {
-		t.Fatalf("addApplicationContainerConfig() failed: %v", err)
-	}
-
-	if len(pod.Spec.Volumes) != 1 {
-		t.Fatalf("volumes = %d, want 1", len(pod.Spec.Volumes))
-	}
-	vol := pod.Spec.Volumes[0]
-	if got, want := vol.Name, InherentXDSVolumeName; got != want {
-		t.Fatalf("volume name = %q, want %q", got, want)
-	}
-	if vol.Secret == nil {
-		t.Fatalf("volume secret = nil, want SecretVolumeSource")
-	}
-	if got, want := vol.Secret.SecretName, InherentGRPCSecretNameForMeta(pod.ObjectMeta); got != want {
-		t.Fatalf("secret name = %q, want %q", got, want)
-	}
-
-	container := pod.Spec.Containers[0]
-	if !hasEnv(container.Env, "GRPC_XDS_BOOTSTRAP", InherentGRPCBootstrapPath) {
-		t.Fatalf("GRPC_XDS_BOOTSTRAP env missing")
-	}
-	if !hasEnv(container.Env, InherentGRPCConfigEnvName, InherentGRPCConfigPath) {
-		t.Fatalf("%s env missing", InherentGRPCConfigEnvName)
-	}
-	if !hasEnv(container.Env, InherentXDSAddressEnvName, "dubbod.dubbo-system.svc:26012") {
-		t.Fatalf("%s env missing", InherentXDSAddressEnvName)
-	}
-	if !hasEnv(container.Env, "GRPC_XDS_EXPERIMENTAL_SECURITY_SUPPORT", "true") {
-		t.Fatalf("GRPC_XDS_EXPERIMENTAL_SECURITY_SUPPORT env missing")
-	}
-	if !hasEnv(container.Env, "DUBBO_GRPC_XDS_CREDENTIALS", "true") {
-		t.Fatalf("DUBBO_GRPC_XDS_CREDENTIALS env missing")
-	}
-	if !hasEnv(container.Env, "DUBBO_GRPC_XDS_RESOLVER", "xds:///") {
-		t.Fatalf("DUBBO_GRPC_XDS_RESOLVER env missing")
-	}
-	if !hasMount(container.VolumeMounts, InherentXDSVolumeName, InherentXDSMountPath, true) {
-		t.Fatalf("inherent xds mount missing")
-	}
-}
-
-func TestInstallerGRPCEngineTemplateConfiguresXDSClientForDubbodImage(t *testing.T) {
-	_, currentFile, _, ok := runtime.Caller(0)
-	if !ok {
-		t.Fatalf("runtime.Caller() failed")
-	}
-	templatePath := filepath.Join(filepath.Dir(currentFile), "../../..", "manifests/charts/dubbod/files/grpc-engine.yaml")
-	templateBytes, err := os.ReadFile(templatePath)
-	if err != nil {
-		t.Fatalf("failed to read grpc-engine.yaml: %v", err)
-	}
-	templates, err := ParseTemplates(RawTemplates{
-		InherentGRPCTemplateName: string(templateBytes),
-	})
-	if err != nil {
-		t.Fatalf("ParseTemplates() failed: %v", err)
-	}
-	valuesConfig, err := NewValuesConfig("{}")
-	if err != nil {
-		t.Fatalf("NewValuesConfig() failed: %v", err)
-	}
-
-	pod := &corev1.Pod{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "nginx-consumer-6d4c7b8c9f-abcde",
-			Namespace: "app",
-			Annotations: map[string]string{
-				InherentInjectTemplatesAnnoName: InherentGRPCTemplateName,
-			},
-		},
-		Spec: corev1.PodSpec{
-			ServiceAccountName: "nginx",
-			Containers: []corev1.Container{{
-				Name:  "app",
-				Image: "dubml/dubbod:debug",
-			}},
-		},
-	}
-	req := InjectionParameters{
-		pod:          pod,
-		templates:    templates,
-		valuesConfig: valuesConfig,
-		meshConfig: &meshv1alpha1.MeshConfig{
-			TrustDomain: "cluster.local",
-			DefaultConfig: &meshv1alpha1.ProxyConfig{
-				DiscoveryAddress: "dubbod.dubbo-system.svc:26012",
-			},
-		},
-		proxyConfig: &meshv1alpha1.ProxyConfig{
-			DiscoveryAddress: "dubbod.dubbo-system.svc:26012",
-		},
-	}
-
-	mergedPod, injectedPod, err := RunTemplate(req)
-	if err != nil {
-		t.Fatalf("RunTemplate() failed: %v", err)
-	}
-	if err := postProcessPod(mergedPod, *injectedPod, req); err != nil {
-		t.Fatalf("postProcessPod() failed: %v", err)
-	}
-
-	container := mergedPod.Spec.Containers[0]
-	wantArgs := []string{"grpc-outbound", "--watch"}
-	if strings.Join(container.Args, ",") != strings.Join(wantArgs, ",") {
-		t.Fatalf("args = %v, want %v", container.Args, wantArgs)
-	}
-	if !hasEnv(container.Env, InherentXDSAddressEnvName, "dubbod.dubbo-system.svc:26012") {
-		t.Fatal("application container missing local xDS address")
-	}
-}
-
-func TestInstallerGRPCEngineTemplateDoesNotConfigureXDSClientForNonDubbodImage(t *testing.T) {
-	_, currentFile, _, ok := runtime.Caller(0)
-	if !ok {
-		t.Fatalf("runtime.Caller() failed")
-	}
-	templatePath := filepath.Join(filepath.Dir(currentFile), "../../..", "manifests/charts/dubbod/files/grpc-engine.yaml")
-	templateBytes, err := os.ReadFile(templatePath)
-	if err != nil {
-		t.Fatalf("failed to read grpc-engine.yaml: %v", err)
-	}
-	templates, err := ParseTemplates(RawTemplates{
-		InherentGRPCTemplateName: string(templateBytes),
-	})
-	if err != nil {
-		t.Fatalf("ParseTemplates() failed: %v", err)
-	}
-	valuesConfig, err := NewValuesConfig("{}")
-	if err != nil {
-		t.Fatalf("NewValuesConfig() failed: %v", err)
-	}
-
-	pod := &corev1.Pod{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "nginx-v1-6d4c7b8c9f-abcde",
-			Namespace: "app",
-			Annotations: map[string]string{
-				InherentInjectTemplatesAnnoName: InherentGRPCTemplateName,
-			},
-		},
-		Spec: corev1.PodSpec{
-			ServiceAccountName: "nginx",
-			Containers: []corev1.Container{{
-				Name:  "app",
-				Image: "nginx:1.27-alpine",
-			}},
-		},
-	}
-	req := InjectionParameters{
-		pod:          pod,
-		templates:    templates,
-		valuesConfig: valuesConfig,
-		meshConfig: &meshv1alpha1.MeshConfig{
-			TrustDomain: "cluster.local",
-			DefaultConfig: &meshv1alpha1.ProxyConfig{
-				DiscoveryAddress: "dubbod.dubbo-system.svc:26012",
-			},
-		},
-		proxyConfig: &meshv1alpha1.ProxyConfig{
-			DiscoveryAddress: "dubbod.dubbo-system.svc:26012",
-		},
-	}
-
-	mergedPod, injectedPod, err := RunTemplate(req)
-	if err != nil {
-		t.Fatalf("RunTemplate() failed: %v", err)
-	}
-	if err := postProcessPod(mergedPod, *injectedPod, req); err != nil {
-		t.Fatalf("postProcessPod() failed: %v", err)
-	}
-	assertNoArgs(t, mergedPod)
-}
-
-func TestEnsureInherentGRPCTemplateAnnotation(t *testing.T) {
+func TestEnsureInherentTripleTemplateAnnotation(t *testing.T) {
 	pod := &corev1.Pod{}
-	ensureInherentGRPCTemplateAnnotation(pod)
-	if got := pod.Annotations[InherentInjectTemplatesAnnoName]; got != InherentGRPCTemplateName {
-		t.Fatalf("template annotation = %q, want %q", got, InherentGRPCTemplateName)
+	ensureInherentTemplateAnnotation(pod, InherentTripleTemplateName)
+	if got := pod.Annotations[InherentInjectTemplatesAnnoName]; got != InherentTripleTemplateName {
+		t.Fatalf("template annotation = %q, want %q", got, InherentTripleTemplateName)
 	}
 
-	ensureInherentGRPCTemplateAnnotation(pod)
-	if got := pod.Annotations[InherentInjectTemplatesAnnoName]; got != InherentGRPCTemplateName {
-		t.Fatalf("template annotation after second call = %q, want %q", got, InherentGRPCTemplateName)
+	ensureInherentTemplateAnnotation(pod, InherentTripleTemplateName)
+	if got := pod.Annotations[InherentInjectTemplatesAnnoName]; got != InherentTripleTemplateName {
+		t.Fatalf("template annotation after second call = %q, want %q", got, InherentTripleTemplateName)
 	}
 
 	pod.Annotations[InherentInjectTemplatesAnnoName] = "custom"
-	ensureInherentGRPCTemplateAnnotation(pod)
-	if got, want := pod.Annotations[InherentInjectTemplatesAnnoName], "custom,"+InherentGRPCTemplateName; got != want {
+	ensureInherentTemplateAnnotation(pod, InherentTripleTemplateName)
+	if got, want := pod.Annotations[InherentInjectTemplatesAnnoName], "custom,"+InherentTripleTemplateName; got != want {
 		t.Fatalf("template annotation = %q, want %q", got, want)
 	}
 }
 
-func TestInherentGRPCSecretNameFitsKubernetesLengthLimit(t *testing.T) {
-	name := InherentGRPCSecretName("grpc-provider-012345678901234567890123456789012345678901234567890123")
+func TestInherentXDSSecretNameFitsKubernetesLengthLimit(t *testing.T) {
+	name := InherentXDSSecretName("grpc-provider-012345678901234567890123456789012345678901234567890123")
 	if len(name) > 63 {
 		t.Fatalf("secret name length = %d, want <= 63", len(name))
 	}
 }
 
-func TestInherentGRPCSecretNameForMetaUsesPodName(t *testing.T) {
+func TestInherentXDSSecretNameForMetaUsesPodName(t *testing.T) {
 	meta := metav1.ObjectMeta{Name: "nginx-95575cc5d-kh98x", GenerateName: "nginx-95575cc5d-"}
-	if got, want := InherentGRPCSecretNameForMeta(meta), InherentGRPCSecretName(meta.Name); got != want {
+	if got, want := InherentXDSSecretNameForMeta(meta), InherentXDSSecretName(meta.Name); got != want {
 		t.Fatalf("secret name = %q, want %q", got, want)
 	}
 }
@@ -552,18 +316,18 @@ func hasMount(mounts []corev1.VolumeMount, name, path string, readOnly bool) boo
 	return false
 }
 
-func TestInstallerGRPCEngineTemplateInjectsTelemetryEnv(t *testing.T) {
+func TestInstallerTripleEngineTemplateInjectsTelemetryEnv(t *testing.T) {
 	_, currentFile, _, ok := runtime.Caller(0)
 	if !ok {
 		t.Fatalf("runtime.Caller() failed")
 	}
-	templatePath := filepath.Join(filepath.Dir(currentFile), "../../..", "manifests/charts/dubbod/files/grpc-engine.yaml")
+	templatePath := filepath.Join(filepath.Dir(currentFile), "../../..", "manifests/charts/dubbod/files/triple-engine.yaml")
 	templateBytes, err := os.ReadFile(templatePath)
 	if err != nil {
-		t.Fatalf("failed to read grpc-engine.yaml: %v", err)
+		t.Fatalf("failed to read triple-engine.yaml: %v", err)
 	}
 	templates, err := ParseTemplates(RawTemplates{
-		InherentGRPCTemplateName: string(templateBytes),
+		InherentTripleTemplateName: string(templateBytes),
 	})
 	if err != nil {
 		t.Fatalf("ParseTemplates() failed: %v", err)
@@ -579,7 +343,7 @@ func TestInstallerGRPCEngineTemplateInjectsTelemetryEnv(t *testing.T) {
 				Name:      "grpc-provider-6d4c7b8c9f-abcde",
 				Namespace: "grpc-app",
 				Annotations: map[string]string{
-					InherentInjectTemplatesAnnoName: InherentGRPCTemplateName,
+					InherentInjectTemplatesAnnoName: InherentTripleTemplateName,
 				},
 			},
 			Spec: corev1.PodSpec{
@@ -629,8 +393,8 @@ func TestInstallerGRPCEngineTemplateInjectsTelemetryEnv(t *testing.T) {
 	if err := postProcessPod(mergedPod, corev1.Pod{}, newParams(tracing)); err != nil {
 		t.Fatalf("postProcessPod() failed: %v", err)
 	}
-	if got := envValue(mergedPod, InherentGRPCMetricsAddressEnvName); got != InherentGRPCMetricsAddress {
-		t.Fatalf("%s = %q, want %q", InherentGRPCMetricsAddressEnvName, got, InherentGRPCMetricsAddress)
+	if got := envValue(mergedPod, InherentTripleStatusAddressEnvName); got != InherentTripleStatusAddress {
+		t.Fatalf("%s = %q, want %q", InherentTripleStatusAddressEnvName, got, InherentTripleStatusAddress)
 	}
 	app := FindContainer("app", mergedPod.Spec.Containers)
 	if app == nil {
@@ -638,12 +402,12 @@ func TestInstallerGRPCEngineTemplateInjectsTelemetryEnv(t *testing.T) {
 	}
 	foundMetricsPort := false
 	for _, port := range app.Ports {
-		if port.Name == InherentGRPCMetricsPortName && port.ContainerPort == InherentGRPCMetricsPort {
+		if port.Name == InherentMetricsPortName && port.ContainerPort == InherentMetricsPort {
 			foundMetricsPort = true
 		}
 	}
 	if !foundMetricsPort {
-		t.Fatalf("application metrics port %d missing", InherentGRPCMetricsPort)
+		t.Fatalf("application metrics port %d missing", InherentMetricsPort)
 	}
 	for key, want := range map[string]string{
 		"prometheus.io/scrape": "true",

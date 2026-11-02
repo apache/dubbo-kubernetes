@@ -37,11 +37,9 @@ metadata:
     dubbo.apache.org/rev: default
 data:
   config: |-
-    defaultTemplates: [grpc-engine]
+    defaultTemplates: [triple-engine]
     policy: enabled
     templates:
-      grpc-engine: |
-{{ .Files.Get "files/grpc-engine.yaml" | trim | indent 8 }}
       triple-engine: |
 {{ .Files.Get "files/triple-engine.yaml" | trim | indent 8 }}
       gateway: |

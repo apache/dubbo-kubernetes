@@ -119,9 +119,9 @@ type Server struct {
 
 	webhookInfo *webhookInfo
 
-	RWConfigStore                  model.ConfigStoreController
-	inherentGRPCWorkloadController *inherentGRPCWorkloadController
-	statusManager                  *status.Manager
+	RWConfigStore                 model.ConfigStoreController
+	inherentXDSWorkloadController *inherentXDSWorkloadController
+	statusManager                 *status.Manager
 }
 
 type readinessFlags struct {
@@ -540,8 +540,8 @@ func (s *Server) initReadinessProbes() {
 		"discovery": func() bool {
 			return s.XDSServer.IsServerReady()
 		},
-		"Inherent gRPC workloads": func() bool {
-			return s.inherentGRPCWorkloadController == nil || s.inherentGRPCWorkloadController.HasSynced()
+		"Inherent xDS workloads": func() bool {
+			return s.inherentXDSWorkloadController == nil || s.inherentXDSWorkloadController.HasSynced()
 		},
 		"Inherent injector": func() bool {
 			return s.readinessFlags.InjectorReady.Load()
@@ -655,8 +655,8 @@ func (s *Server) initControllers(args *DubboArgs) error {
 	if err := s.initServiceControllers(args); err != nil {
 		return fmt.Errorf("error initializing service controllers: %v", err)
 	}
-	if err := s.initInherentGRPCWorkloads(); err != nil {
-		return fmt.Errorf("error initializing Inherent gRPC workloads: %v", err)
+	if err := s.initInherentXDSWorkloads(); err != nil {
+		return fmt.Errorf("error initializing Inherent xDS workloads: %v", err)
 	}
 	return nil
 }
@@ -796,7 +796,7 @@ func (s *Server) cachesSynced() bool {
 	if !s.configController.HasSynced() {
 		return false
 	}
-	if !s.inherentGRPCWorkloadsSynced() {
+	if !s.inherentXDSWorkloadsSynced() {
 		return false
 	}
 	return true
