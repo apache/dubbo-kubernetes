@@ -14,7 +14,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package grpcxds
+package xdsbootstrap
 
 import (
 	"encoding/json"
@@ -33,6 +33,8 @@ import (
 	"google.golang.org/protobuf/types/known/structpb"
 )
 
+// Listener names and bootstrap JSON keys are shared wire contracts with the
+// Triple runtime and gateway; retain their existing values.
 const (
 	ServerListenerNamePrefix    = "xds.dubbo.apache.org/grpc/lds/inbound/"
 	ServerListenerNameTemplate  = ServerListenerNamePrefix + "%s"

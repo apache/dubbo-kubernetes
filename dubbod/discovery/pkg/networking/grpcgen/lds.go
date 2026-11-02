@@ -26,9 +26,9 @@ import (
 	"github.com/apache/dubbo-kubernetes/dubbod/discovery/pkg/networking/util"
 	"github.com/apache/dubbo-kubernetes/dubbod/discovery/pkg/util/protoconv"
 	"github.com/apache/dubbo-kubernetes/pkg/config/host"
-	"github.com/apache/dubbo-kubernetes/pkg/grpcxds"
 	"github.com/apache/dubbo-kubernetes/pkg/util/sets"
 	"github.com/apache/dubbo-kubernetes/pkg/wellknown"
+	"github.com/apache/dubbo-kubernetes/pkg/xdsbootstrap"
 	core "github.com/dubml/xds-api/core/v1"
 	routerv1 "github.com/dubml/xds-api/extensions/filters/v1/http/router"
 	hcmv1 "github.com/dubml/xds-api/extensions/filters/v1/network/http_connection_manager"
@@ -57,7 +57,7 @@ func (g *GrpcConfigGenerator) BuildListeners(node *model.Proxy, push *model.Push
 		for _, st := range node.ServiceTargets {
 			if st.Service != nil && st.Port.ServicePort != nil {
 				// Generate inbound listener name for each service target port
-				listenerName := fmt.Sprintf("%s0.0.0.0:%d", grpcxds.ServerListenerNamePrefix, st.Port.TargetPort)
+				listenerName := fmt.Sprintf("%s0.0.0.0:%d", xdsbootstrap.ServerListenerNamePrefix, st.Port.TargetPort)
 				names = append(names, listenerName)
 			}
 		}
@@ -115,7 +115,7 @@ func newListenerNameFilter(names []string, node *model.Proxy) listenerNames {
 	filter := make(listenerNames, len(names))
 	for _, name := range names {
 		// inbound, create a simple entry and move on
-		if strings.HasPrefix(name, grpcxds.ServerListenerNamePrefix) {
+		if strings.HasPrefix(name, xdsbootstrap.ServerListenerNamePrefix) {
 			filter[name] = listenerName{RequestedNames: sets.New(name)}
 			continue
 		}
@@ -176,7 +176,7 @@ func buildInboundListeners(node *model.Proxy, push *model.PushContext, names []s
 	}
 
 	for _, name := range listenerNames {
-		listenAddress := strings.TrimPrefix(name, grpcxds.ServerListenerNamePrefix)
+		listenAddress := strings.TrimPrefix(name, xdsbootstrap.ServerListenerNamePrefix)
 		listenHost, listenPortStr, err := net.SplitHostPort(listenAddress)
 		if err != nil {
 			log.Errorf("failed parsing address from gRPC listener name %s: %v", name, err)
@@ -365,7 +365,7 @@ func buildOutboundListeners(node *model.Proxy, push *model.PushContext, filter l
 	var outboundListeners []listenerInfo
 
 	for name, ln := range filter {
-		if strings.HasPrefix(name, grpcxds.ServerListenerNamePrefix) {
+		if strings.HasPrefix(name, xdsbootstrap.ServerListenerNamePrefix) {
 			continue // Skip inbound listeners
 		}
 
@@ -559,7 +559,7 @@ func buildOutboundListeners(node *model.Proxy, push *model.PushContext, filter l
 func (f listenerNames) inboundNames() []string {
 	var out []string
 	for key := range f {
-		if strings.HasPrefix(key, grpcxds.ServerListenerNamePrefix) {
+		if strings.HasPrefix(key, xdsbootstrap.ServerListenerNamePrefix) {
 			out = append(out, key)
 		}
 	}

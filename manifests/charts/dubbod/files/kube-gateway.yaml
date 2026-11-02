@@ -101,7 +101,7 @@ spec:
       annotations:
         dubbo.apache.org/rev: {{ .Revision | quote }}
         gateway.dubbo.apache.org/bootstrap-hash: {{ .BootstrapConfigHash | quote }}
-        inject.dubbo.apache.org/templates: grpc-engine
+        inject.dubbo.apache.org/templates: triple-engine
         prometheus.io/scrape: "true"
         prometheus.io/path: /metrics
         prometheus.io/port: "26021"

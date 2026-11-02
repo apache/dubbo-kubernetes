@@ -27,32 +27,16 @@ import (
 )
 
 const (
-	InherentGRPCTemplateName                    = "grpc-engine"
-	InherentTripleTemplateName                  = "triple-engine"
-	InherentTripleBootstrapEnvName              = "TRIPLE_XDS_BOOTSTRAP"
-	InherentTripleBootstrapFileName             = "triple-bootstrap.json"
-	InherentTripleBootstrapPath                 = InherentXDSMountPath + "/" + InherentTripleBootstrapFileName
-	InherentTripleStatusAddressEnvName          = "DUBBO_TRIPLE_STATUS_ADDRESS"
-	InherentTripleStatusAddress                 = "0.0.0.0:9090"
-	InherentXDSVolumeName                       = "dubbo-xds"
-	InherentXDSMountPath                        = "/etc/dubbo/proxy"
-	InherentGRPCBootstrapFileName               = "grpc-bootstrap.json"
-	InherentGRPCBootstrapPath                   = InherentXDSMountPath + "/" + InherentGRPCBootstrapFileName
-	InherentXDSAddressEnvName                   = "XDS_ADDRESS"
-	InherentGRPCConfigEnvName                   = "DUBBO_GRPC_XDS_CONFIG"
-	InherentGRPCMetricsAddressEnvName           = "DUBBO_GRPC_METRICS_ADDRESS"
-	InherentGRPCMetricsAddress                  = ":9090"
-	InherentGRPCMetricsPortName                 = "metrics"
-	InherentGRPCMetricsPort                     = 9090
-	InherentGRPCKeepaliveEnvName                = "DUBBO_GRPC_KEEPALIVE"
-	InherentGRPCKeepaliveTimeEnv                = "GRPC_KEEPALIVE_INTERVAL"
-	InherentGRPCKeepaliveTimeoutEnv             = "GRPC_KEEPALIVE_TIMEOUT"
-	InherentGRPCKeepalivePermitWithoutStreamEnv = "GRPC_KEEPALIVE_PERMIT_WITHOUT_STREAM"
-	InherentGRPCKeepaliveValue                  = "true"
-	InherentGRPCKeepaliveTime                   = "30s"
-	InherentGRPCKeepaliveTimeout                = "10s"
-	InherentGRPCConfigFileName                  = "dubbo-grpc-xds.json"
-	InherentGRPCConfigPath                      = InherentXDSMountPath + "/" + InherentGRPCConfigFileName
+	InherentTripleTemplateName         = "triple-engine"
+	InherentTripleBootstrapEnvName     = "TRIPLE_XDS_BOOTSTRAP"
+	InherentTripleBootstrapFileName    = "triple-bootstrap.json"
+	InherentTripleBootstrapPath        = InherentXDSMountPath + "/" + InherentTripleBootstrapFileName
+	InherentTripleStatusAddressEnvName = "DUBBO_TRIPLE_STATUS_ADDRESS"
+	InherentTripleStatusAddress        = "0.0.0.0:9090"
+	InherentXDSVolumeName              = "dubbo-xds"
+	InherentXDSMountPath               = "/etc/dubbo/proxy"
+	InherentMetricsPortName            = "metrics"
+	InherentMetricsPort                = 9090
 	// InherentGatewayInboundPort is the managed gateway listener. Application
 	// workloads keep their own declared ports in proxyless mode.
 	InherentGatewayInboundPort = 15080
@@ -60,7 +44,7 @@ const (
 
 var InherentInjectTemplatesAnnoName = annotation.OrgApacheDubboInjectTemplates.Name
 
-func InherentGRPCSecretName(podName string) string {
+func InherentXDSSecretName(podName string) string {
 	const (
 		prefix      = "dubbo-xds-"
 		maxNameLen  = 63
@@ -82,11 +66,11 @@ func InherentGRPCSecretName(podName string) string {
 	return fmt.Sprintf("%s%s-%s", prefix, base, suffix)
 }
 
-func InherentGRPCSecretNameForMeta(meta metav1.ObjectMeta) string {
-	return InherentGRPCSecretName(meta.Name)
+func InherentXDSSecretNameForMeta(meta metav1.ObjectMeta) string {
+	return InherentXDSSecretName(meta.Name)
 }
 
-func inherentGRPCPodName(prefix string, requestUID types.UID) string {
+func inherentXDSPodName(prefix string, requestUID types.UID) string {
 	const suffixLength = 16
 	if len(prefix) > 63-suffixLength {
 		prefix = prefix[:63-suffixLength]

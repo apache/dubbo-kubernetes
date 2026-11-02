@@ -74,7 +74,7 @@ func TestTripleTemplateRetainsApplicationAndDoesNotAppendGRPC(t *testing.T) {
 					if merged.Annotations[InherentInjectTemplatesAnnoName] != InherentTripleTemplateName {
 						t.Fatal("grpc-engine appended")
 					}
-					assertDirectXDSConnection(t, merged, name, InherentGRPCSecretNameForMeta(original.ObjectMeta))
+					assertDirectXDSConnection(t, merged, name, InherentXDSSecretNameForMeta(original.ObjectMeta))
 					before := merged.DeepCopy()
 					if err := postProcessPod(merged, *injected, req); err != nil {
 						t.Fatal(err)

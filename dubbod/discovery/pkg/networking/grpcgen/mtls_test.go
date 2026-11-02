@@ -21,7 +21,7 @@ import (
 	"github.com/apache/dubbo-kubernetes/dubbod/discovery/pkg/model"
 	"github.com/apache/dubbo-kubernetes/pkg/config"
 	"github.com/apache/dubbo-kubernetes/pkg/config/schema/gvk"
-	"github.com/apache/dubbo-kubernetes/pkg/grpcxds"
+	"github.com/apache/dubbo-kubernetes/pkg/xdsbootstrap"
 	security "github.com/dubml/api/security/v1alpha3"
 	tlsv1 "github.com/dubml/xds-api/extensions/transport_sockets/tls/v1"
 	listener "github.com/dubml/xds-api/listener/v1"
@@ -41,7 +41,7 @@ func TestPeerAuthenticationStrictBuildsDownstreamMTLSListener(t *testing.T) {
 		newStrictPeerAuthenticationConfig("app-strict-mtls", "app"),
 	}, []*model.Service{svc})
 
-	listenerName := grpcxds.ServerListenerNamePrefix + "0.0.0.0:80"
+	listenerName := xdsbootstrap.ServerListenerNamePrefix + "0.0.0.0:80"
 	resources := (&GrpcConfigGenerator{}).BuildListeners(proxy, push, []string{listenerName})
 	l := findListener(t, resources, listenerName)
 	if len(l.GetFilterChains()) != 1 {
@@ -76,7 +76,7 @@ func TestPeerAuthenticationPermissiveBuildsPlaintextAndMTLSFilterChains(t *testi
 		newPeerAuthenticationConfig("app-permissive-mtls", "app", security.PeerAuthentication_MutualTLS_PERMISSIVE),
 	}, []*model.Service{svc})
 
-	listenerName := grpcxds.ServerListenerNamePrefix + "0.0.0.0:80"
+	listenerName := xdsbootstrap.ServerListenerNamePrefix + "0.0.0.0:80"
 	resources := (&GrpcConfigGenerator{}).BuildListeners(proxy, push, []string{listenerName})
 	l := findListener(t, resources, listenerName)
 	if len(l.GetFilterChains()) != 2 {
@@ -118,7 +118,7 @@ func TestRootNamespacePeerAuthenticationBuildsGlobalStrictListener(t *testing.T)
 		newPeerAuthenticationConfig("default", "dubbo-system", security.PeerAuthentication_MutualTLS_STRICT),
 	}, []*model.Service{svc})
 
-	listenerName := grpcxds.ServerListenerNamePrefix + "0.0.0.0:80"
+	listenerName := xdsbootstrap.ServerListenerNamePrefix + "0.0.0.0:80"
 	resources := (&GrpcConfigGenerator{}).BuildListeners(proxy, push, []string{listenerName})
 	l := findListener(t, resources, listenerName)
 	if len(l.GetFilterChains()) != 1 {

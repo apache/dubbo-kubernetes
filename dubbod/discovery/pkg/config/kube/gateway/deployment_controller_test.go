@@ -315,8 +315,8 @@ func TestKubeGatewayTemplateRendersGatewayResources(t *testing.T) {
 	if !strings.Contains(rendered[4], `inherent.dubbo.apache.org/inject: "true"`) {
 		t.Fatalf("deployment pod template did not enable inherent injection for gateway mTLS certs:\n%s", rendered[4])
 	}
-	if !strings.Contains(rendered[4], "inject.dubbo.apache.org/templates: grpc-engine") {
-		t.Fatalf("deployment pod template did not request grpc-engine injection:\n%s", rendered[4])
+	if !strings.Contains(rendered[4], "inject.dubbo.apache.org/templates: triple-engine") {
+		t.Fatalf("deployment pod template did not request triple-engine injection:\n%s", rendered[4])
 	}
 	if !strings.Contains(rendered[4], `prometheus.io/scrape: "true"`) ||
 		!strings.Contains(rendered[4], "prometheus.io/path: /metrics") ||

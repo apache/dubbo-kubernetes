@@ -100,7 +100,7 @@ func isInjectedPod(pod corev1.Pod) bool {
 	if pod.Annotations[annotation.OrgApacheDubboInherentStatus.Name] != "" {
 		return true
 	}
-	if containsCSV(pod.Annotations[annotation.OrgApacheDubboInjectTemplates.Name], inject.InherentGRPCTemplateName) {
+	if containsCSV(pod.Annotations[annotation.OrgApacheDubboInjectTemplates.Name], inject.InherentTripleTemplateName) {
 		return true
 	}
 	if hasVolume(pod, inject.InherentXDSVolumeName) {
@@ -109,7 +109,7 @@ func isInjectedPod(pod corev1.Pod) bool {
 	for _, container := range allContainers(pod) {
 		for _, env := range container.Env {
 			switch env.Name {
-			case "GRPC_XDS_BOOTSTRAP", inject.InherentGRPCConfigEnvName, inject.InherentXDSAddressEnvName:
+			case inject.InherentTripleBootstrapEnvName:
 				return true
 			}
 		}
@@ -209,7 +209,7 @@ func podTemplates(pod corev1.Pod) string {
 		return templates
 	}
 	if isInjectedPod(pod) {
-		return inject.InherentGRPCTemplateName
+		return inject.InherentTripleTemplateName
 	}
 	return ""
 }
