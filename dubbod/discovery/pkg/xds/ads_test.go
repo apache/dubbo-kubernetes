@@ -18,6 +18,7 @@ package xds
 import (
 	"encoding/json"
 	"fmt"
+	"strings"
 	"testing"
 	"time"
 
@@ -25,13 +26,54 @@ import (
 	v1 "github.com/apache/dubbo-kubernetes/dubbod/discovery/pkg/xds/v1"
 	"github.com/apache/dubbo-kubernetes/pkg/config/schema/kind"
 	"github.com/apache/dubbo-kubernetes/pkg/util/sets"
+	core "github.com/dubml/xds-api/core/v1"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
+	"google.golang.org/protobuf/types/known/structpb"
 )
+
+func TestInitProxyMetadataGeneratorSupport(t *testing.T) {
+	server := &DiscoveryServer{}
+	makeNode := func(meta map[string]any) *core.Node {
+		t.Helper()
+		st, err := structpb.NewStruct(meta)
+		if err != nil {
+			t.Fatalf("NewStruct() failed: %v", err)
+		}
+		return &core.Node{
+			Id:       "inherent~10.0.0.1~pod-1.app~app.svc.cluster.local",
+			Metadata: st,
+		}
+	}
+
+	tripleProxy, err := server.initProxyMetadata(makeNode(map[string]any{
+		"GENERATOR": "triple",
+		"NAMESPACE": "app",
+	}))
+	if err != nil {
+		t.Fatalf("initProxyMetadata(triple) failed: %v", err)
+	}
+	if tripleProxy.Metadata == nil || tripleProxy.Metadata.Generator != "triple" || !tripleProxy.IsInherentTriple() {
+		t.Fatalf("unexpected triple proxy metadata: %+v", tripleProxy.Metadata)
+	}
+
+	_, err = server.initProxyMetadata(makeNode(map[string]any{
+		"GENERATOR": "grpc",
+		"NAMESPACE": "app",
+	}))
+	if err == nil {
+		t.Fatal("initProxyMetadata(grpc) succeeded, want unsupported error")
+	}
+	if status.Code(err) != codes.InvalidArgument || !strings.Contains(err.Error(), "unsupported xDS generator") {
+		t.Fatalf("initProxyMetadata(grpc) err = %v, want InvalidArgument unsupported xDS generator", err)
+	}
+}
 
 func TestConnectionWatchesAnyServiceFiltersInherentEDS(t *testing.T) {
 	con := &Connection{proxy: &model.Proxy{
 		Type: model.Inherent,
 		Metadata: &model.NodeMetadata{
-			Generator: "grpc",
+			Generator: "triple",
 		},
 		WatchedResources: map[string]*model.WatchedResource{
 			v1.EndpointType: {
@@ -56,7 +98,7 @@ func TestConnectionWatchesAnyServiceKeepsBroadPushForUnknownWatch(t *testing.T) 
 	con := &Connection{proxy: &model.Proxy{
 		Type: model.Inherent,
 		Metadata: &model.NodeMetadata{
-			Generator: "grpc",
+			Generator: "triple",
 		},
 		WatchedResources: map[string]*model.WatchedResource{},
 	}}
@@ -213,7 +255,7 @@ func TestPushStatusJSONIncludesOperationalSummary(t *testing.T) {
 	if got.PushVersion != "v1" {
 		t.Fatalf("PushVersion = %q, want v1", got.PushVersion)
 	}
-	if got.Clients.ConnectedEndpoints != 1 || got.Clients.InherentGRPC != 1 || got.Clients.InherentGRPCEDSWatchers != 1 {
+	if got.Clients.ConnectedEndpoints != 1 || got.Clients.InherentTriple != 1 || got.Clients.InherentTripleEDSWatchers != 1 {
 		t.Fatalf("Clients = %+v, want one connected inherent EDS watcher", got.Clients)
 	}
 	if got.Queue.Pending != 1 || got.Queue.Queued != 1 {
@@ -278,7 +320,7 @@ func inherentConnectionProxy(service string) *model.Proxy {
 	return &model.Proxy{
 		Type: model.Inherent,
 		Metadata: &model.NodeMetadata{
-			Generator: "grpc",
+			Generator: "triple",
 		},
 		WatchedResources: map[string]*model.WatchedResource{
 			v1.EndpointType: {

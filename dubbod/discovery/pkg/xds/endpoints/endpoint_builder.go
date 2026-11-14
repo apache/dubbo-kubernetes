@@ -20,6 +20,7 @@ import (
 	"fmt"
 	"sort"
 	"strings"
+	"unicode"
 
 	"github.com/apache/dubbo-kubernetes/dubbod/discovery/pkg/model"
 	"github.com/apache/dubbo-kubernetes/dubbod/discovery/pkg/networking/util"
@@ -151,7 +152,17 @@ func (b *EndpointBuilder) BuildClusterLoadAssignment(endpointIndex *model.Endpoi
 			b.hostname, b.port, svcPort.Name, portNamesList)
 	}
 
-	for _, eps := range shards.Shards {
+	shardKeys := make([]model.ShardKey, 0, len(shards.Shards))
+	for k := range shards.Shards {
+		shardKeys = append(shardKeys, k)
+	}
+	sort.Slice(shardKeys, func(i, j int) bool {
+		return shardKeys[i].Provider < shardKeys[j].Provider
+	})
+
+	seenEndpoints := make(map[string]struct{})
+	for _, shardKey := range shardKeys {
+		eps := shards.Shards[shardKey]
 		for _, ep := range eps {
 			totalEndpoints++
 			// Filter by port name
@@ -179,6 +190,14 @@ func (b *EndpointBuilder) BuildClusterLoadAssignment(endpointIndex *model.Endpoi
 				log.Debugf("buildLbEndpoint returned nil for endpoint %s", ep.FirstAddressOrNil())
 				continue
 			}
+			sa := lbEp.GetEndpoint().GetAddress().GetSocketAddress()
+			addrKey := formatEndpointAddressKey(sa.GetAddress(), sa.GetPortValue())
+			if _, duplicate := seenEndpoints[addrKey]; duplicate {
+				filteredCount++
+				log.Debugf("filtering duplicate endpoint address %s for cluster %s", addrKey, b.clusterName)
+				continue
+			}
+			seenEndpoints[addrKey] = struct{}{}
 			lbEndpoints = append(lbEndpoints, lbEp)
 			group := localities[ep.Locality]
 			if group == nil {
@@ -191,7 +210,7 @@ func (b *EndpointBuilder) BuildClusterLoadAssignment(endpointIndex *model.Endpoi
 	}
 
 	if len(lbEndpoints) == 0 {
-		// For Inherent gRPC, log empty endpoints at INFO level to help diagnose connection issues
+		// For Inherent Triple, log empty endpoints at INFO level to help diagnose connection issues
 		// This helps identify when endpoints are not available vs when they're filtered out
 		logLevel := log.Infof // If no endpoints exist at all, this is informational
 		if totalEndpoints > 0 {
@@ -272,9 +291,12 @@ func (b *EndpointBuilder) buildLbEndpoint(ep *model.DubboEndpoint) *endpoint.LbE
 
 	endpointAddress := ep.Addresses[0]
 	endpointPort := ep.EndpointPort
+	if !isValidEndpointHostPort(endpointAddress, endpointPort) {
+		return nil
+	}
 
 	address := util.BuildAddress(endpointAddress, endpointPort)
-	if address == nil {
+	if address == nil || address.GetSocketAddress() == nil {
 		return nil
 	}
 
@@ -330,6 +352,13 @@ func buildEmptyClusterLoadAssignment(clusterName string) *endpoint.ClusterLoadAs
 }
 
 func buildDNSClusterLoadAssignment(clusterName, address string, port uint32) *endpoint.ClusterLoadAssignment {
+	if !isValidEndpointHostPort(address, port) {
+		return buildEmptyClusterLoadAssignment(clusterName)
+	}
+	builtAddr := util.BuildAddress(address, port)
+	if builtAddr == nil || builtAddr.GetSocketAddress() == nil {
+		return buildEmptyClusterLoadAssignment(clusterName)
+	}
 	return &endpoint.ClusterLoadAssignment{
 		ClusterName: clusterName,
 		Endpoints: []*endpoint.LocalityLbEndpoints{
@@ -339,7 +368,7 @@ func buildDNSClusterLoadAssignment(clusterName, address string, port uint32) *en
 					{
 						HostIdentifier: &endpoint.LbEndpoint_Endpoint{
 							Endpoint: &endpoint.Endpoint{
-								Address: util.BuildAddress(address, port),
+								Address: builtAddr,
 							},
 						},
 						HealthStatus: core.HealthStatus_HEALTHY,
@@ -354,6 +383,31 @@ func buildDNSClusterLoadAssignment(clusterName, address string, port uint32) *en
 			},
 		},
 	}
+}
+
+func isValidEndpointHostPort(addr string, port uint32) bool {
+	if port == 0 || port > 65535 {
+		return false
+	}
+	if addr == "" || strings.HasPrefix(addr, model.UnixAddressPrefix) {
+		return false
+	}
+	if strings.ContainsAny(addr, "/@") {
+		return false
+	}
+	for _, r := range addr {
+		if unicode.IsSpace(r) {
+			return false
+		}
+	}
+	return true
+}
+
+func formatEndpointAddressKey(addr string, port uint32) string {
+	if strings.Contains(addr, ":") {
+		return fmt.Sprintf("[%s]:%d", addr, port)
+	}
+	return fmt.Sprintf("%s:%d", addr, port)
 }
 
 // Cacheable implements model.XdsCacheEntry

@@ -80,7 +80,7 @@ func (s *DiscoveryServer) pushXds(con *Connection, w *model.WatchedResource, req
 	}
 
 	var requestedResourceNames sets.String
-	if con.proxy.IsInherentGrpc() {
+	if con.proxy.IsInherentTriple() {
 		if len(w.ResourceNames) == 0 {
 			// Initial wildcard request - need to extract resource names from parent resources
 			// For CDS: extract cluster names from LDS
@@ -183,7 +183,7 @@ func (s *DiscoveryServer) pushXds(con *Connection, w *model.WatchedResource, req
 	}
 
 	var logFiltered string
-	if !req.Delta.IsEmpty() && !con.proxy.IsInherentGrpc() {
+	if !req.Delta.IsEmpty() && !con.proxy.IsInherentTriple() {
 		logFiltered = " filtered:" + strconv.Itoa(len(w.ResourceNames)-len(req.Delta.Subscribed))
 		w = &model.WatchedResource{
 			TypeUrl:       w.TypeUrl,
@@ -209,10 +209,10 @@ func (s *DiscoveryServer) pushXds(con *Connection, w *model.WatchedResource, req
 		return nil
 	}
 
-	// For Inherent gRPC, filter resources to only include requested ones
+	// For Inherent Triple, filter resources to only include requested ones
 	// This prevents the push loop where client requests 1 resource but receives 13/14
 	var filteredRes model.Resources
-	if con.proxy.IsInherentGrpc() {
+	if con.proxy.IsInherentTriple() {
 		if len(requestedResourceNames) > 0 {
 			// Filter to only requested resources
 			filteredRes = make(model.Resources, 0, len(res))
@@ -220,7 +220,7 @@ func (s *DiscoveryServer) pushXds(con *Connection, w *model.WatchedResource, req
 				if requestedResourceNames.Contains(r.Name) {
 					filteredRes = append(filteredRes, r)
 				} else {
-					log.Debugf("filtering out unrequested resource %s for Inherent gRPC (requested: %v)", r.Name, requestedResourceNames.UnsortedList())
+					log.Debugf("filtering out unrequested resource %s for Inherent Triple (requested: %v)", r.Name, requestedResourceNames.UnsortedList())
 				}
 			}
 			if len(filteredRes) != len(res) {
@@ -230,7 +230,7 @@ func (s *DiscoveryServer) pushXds(con *Connection, w *model.WatchedResource, req
 		} else if len(w.ResourceNames) == 0 {
 			// Wildcard request without previous NonceSent - this is initial request
 			// Allow generating all resources for initial connection
-			log.Debugf("Inherent gRPC initial wildcard request, generating all resources")
+			log.Debugf("Inherent Triple initial wildcard request, generating all resources")
 		}
 	}
 
@@ -289,11 +289,11 @@ func (s *DiscoveryServer) pushXds(con *Connection, w *model.WatchedResource, req
 			util.ByteCount(ResourceSize(res)), info, resourceNamesStr)
 	}
 
-	// For Inherent gRPC, after pushing LDS with outbound listeners,
+	// For Inherent Triple, after pushing LDS with outbound listeners,
 	// automatically trigger CDS and RDS push for the referenced clusters and routes
 	// ONLY if this is a direct request push (not a push from pushConnection which would cause loops)
 	// Only auto-push if CDS/RDS is not already being watched by the client (client will request it naturally)
-	if w.TypeUrl == v1.ListenerType && con.proxy.IsInherentGrpc() && len(res) > 0 {
+	if w.TypeUrl == v1.ListenerType && con.proxy.IsInherentTriple() && len(res) > 0 {
 		// Only auto-push CDS/RDS if this is a direct request (not a full push from pushConnection)
 		// Check if this push was triggered by a direct client request using IsRequest()
 		isDirectRequest := req.IsRequest()
@@ -396,7 +396,7 @@ func (s *DiscoveryServer) pushXds(con *Connection, w *model.WatchedResource, req
 		}
 	}
 
-	// For Inherent gRPC, after pushing CDS with EDS clusters,
+	// For Inherent Triple, after pushing CDS with EDS clusters,
 	// we should NOT automatically push EDS before the client requests it.
 	// The gRPC xDS client will automatically request EDS after receiving CDS with EDS clusters.
 	// If we push EDS before the client requests it, the client will receive the response
@@ -405,7 +405,7 @@ func (s *DiscoveryServer) pushXds(con *Connection, w *model.WatchedResource, req
 	// 1. Update the watched resource to include the EDS cluster names (so when client requests EDS, we know what to send)
 	// 2. Wait for the client to request EDS naturally
 	// 3. When the client requests EDS, we will push it with the correct state
-	if w.TypeUrl == v1.ClusterType && con.proxy.IsInherentGrpc() && len(res) > 0 {
+	if w.TypeUrl == v1.ClusterType && con.proxy.IsInherentTriple() && len(res) > 0 {
 		// Extract EDS cluster names from CDS resources
 		edsClusterNames := extractEDSClusterNamesFromCDS(res)
 		if len(edsClusterNames) > 0 {

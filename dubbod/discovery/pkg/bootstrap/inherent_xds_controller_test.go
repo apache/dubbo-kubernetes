@@ -26,6 +26,7 @@ import (
 	"encoding/pem"
 	"math/big"
 	"net/url"
+	"path"
 	"strings"
 	"testing"
 	"time"
@@ -442,6 +443,32 @@ func TestTripleReconcilePreservesWorkloadCredentials(t *testing.T) {
 	}
 	if bootstrap.Node.GetId() != "inherent~10.0.0.1~edge.app~app.svc.cluster.local" || len(bootstrap.XDSServers) != 1 || bootstrap.XDSServers[0].ServerURI != meshConfig.DefaultConfig.DiscoveryAddress {
 		t.Fatalf("unexpected Triple bootstrap: %+v", bootstrap)
+	}
+	if got := bootstrap.Node.GetMetadata().GetFields()["GENERATOR"].GetStringValue(); got != "triple" {
+		t.Fatalf("bootstrap GENERATOR = %q, want triple", got)
+	}
+	defaultProvider, ok := bootstrap.CertProviders["default"]
+	if !ok || defaultProvider.PluginName != xdsbootstrap.FileWatcherCertProviderName {
+		t.Fatalf("bootstrap certificate_providers[default] = %+v, want file_watcher", defaultProvider)
+	}
+	watcherCfg, ok := defaultProvider.Config.(xdsbootstrap.FileWatcherCertProviderConfig)
+	if !ok {
+		t.Fatalf("certificate_providers[default].config = %T, want FileWatcherCertProviderConfig", defaultProvider.Config)
+	}
+	if watcherCfg.CertificateFile != path.Join(inject.InherentXDSMountPath, constants.CertChainFilename) ||
+		watcherCfg.PrivateKeyFile != path.Join(inject.InherentXDSMountPath, constants.KeyFilename) ||
+		watcherCfg.CACertificateFile != path.Join(inject.InherentXDSMountPath, constants.CACertNamespaceConfigMapDataName) {
+		t.Fatalf("bootstrap default provider paths = %+v, want under %s", watcherCfg, inject.InherentXDSMountPath)
+	}
+	for _, secretKey := range []string{
+		constants.CertChainFilename,
+		constants.KeyFilename,
+		constants.CACertNamespaceConfigMapDataName,
+		inject.InherentTripleBootstrapFileName,
+	} {
+		if len(secret.Data[secretKey]) == 0 {
+			t.Fatalf("workload Secret missing %q", secretKey)
+		}
 	}
 	if len(secret.Data) != 4 || secret.OwnerReferences[0].UID != pod.UID {
 		t.Fatal("workload Secret contract changed")

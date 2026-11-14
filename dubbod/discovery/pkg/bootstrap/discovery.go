@@ -18,7 +18,7 @@ package bootstrap
 
 import (
 	"github.com/apache/dubbo-kubernetes/dubbod/discovery/pkg/model"
-	"github.com/apache/dubbo-kubernetes/dubbod/discovery/pkg/networking/grpcgen"
+	"github.com/apache/dubbo-kubernetes/dubbod/discovery/pkg/networking/triplegen"
 	"github.com/apache/dubbo-kubernetes/dubbod/discovery/pkg/xds"
 	v1 "github.com/apache/dubbo-kubernetes/dubbod/discovery/pkg/xds/v1"
 )
@@ -27,10 +27,10 @@ func InitGenerators(s *xds.DiscoveryServer) {
 	env := s.Env
 	generators := map[string]model.XdsResourceGenerator{}
 	edsGen := &xds.EdsGenerator{Cache: s.Cache, EndpointIndex: env.EndpointIndex}
-	grpcGenerator := &grpcgen.GrpcConfigGenerator{}
-	generators["grpc/"+v1.EndpointType] = edsGen
-	generators["grpc/"+v1.ListenerType] = grpcGenerator
-	generators["grpc/"+v1.RouteType] = grpcGenerator
-	generators["grpc/"+v1.ClusterType] = grpcGenerator
+	tripleGenerator := &triplegen.TripleConfigGenerator{}
+	generators["triple/"+v1.EndpointType] = edsGen
+	generators["triple/"+v1.ListenerType] = tripleGenerator
+	generators["triple/"+v1.RouteType] = tripleGenerator
+	generators["triple/"+v1.ClusterType] = tripleGenerator
 	s.Generators = generators
 }

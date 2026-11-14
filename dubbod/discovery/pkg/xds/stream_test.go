@@ -137,9 +137,9 @@ func newInherentXDSTestServer(t *testing.T) (*DiscoveryServer, *Connection, *fak
 	server.Authenticators = []security.Authenticator{testAuthenticator{identities: []string{"spiffe://cluster.local/ns/app/sa/default"}}}
 	server.Authorize = allowTestWorkload
 	server.Generators = map[string]model.XdsResourceGenerator{
-		"grpc/" + v1.ListenerType: staticResourceGenerator{resources: inherentListenerResources()},
-		"grpc/" + v1.ClusterType:  staticResourceGenerator{resources: inherentClusterResources()},
-		"grpc/" + v1.RouteType:    staticResourceGenerator{resources: inherentRouteResources()},
+		"triple/" + v1.ListenerType: staticResourceGenerator{resources: inherentListenerResources()},
+		"triple/" + v1.ClusterType:  staticResourceGenerator{resources: inherentClusterResources()},
+		"triple/" + v1.RouteType:    staticResourceGenerator{resources: inherentRouteResources()},
 	}
 
 	stream := newFakeADSStream()
@@ -149,7 +149,7 @@ func newInherentXDSTestServer(t *testing.T) (*DiscoveryServer, *Connection, *fak
 		ID:        "pod-1",
 		Type:      model.Inherent,
 		DNSDomain: "app.svc.cluster.local",
-		Metadata:  &model.NodeMetadata{Generator: "grpc", Namespace: "app"},
+		Metadata:  &model.NodeMetadata{Generator: "triple", Namespace: "app"},
 		WatchedResources: map[string]*model.WatchedResource{
 			v1.ListenerType: {
 				TypeUrl:       v1.ListenerType,
@@ -169,7 +169,7 @@ type staticResourceGenerator struct {
 
 func TestSotWEmptySnapshotPreservesSubscriptionAndACKDoesNotLoop(t *testing.T) {
 	server, con, stream := newInherentXDSTestServer(t)
-	server.Generators["grpc/"+v1.ListenerType] = staticResourceGenerator{resources: model.Resources{}}
+	server.Generators["triple/"+v1.ListenerType] = staticResourceGenerator{resources: model.Resources{}}
 	push := &model.PushRequest{Push: con.proxy.LastPushContext, Full: true}
 	if err := server.pushXds(con, con.proxy.GetWatchedResource(v1.ListenerType), push); err != nil {
 		t.Fatal(err)
@@ -189,7 +189,7 @@ func TestSotWEmptySnapshotPreservesSubscriptionAndACKDoesNotLoop(t *testing.T) {
 		t.Fatal("ACK of an empty snapshot triggered another response")
 	default:
 	}
-	server.Generators["grpc/"+v1.ListenerType] = staticResourceGenerator{resources: inherentListenerResources()}
+	server.Generators["triple/"+v1.ListenerType] = staticResourceGenerator{resources: inherentListenerResources()}
 	if err := server.pushXds(con, con.proxy.GetWatchedResource(v1.ListenerType), push); err != nil {
 		t.Fatal(err)
 	}
@@ -328,7 +328,7 @@ func (testConfigStore) Delete(config.GroupVersionKind, string, string, *string) 
 func testInherentNode(t *testing.T) *core.Node {
 	t.Helper()
 	meta, err := structpb.NewStruct(map[string]any{
-		"GENERATOR": "grpc",
+		"GENERATOR": "triple",
 		"NAMESPACE": "app",
 	})
 	if err != nil {
