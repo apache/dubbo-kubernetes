@@ -59,7 +59,6 @@ func NewRootCommand() *cobra.Command {
 
 	cmd.AddFlags(rootCmd)
 	rootCmd.AddCommand(waitCmd)
-	rootCmd.AddCommand(newTripleEngineCommand())
 
 	return rootCmd
 }

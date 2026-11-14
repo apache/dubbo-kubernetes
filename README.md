@@ -27,17 +27,19 @@ Dubbo component composition:
 
 Projects are distributed across the code directory repositories:
 
-- [api](https://github.com/dubml/api). — Defines the component level APIs for the Dubbo control plane.
+- [api](https://github.com/dubml/api) — Defines the component level APIs for the Dubbo control plane.
 
-- [xds-api](https://github.com/dubml/xds-api). — Define the xDS API for the Dubbo control plane.
+- [xds-api](https://github.com/dubml/xds-api) — Define the xDS API for the Dubbo control plane.
 
-- [client-go](https://github.com/dubml/client-go). — Defines the Kubernetes clients automatically generated for Dubbo control plane resources.
+- [client-go](https://github.com/dubml/client-go) — Defines the Kubernetes clients automatically generated for Dubbo control plane resources.
+
+- [triple](https://github.com/dubml/triple) — Defined the triple protocol used by the control plane.
 
 - [dubbod](https://github.com/dubml/dubbod) — The main code directory for the Dubbo control plane.
 
-- [dubboctl](https://github.com/dubml/dubboctl). — Provides dubboctl command line tools for control plane management and other operations.
+- [dubboctl](https://github.com/dubml/dubboctl) — Provides dubboctl command line tools for control plane management and other operations.
 
-- [operator](https://github.com/dubml/operator). — Provides user friendly options for operating the service mesh.
+- [operator](https://github.com/dubml/operator) — Provides user friendly options for operating the service mesh.
 
 ## License
 
