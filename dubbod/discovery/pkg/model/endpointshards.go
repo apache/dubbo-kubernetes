@@ -135,7 +135,14 @@ func (e *EndpointIndex) UpdateServiceEndpoints(shard ShardKey, hostname string, 
 		// but we should not delete the keys from EndpointIndex map - that will trigger
 		// unnecessary full push which can become a real problem if a pod is in crashloop and thus endpoints
 		// flip flopping between 1 and 0.
-		e.DeleteServiceShard(shard, hostname, namespace, true)
+		if e.deleteServiceShard(shard, hostname, namespace, true) {
+			if logPushType {
+				log.Infof("Full push, service %s at shard %v has no endpoints and service accounts changed", hostname, shard)
+			} else {
+				log.Infof("Cache Update, Service %s at shard %v has no endpoints and service accounts changed", hostname, shard)
+			}
+			return FullPush
+		}
 		if logPushType {
 			log.Infof("Incremental push, service %s at shard %v has no endpoints", hostname, shard)
 		} else {
@@ -244,19 +251,26 @@ func (e *EndpointIndex) GetOrCreateEndpointShard(serviceName, namespace string) 
 }
 
 func (e *EndpointIndex) DeleteServiceShard(shard ShardKey, serviceName, namespace string, preserveKeys bool) {
-	e.mu.Lock()
-	defer e.mu.Unlock()
-	e.deleteServiceInner(shard, serviceName, namespace, preserveKeys)
+	e.deleteServiceShard(shard, serviceName, namespace, preserveKeys)
 }
 
-func (e *EndpointIndex) deleteServiceInner(shard ShardKey, serviceName, namespace string, preserveKeys bool) {
+func (e *EndpointIndex) deleteServiceShard(shard ShardKey, serviceName, namespace string, preserveKeys bool) bool {
+	e.mu.Lock()
+	defer e.mu.Unlock()
+	return e.deleteServiceInner(shard, serviceName, namespace, preserveKeys)
+}
+
+func (e *EndpointIndex) deleteServiceInner(shard ShardKey, serviceName, namespace string, preserveKeys bool) bool {
 	if e.shardsBySvc[serviceName] == nil ||
 		e.shardsBySvc[serviceName][namespace] == nil {
-		return
+		return false
 	}
 	epShards := e.shardsBySvc[serviceName][namespace]
 	epShards.Lock()
+	defer epShards.Unlock()
 	delete(epShards.Shards, shard)
+	// Recompute service accounts from remaining shards so empty or deleted shards do not retain stale SAs.
+	saUpdated := updateShardServiceAccount(epShards, serviceName)
 	e.clearCacheForService(serviceName, namespace)
 	if !preserveKeys {
 		if len(epShards.Shards) == 0 {
@@ -266,7 +280,7 @@ func (e *EndpointIndex) deleteServiceInner(shard ShardKey, serviceName, namespac
 			delete(e.shardsBySvc, serviceName)
 		}
 	}
-	epShards.Unlock()
+	return saUpdated
 }
 
 func (e *EndpointIndex) clearCacheForService(svc, ns string) {

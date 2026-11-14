@@ -18,15 +18,30 @@ package xds
 import (
 	"encoding/json"
 	"fmt"
+	"slices"
 	"strings"
 	"testing"
 	"time"
 
+	"github.com/apache/dubbo-kubernetes/dubbod/discovery/pkg/config/memory"
 	"github.com/apache/dubbo-kubernetes/dubbod/discovery/pkg/model"
+	"github.com/apache/dubbo-kubernetes/dubbod/discovery/pkg/networking/triplegen"
 	v1 "github.com/apache/dubbo-kubernetes/dubbod/discovery/pkg/xds/v1"
+	"github.com/apache/dubbo-kubernetes/pkg/config"
+	"github.com/apache/dubbo-kubernetes/pkg/config/host"
+	"github.com/apache/dubbo-kubernetes/pkg/config/mesh"
+	"github.com/apache/dubbo-kubernetes/pkg/config/mesh/meshwatcher"
+	"github.com/apache/dubbo-kubernetes/pkg/config/protocol"
+	"github.com/apache/dubbo-kubernetes/pkg/config/schema/collections"
+	"github.com/apache/dubbo-kubernetes/pkg/config/schema/gvk"
 	"github.com/apache/dubbo-kubernetes/pkg/config/schema/kind"
+	"github.com/apache/dubbo-kubernetes/pkg/kube/krt"
 	"github.com/apache/dubbo-kubernetes/pkg/util/sets"
+	securityv1alpha3 "github.com/dubml/api/security/v1alpha3"
+	cluster "github.com/dubml/xds-api/cluster/v1"
 	core "github.com/dubml/xds-api/core/v1"
+	tlsv1 "github.com/dubml/xds-api/extensions/transport_sockets/tls/v1"
+	discovery "github.com/dubml/xds-api/service/discovery/v1"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/types/known/structpb"
@@ -269,6 +284,183 @@ func TestPushStatusJSONIncludesOperationalSummary(t *testing.T) {
 	}
 }
 
+func TestEDSUpdateServiceAccountOrderingRegeneratesCDS(t *testing.T) {
+	const (
+		hostName    = "payment.app.svc.cluster.local"
+		clusterName = "outbound|8080||" + hostName
+		primarySAN  = "spiffe://cluster.local/ns/app/sa/payment"
+		canarySAN   = "spiffe://cluster.local/ns/app/sa/payment-canary"
+	)
+
+	store := memory.Make(collections.DubboGatewayAPI())
+	if _, err := store.Create(config.Config{
+		Meta: config.Meta{
+			GroupVersionKind: gvk.PeerAuthentication,
+			Name:             "strict",
+			Namespace:        "app",
+			Domain:           "cluster.local",
+		},
+		Spec: &securityv1alpha3.PeerAuthentication{
+			Mtls: &securityv1alpha3.PeerAuthentication_MutualTLS{
+				Mode: securityv1alpha3.PeerAuthentication_MutualTLS_STRICT,
+			},
+		},
+	}); err != nil {
+		t.Fatalf("create PeerAuthentication: %v", err)
+	}
+
+	svc := &model.Service{
+		Hostname: host.Name(hostName),
+		Ports: model.PortList{{
+			Name:     "http",
+			Port:     8080,
+			Protocol: protocol.HTTP2,
+		}},
+		Attributes: model.ServiceAttributes{
+			Name:      "payment",
+			Namespace: "app",
+		},
+	}
+
+	env := model.NewEnvironment()
+	env.ConfigStore = store
+	env.ServiceDiscovery = staticADSServiceDiscovery{services: []*model.Service{svc}}
+	env.Watcher = meshwatcher.ConfigAdapter(krt.NewStatic(&meshwatcher.MeshConfigResource{
+		MeshConfig: mesh.DefaultMeshConfig(),
+	}, true))
+	env.Init()
+
+	initialPush := model.NewPushContext()
+	initialPush.InitContext(env, nil, nil)
+	env.SetPushContext(initialPush)
+
+	server := NewDiscoveryServer(env, nil)
+	server.Authorize = allowTestWorkload
+	server.Generators = map[string]model.XdsResourceGenerator{
+		"triple/" + v1.ClusterType: &triplegen.TripleConfigGenerator{},
+	}
+
+	stream := newFakeADSStream()
+	con := newConnection("127.0.0.1:26010", stream)
+	con.s = server
+	con.SetID("inherent-payment-caller")
+	con.MarkInitialized()
+	con.proxy = &model.Proxy{
+		ID:              "caller.app",
+		Type:            model.Inherent,
+		DNSDomain:       "app.svc.cluster.local",
+		ConfigNamespace: "app",
+		Metadata:        &model.NodeMetadata{Generator: "triple", Namespace: "app"},
+		WatchedResources: map[string]*model.WatchedResource{
+			v1.ClusterType: {
+				TypeUrl:       v1.ClusterType,
+				ResourceNames: sets.New(clusterName),
+			},
+		},
+		LastPushContext: initialPush,
+		LastPushTime:    time.Now(),
+	}
+	server.addCon(con.ID(), con)
+
+	decodeSingleClusterSANs := func(resp *discovery.DiscoveryResponse) (bool, []string) {
+		t.Helper()
+		if resp.TypeUrl != v1.ClusterType || len(resp.Resources) != 1 {
+			t.Fatalf("unexpected CDS response type=%s resources=%d", resp.TypeUrl, len(resp.Resources))
+		}
+		generated := &cluster.Cluster{}
+		if err := resp.Resources[0].UnmarshalTo(generated); err != nil {
+			t.Fatalf("unmarshal cluster: %v", err)
+		}
+		if generated.GetTransportSocket() == nil {
+			return false, nil
+		}
+		tlsContext := &tlsv1.UpstreamTlsContext{}
+		if err := generated.GetTransportSocket().GetTypedConfig().UnmarshalTo(tlsContext); err != nil {
+			t.Fatalf("unmarshal upstream TLS context: %v", err)
+		}
+		return true, tlsContext.GetCommonTlsContext().
+			GetCombinedValidationContext().
+			GetDefaultValidationContext().
+			GetMatchSubjectAltNames()
+	}
+
+	applyNextFullEDSUpdate := func(endpoints []*model.DubboEndpoint) (bool, []string) {
+		t.Helper()
+		server.EDSUpdate(model.ShardKey{}, hostName, "app", endpoints)
+		var req *model.PushRequest
+		select {
+		case req = <-server.pushChannel:
+		case <-time.After(time.Second):
+			t.Fatal("timed out waiting for PushRequest from EDSUpdate")
+		}
+		if !req.Full {
+			t.Fatalf("EDSUpdate triggered req.Full = false, want true")
+		}
+		if !req.Reason.Has(model.EndpointUpdate) {
+			t.Fatalf("EDSUpdate reason = %v, want EndpointUpdate", req.Reason)
+		}
+		server.Push(req)
+		queuedCon, queuedReq, shutdown := server.pushQueue.Dequeue()
+		if shutdown {
+			t.Fatal("push queue unexpectedly shut down")
+		}
+		if err := server.pushConnection(queuedCon, &Event{pushRequest: queuedReq}); err != nil {
+			t.Fatalf("pushConnection() failed: %v", err)
+		}
+		server.pushQueue.MarkDone(queuedCon)
+		responses := stream.takeAllResponses(t, 1)
+		return decodeSingleClusterSANs(responses[0])
+	}
+
+	// 1. Service arrived before endpoints: initial CDS omits mTLS because no SA exists yet.
+	if err := server.pushConnection(con, &Event{pushRequest: &model.PushRequest{Full: true, Push: initialPush}}); err != nil {
+		t.Fatalf("initial pushConnection() failed: %v", err)
+	}
+	hasMTLS, sans := decodeSingleClusterSANs(stream.takeAllResponses(t, 1)[0])
+	if hasMTLS || len(sans) != 0 {
+		t.Fatalf("initial CDS before endpoints had hasMTLS=%v sans=%v, want false/empty", hasMTLS, sans)
+	}
+
+	// 2. Endpoints arrive later: full push triggers and regenerated CDS carries mTLS + both SANs.
+	hasMTLS, sans = applyNextFullEDSUpdate([]*model.DubboEndpoint{
+		{
+			Addresses:       []string{"10.0.0.10"},
+			EndpointPort:    8080,
+			ServicePortName: "http",
+			ServiceAccount:  primarySAN,
+			HealthStatus:    model.Healthy,
+		},
+		{
+			Addresses:       []string{"10.0.0.11"},
+			EndpointPort:    8080,
+			ServicePortName: "http",
+			ServiceAccount:  canarySAN,
+			HealthStatus:    model.Healthy,
+		},
+	})
+	if !hasMTLS || !slices.Equal(sans, []string{primarySAN, canarySAN}) {
+		t.Fatalf("CDS after endpoints arrived: hasMTLS=%v sans=%v, want true [%s %s]", hasMTLS, sans, primarySAN, canarySAN)
+	}
+
+	// 3. Remove last endpoint using canarySAN: full push triggers and canarySAN disappears from CDS.
+	hasMTLS, sans = applyNextFullEDSUpdate([]*model.DubboEndpoint{{
+		Addresses:       []string{"10.0.0.10"},
+		EndpointPort:    8080,
+		ServicePortName: "http",
+		ServiceAccount:  primarySAN,
+		HealthStatus:    model.Healthy,
+	}})
+	if !hasMTLS || !slices.Equal(sans, []string{primarySAN}) {
+		t.Fatalf("CDS after removing last canary endpoint: hasMTLS=%v sans=%v, want true [%s]", hasMTLS, sans, primarySAN)
+	}
+
+	// 4. Delete remaining endpoint via nil slice: full push clears SANs and omits mTLS.
+	hasMTLS, sans = applyNextFullEDSUpdate(nil)
+	if hasMTLS || len(sans) != 0 {
+		t.Fatalf("CDS after deleting final endpoint: hasMTLS=%v sans=%v, want false/empty", hasMTLS, sans)
+	}
+}
+
 func BenchmarkClientsForPushInherentTargeted10k(b *testing.B) {
 	server, req := newInherentTargetedPushServer(10000, 100, "svc-7.app.svc.cluster.local")
 	b.ReportAllocs()
@@ -329,4 +521,25 @@ func inherentConnectionProxy(service string) *model.Proxy {
 			},
 		},
 	}
+}
+
+type staticADSServiceDiscovery struct {
+	services []*model.Service
+}
+
+func (s staticADSServiceDiscovery) Services() []*model.Service {
+	return s.services
+}
+
+func (s staticADSServiceDiscovery) GetService(hostname host.Name) *model.Service {
+	for _, svc := range s.services {
+		if svc.Hostname == hostname {
+			return svc
+		}
+	}
+	return nil
+}
+
+func (s staticADSServiceDiscovery) GetProxyServiceTargets(*model.Proxy) []model.ServiceTarget {
+	return nil
 }

@@ -34,7 +34,10 @@ import (
 )
 
 func TestExportTripleSnapshotFixtures(t *testing.T) {
-	const fixtureDir = "/tmp/triple-fixtures"
+	fixtureDir := os.Getenv("TRIPLE_FIXTURE_DIR")
+	if fixtureDir == "" {
+		t.Skip("set TRIPLE_FIXTURE_DIR to export snapshot fixtures")
+	}
 	if err := os.MkdirAll(fixtureDir, 0o755); err != nil {
 		t.Fatalf("create fixture directory %s: %v", fixtureDir, err)
 	}
@@ -157,6 +160,7 @@ func TestExportTripleSnapshotFixtures(t *testing.T) {
 		Addresses:       []string{"10.0.0.2"},
 		EndpointPort:    9080,
 		ServicePortName: "http",
+		ServiceAccount:  "spiffe://cluster.local/ns/mtls/sa/reviews-v2",
 		HealthStatus:    model.Healthy,
 	}}, false)
 

@@ -20,16 +20,17 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/apache/dubbo-kubernetes/dubbod/discovery/pkg/util/protoconv"
-	discovery "github.com/dubml/xds-api/service/discovery/v1"
-
 	"github.com/apache/dubbo-kubernetes/dubbod/discovery/pkg/model"
 	"github.com/apache/dubbo-kubernetes/dubbod/discovery/pkg/networking/util"
+	"github.com/apache/dubbo-kubernetes/dubbod/discovery/pkg/util/protoconv"
+	"github.com/apache/dubbo-kubernetes/pkg/config/constants"
 	"github.com/apache/dubbo-kubernetes/pkg/config/host"
+	"github.com/apache/dubbo-kubernetes/pkg/spiffe"
 	"github.com/apache/dubbo-kubernetes/pkg/util/sets"
 	cluster "github.com/dubml/xds-api/cluster/v1"
 	core "github.com/dubml/xds-api/core/v1"
 	tlsv1 "github.com/dubml/xds-api/extensions/transport_sockets/tls/v1"
+	discovery "github.com/dubml/xds-api/service/discovery/v1"
 )
 
 type clusterBuilder struct {
@@ -149,7 +150,6 @@ func (b *clusterBuilder) applyPeerAuthenticationMTLS(c *cluster.Cluster) {
 	}
 	tlsContext := b.buildUpstreamTLSContext(c)
 	if tlsContext == nil {
-		log.Warnf("failed to build automatic mTLS context for STRICT PeerAuthentication on cluster %s", c.Name)
 		return
 	}
 	c.TransportSocket = &core.TransportSocket{
@@ -179,17 +179,32 @@ func (b *clusterBuilder) edsCluster(name string) *cluster.Cluster {
 // buildUpstreamTLSContext builds an UpstreamTlsContext that conforms to Triple xDS expectations,
 // reusing the common certificate-provider setup from buildCommonTLSContext.
 func (b *clusterBuilder) buildUpstreamTLSContext(c *cluster.Cluster) *tlsv1.UpstreamTlsContext {
-	// Pin the upstream identity: only certificates whose SAN matches one of the
-	// target service's SPIFFE identities are accepted.
-	var sans []string
+	// Pin the upstream identity: xds-client SanVerifier matches exact SANs against
+	// peer URI/DNS SANs, and falls back to WebPKI DNS validation when empty.
+	// Never emit an mTLS context without at least one concrete SPIFFE SAN.
+	var rawSANs []string
+	var trustDomain string
+	var aliases []string
+	if b.push != nil && b.push.Mesh != nil {
+		trustDomain = b.push.Mesh.GetTrustDomain()
+		aliases = b.push.Mesh.GetTrustDomainAliases()
+	}
+	if b.svc != nil && b.push != nil {
+		rawSANs = b.push.ServiceAccounts(b.svc.Hostname, b.svc.Attributes.Namespace)
+		if len(rawSANs) == 0 && b.hostname != b.svc.Hostname {
+			rawSANs = b.push.ServiceAccounts(b.hostname, b.svc.Attributes.Namespace)
+		}
+	}
+	ns := ""
+	hostName := b.hostname
 	if b.svc != nil {
-		sans = b.push.ServiceAccounts(b.svc.Hostname, b.svc.Attributes.Namespace)
-		if len(sans) == 0 && b.hostname != b.svc.Hostname {
-			sans = b.push.ServiceAccounts(b.hostname, b.svc.Attributes.Namespace)
-		}
-		if len(sans) == 0 {
-			log.Warnf("no SPIFFE identities found for %s; upstream TLS for cluster %s will not verify peer SAN", b.svc.Hostname, c.Name)
-		}
+		ns = b.svc.Attributes.Namespace
+		hostName = b.svc.Hostname
+	}
+	sans := normalizePeerSPIFFESANs(rawSANs, trustDomain, ns, aliases)
+	if len(sans) == 0 {
+		log.Warnf("no SPIFFE identities found for %s; skipping mTLS on cluster %s", hostName, c.Name)
+		return nil
 	}
 	common := buildCommonTLSContext(sans)
 	if common == nil {
@@ -221,4 +236,41 @@ func (b *clusterBuilder) buildUpstreamTLSContext(c *cluster.Cluster) *tlsv1.Upst
 	// Inherent Triple always speaks HTTP/2, advertise h2 via ALPN.
 	tlsContext.CommonTlsContext.AlpnProtocols = []string{"h2"}
 	return tlsContext
+}
+
+// normalizePeerSPIFFESANs converts raw service account entries into sorted, exact
+// spiffe://<trust-domain>/ns/<ns>/sa/<sa> URI SANs accepted by xds-client's SanVerifier.
+func normalizePeerSPIFFESANs(rawSANs []string, trustDomain, namespace string, aliases []string) []string {
+	if len(rawSANs) == 0 {
+		return nil
+	}
+	if trustDomain == "" {
+		trustDomain = constants.DefaultClusterLocalDomain
+	}
+	resolved := sets.New[string]()
+	bare := sets.New[string]()
+	for _, raw := range rawSANs {
+		s := strings.TrimSpace(raw)
+		if s == "" {
+			continue
+		}
+		if strings.HasPrefix(s, spiffe.URIPrefix) {
+			id, err := spiffe.ParseIdentity(s)
+			if err == nil && id.TrustDomain != "" && id.Namespace != "" && id.ServiceAccount != "" {
+				resolved.Insert(id.String())
+			}
+			continue
+		}
+		if !strings.Contains(s, "://") && !strings.Contains(s, "/") && namespace != "" {
+			bare.Insert(spiffe.Identity{
+				TrustDomain:    trustDomain,
+				Namespace:      namespace,
+				ServiceAccount: s,
+			}.String())
+		}
+	}
+	if len(bare) > 0 {
+		resolved.Merge(spiffe.ExpandWithTrustDomains(bare, aliases))
+	}
+	return sets.SortedList(resolved)
 }

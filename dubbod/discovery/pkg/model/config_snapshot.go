@@ -313,8 +313,9 @@ func (ps *ConfigSnapshot) updateContext(env *Environment, oldSnapshot *ConfigSna
 
 	// Also check if the actual number of services has changed
 	// This handles cases where Kubernetes Services are added/removed without ServiceEntry updates
+	var currentServices []*Service
 	if !servicesChanged && oldSnapshot != nil {
-		currentServices := env.Services()
+		currentServices = env.Services()
 		// Count services in old ServiceIndex
 		oldServiceCount := 0
 		for _, namespaces := range oldSnapshot.ServiceIndex.HostnameAndNamespace {
@@ -332,7 +333,12 @@ func (ps *ConfigSnapshot) updateContext(env *Environment, oldSnapshot *ConfigSna
 	} else {
 		// make sure we copy over things that would be generated in initServiceRegistry
 		ps.ServiceIndex = oldSnapshot.ServiceIndex
-		ps.serviceAccounts = oldSnapshot.serviceAccounts
+		if currentServices == nil {
+			currentServices = env.Services()
+		}
+		// Recompute service accounts from EndpointIndex because endpoint/SA changes
+		// can occur without triggering servicesChanged (e.g. EDSCacheUpdate or subsequent policy pushes).
+		ps.initServiceAccounts(env, currentServices)
 	}
 
 	// Initialize or reuse Gateway API controller state.
