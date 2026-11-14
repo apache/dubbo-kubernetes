@@ -36,11 +36,11 @@ type pushStatusReport struct {
 }
 
 type pushClientStatus struct {
-	ConnectedEndpoints      int `json:"connectedEndpoints"`
-	InherentGRPC            int `json:"inherentGrpc"`
-	InherentGRPCEDSWatchers int `json:"inherentGrpcEdsWatchers"`
-	InherentGRPCUnknownEDS  int `json:"inherentGrpcUnknownEds"`
-	WatchedEDSResources     int `json:"watchedEdsResources"`
+	ConnectedEndpoints        int `json:"connectedEndpoints"`
+	InherentTriple            int `json:"inherentTriple"`
+	InherentTripleEDSWatchers int `json:"inherentTripleEdsWatchers"`
+	InherentTripleUnknownEDS  int `json:"inherentTripleUnknownEds"`
+	WatchedEDSResources       int `json:"watchedEdsResources"`
 }
 
 type pushUpdateStatus struct {
@@ -90,14 +90,14 @@ func summarizePushClients(clients []*Connection) pushClientStatus {
 			continue
 		}
 		con.proxy.RLock()
-		isInherentGRPC := con.proxy.Metadata != nil && con.proxy.Metadata.Generator == "grpc"
+		isInherentTriple := con.proxy.Metadata != nil && con.proxy.Metadata.Generator == "triple"
 		watched := con.proxy.WatchedResources[v1.EndpointType]
-		if isInherentGRPC {
-			out.InherentGRPC++
+		if isInherentTriple {
+			out.InherentTriple++
 			if watched == nil {
-				out.InherentGRPCUnknownEDS++
+				out.InherentTripleUnknownEDS++
 			} else {
-				out.InherentGRPCEDSWatchers++
+				out.InherentTripleEDSWatchers++
 				out.WatchedEDSResources += len(watched.ResourceNames)
 			}
 		}

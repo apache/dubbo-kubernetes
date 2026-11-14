@@ -14,13 +14,14 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package grpcgen
+package triplegen
 
 import (
 	"fmt"
 	"strconv"
 	"strings"
 	"time"
+	"unicode"
 
 	"github.com/apache/dubbo-kubernetes/dubbod/discovery/pkg/util/protoconv"
 	discovery "github.com/dubml/xds-api/service/discovery/v1"
@@ -29,13 +30,12 @@ import (
 	"github.com/apache/dubbo-kubernetes/pkg/config"
 	"github.com/apache/dubbo-kubernetes/pkg/config/host"
 	route "github.com/dubml/xds-api/route/v1"
-	matcher "github.com/dubml/xds-api/type/matcher/v1"
 	"google.golang.org/protobuf/types/known/durationpb"
 	"google.golang.org/protobuf/types/known/wrapperspb"
 	sigsk8siogatewayapiapisv1 "sigs.k8s.io/gateway-api/apis/v1"
 )
 
-func (g *GrpcConfigGenerator) BuildHTTPRoutes(node *model.Proxy, req *model.PushRequest, routeNames []string) ([]*discovery.Resource, model.XdsLogDetails) {
+func (g *TripleConfigGenerator) BuildHTTPRoutes(node *model.Proxy, req *model.PushRequest, routeNames []string) ([]*discovery.Resource, model.XdsLogDetails) {
 	resp := []*discovery.Resource{}
 	log.Debugf("node=%s, routeNames=%v", node.ID, routeNames)
 	if len(routeNames) == 0 {
@@ -70,7 +70,7 @@ func buildHTTPRoute(node *model.Proxy, push *model.PushContext, routeName string
 			return nil
 		}
 
-		// Build outbound route configuration for gRPC inherent
+		// Build outbound route configuration for Triple inherent mode
 		// This is used by ApiListener to route traffic to the correct cluster
 		svc := push.ServiceForHostname(node, hostname)
 		if svc == nil {
@@ -79,29 +79,17 @@ func buildHTTPRoute(node *model.Proxy, push *model.PushContext, routeName string
 		}
 
 		// Build VirtualHost Domains for outbound route
-		// Domains must match the xDS URL hostname for gRPC xDS client
+		// Domains must match the xDS URL hostname for Triple xDS client
 		hostStr := string(hostname)
-		domains := []string{
-			fmt.Sprintf("%s:%d", hostStr, parsedPort), // FQDN with port - MOST SPECIFIC
-			hostStr, // Full FQDN
-		}
-		// Add short name if different from FQDN
-		hostParts := strings.Split(hostStr, ".")
-		if len(hostParts) > 0 && hostParts[0] != hostStr {
-			shortName := hostParts[0]
-			domains = append(domains, fmt.Sprintf("%s:%d", shortName, parsedPort)) // Short name with port
-			domains = append(domains, shortName)                                   // Short name
-		}
-		domains = append(domains, "*") // Wildcard for any domain - LEAST SPECIFIC
+		domains := buildOutboundDomains(hostStr, parsedPort)
 
-		faultPolicy := serviceFaultPolicy(push, svc, parsedPort)
 		outboundRoutes := []*route.Route{
-			defaultSingleClusterRoute(routeName, faultPolicy),
+			defaultSingleClusterRoute(routeName),
 		}
 
 		if httpRoutes := filterHTTPRoutesByService(push.HTTPRouteForHost(host.Name(hostStr)), svc, parsedPort); len(httpRoutes) > 0 {
 			log.Infof("found %d service-attached HTTPRoute(s) for host %s", len(httpRoutes), hostStr)
-			if routes := buildRoutesFromGatewayHTTPRoute(httpRoutes, host.Name(hostStr), parsedPort, faultPolicy); len(routes) > 0 {
+			if routes := buildRoutesFromGatewayHTTPRoute(httpRoutes, host.Name(hostStr), parsedPort); len(routes) > 0 {
 				log.Infof("built %d routes from service-attached HTTPRoute for host %s", len(routes), hostStr)
 				outboundRoutes = routes
 			} else {
@@ -143,7 +131,7 @@ func buildHTTPRoute(node *model.Proxy, push *model.PushContext, routeName string
 	}
 }
 
-func defaultSingleClusterRoute(clusterName string, faultPolicy *route.FaultPolicy) *route.Route {
+func defaultSingleClusterRoute(clusterName string) *route.Route {
 	return &route.Route{
 		Match: &route.RouteMatch{
 			PathSpecifier: &route.RouteMatch_Prefix{
@@ -155,14 +143,13 @@ func defaultSingleClusterRoute(clusterName string, faultPolicy *route.FaultPolic
 				ClusterSpecifier: &route.RouteAction_Cluster{
 					Cluster: clusterName,
 				},
-				FaultPolicy: faultPolicy,
 			},
 		},
 	}
 }
 
 // buildRoutesFromGatewayHTTPRoute converts Gateway API HTTPRoute resources to XDS Route configurations
-func buildRoutesFromGatewayHTTPRoute(httpRoutes []config.Config, hostName host.Name, defaultPort int, faultPolicy *route.FaultPolicy) []*route.Route {
+func buildRoutesFromGatewayHTTPRoute(httpRoutes []config.Config, hostName host.Name, defaultPort int) []*route.Route {
 	if len(httpRoutes) == 0 {
 		return nil
 	}
@@ -184,6 +171,7 @@ func buildRoutesFromGatewayHTTPRoute(httpRoutes []config.Config, hostName host.N
 
 			// Build weighted clusters from backendRefs
 			weights := make([]*route.WeightedCluster_ClusterWeight, 0, len(rule.BackendRefs))
+			weightIdxByCluster := make(map[string]int, len(rule.BackendRefs))
 			var totalWeight uint32
 
 			for backendIdx, backendRef := range rule.BackendRefs {
@@ -204,23 +192,25 @@ func buildRoutesFromGatewayHTTPRoute(httpRoutes []config.Config, hostName host.N
 				backendHost := fmt.Sprintf("%s.%s.svc.cluster.local", backendName, backendNamespace)
 				clusterName := model.BuildSubsetKey(model.TrafficDirectionOutbound, "", host.Name(backendHost), backendPort)
 
-				// Get weight (default to 1 if not specified)
+				// Get weight (default to 1 if not specified or non-positive)
 				weight := uint32(1)
-				if backendRef.Weight != nil {
+				if backendRef.Weight != nil && *backendRef.Weight > 0 {
 					weight = uint32(*backendRef.Weight)
-				}
-				if weight == 0 {
-					weight = 1
 				}
 				totalWeight += weight
 
 				log.Debugf("HTTPRoute %s/%s rule[%d] backend[%d] -> cluster=%s, weight=%d, host=%s, port=%d",
 					hrConfig.Namespace, hrConfig.Name, ruleIdx, backendIdx, clusterName, weight, backendHost, backendPort)
 
-				weights = append(weights, &route.WeightedCluster_ClusterWeight{
-					Name:   clusterName,
-					Weight: wrapperspb.UInt32(weight),
-				})
+				if idx, exists := weightIdxByCluster[clusterName]; exists {
+					weights[idx].Weight = wrapperspb.UInt32(weights[idx].Weight.GetValue() + weight)
+				} else {
+					weightIdxByCluster[clusterName] = len(weights)
+					weights = append(weights, &route.WeightedCluster_ClusterWeight{
+						Name:   clusterName,
+						Weight: wrapperspb.UInt32(weight),
+					})
+				}
 			}
 
 			if len(weights) == 0 {
@@ -245,8 +235,6 @@ func buildRoutesFromGatewayHTTPRoute(httpRoutes []config.Config, hostName host.N
 					routeAction.Timeout = timeout
 				}
 			}
-			routeAction.RetryPolicy = gatewayAPIRetryPolicy(rule.Retry, rule.Timeouts)
-			routeAction.FaultPolicy = faultPolicy
 
 			routeMatches := buildRouteMatchesFromHTTPRouteMatches(rule.Matches)
 			for _, routeMatch := range routeMatches {
@@ -266,85 +254,12 @@ func buildRoutesFromGatewayHTTPRoute(httpRoutes []config.Config, hostName host.N
 	return allRoutes
 }
 
-func serviceFaultPolicy(push *model.PushContext, svc *model.Service, port int) *route.FaultPolicy {
-	if push == nil || svc == nil {
-		return nil
-	}
-	portName := ""
-	if servicePort, found := svc.Ports.GetByPort(port); found && servicePort != nil {
-		portName = servicePort.Name
-	}
-	settings, found := push.FaultInjectionForService(svc.Attributes.Namespace, svc.Attributes.Name, portName)
-	if !found {
-		return nil
-	}
-	policy := &route.FaultPolicy{}
-	if settings.Delay > 0 {
-		policy.Delay = &route.FaultDelay{
-			FixedDelay: durationpb.New(settings.Delay),
-			Percentage: wrapperspb.UInt32(settings.DelayPercentage),
-		}
-	}
-	if settings.AbortStatus != 0 {
-		policy.Abort = &route.FaultAbort{
-			HttpStatus: settings.AbortStatus,
-			Percentage: wrapperspb.UInt32(settings.AbortPercentage),
-		}
-	}
-	if policy.Delay == nil && policy.Abort == nil {
-		return nil
-	}
-	return policy
-}
-
-func gatewayAPIRetryPolicy(retry *sigsk8siogatewayapiapisv1.HTTPRouteRetry, timeouts *sigsk8siogatewayapiapisv1.HTTPRouteTimeouts) *route.RetryPolicy {
-	if retry == nil {
-		return nil
-	}
-
-	attempts := uint32(1)
-	if retry.Attempts != nil {
-		if *retry.Attempts <= 0 {
-			return nil
-		}
-		attempts = uint32(*retry.Attempts)
-	}
-
-	retryOn := []string{"connect-failure", "reset"}
-	statusCodes := make([]uint32, 0, len(retry.Codes))
-	for _, code := range retry.Codes {
-		if code < 400 || code > 599 {
-			continue
-		}
-		statusCodes = append(statusCodes, uint32(code))
-	}
-	if len(statusCodes) > 0 {
-		retryOn = append(retryOn, "retriable-status-codes")
-	}
-
-	policy := &route.RetryPolicy{
-		RetryOn:              strings.Join(retryOn, ","),
-		NumRetries:           wrapperspb.UInt32(attempts),
-		RetriableStatusCodes: statusCodes,
-	}
-	if timeouts != nil {
-		policy.PerTryTimeout = gatewayAPIDurationToProto(timeouts.BackendRequest)
-	}
-	if base := gatewayAPIDurationToProto(retry.Backoff); base != nil && base.AsDuration() > 0 {
-		policy.RetryBackOff = &route.RetryPolicy_RetryBackOff{
-			BaseInterval: base,
-			MaxInterval:  durationpb.New(10 * base.AsDuration()),
-		}
-	}
-	return policy
-}
-
 func gatewayAPIDurationToProto(duration *sigsk8siogatewayapiapisv1.Duration) *durationpb.Duration {
 	if duration == nil {
 		return nil
 	}
 	parsed, err := time.ParseDuration(string(*duration))
-	if err != nil {
+	if err != nil || parsed < 0 {
 		log.Warnf("invalid HTTPRoute timeout duration %q: %v", *duration, err)
 		return nil
 	}
@@ -412,7 +327,9 @@ func buildRouteMatchesFromHTTPRouteMatches(matches []sigsk8siogatewayapiapisv1.H
 
 	out := make([]*route.RouteMatch, 0, len(matches))
 	for _, match := range matches {
-		out = append(out, buildRouteMatchFromHTTPRouteMatch(match))
+		if routeMatch := buildRouteMatchFromHTTPRouteMatch(match); routeMatch != nil {
+			out = append(out, routeMatch)
+		}
 	}
 	return out
 }
@@ -425,26 +342,31 @@ func buildRouteMatchFromHTTPRouteMatch(match sigsk8siogatewayapiapisv1.HTTPRoute
 		pathType := match.Path.Type
 		pathValue := match.Path.Value
 		if pathValue == nil {
-			pathValue = ptr("")
+			pathValue = ptr("/")
 		}
 
 		// pathType is a pointer, need to dereference it
 		if pathType != nil {
 			switch *pathType {
 			case sigsk8siogatewayapiapisv1.PathMatchExact:
+				if !strings.HasPrefix(*pathValue, "/") {
+					log.Debugf("skipping invalid exact path match %q without leading slash for Triple RDS", *pathValue)
+					return nil
+				}
 				routeMatch.PathSpecifier = &route.RouteMatch_Path{
 					Path: *pathValue,
 				}
 			case sigsk8siogatewayapiapisv1.PathMatchPathPrefix:
+				if !strings.HasPrefix(*pathValue, "/") {
+					log.Debugf("skipping invalid prefix path match %q without leading slash for Triple RDS", *pathValue)
+					return nil
+				}
 				routeMatch.PathSpecifier = &route.RouteMatch_Prefix{
 					Prefix: *pathValue,
 				}
 			case sigsk8siogatewayapiapisv1.PathMatchRegularExpression:
-				routeMatch.PathSpecifier = &route.RouteMatch_SafeRegex{
-					SafeRegex: &matcher.RegexMatcher{
-						Regex: *pathValue,
-					},
-				}
+				log.Debugf("skipping unsupported regex path match %q for Triple RDS", *pathValue)
+				return nil
 			default:
 				// Default to prefix match
 				routeMatch.PathSpecifier = &route.RouteMatch_Prefix{
@@ -468,11 +390,21 @@ func buildRouteMatchFromHTTPRouteMatch(match sigsk8siogatewayapiapisv1.HTTPRoute
 	if len(match.Headers) > 0 {
 		headerMatchers := make([]*route.HeaderMatcher, 0, len(match.Headers))
 		for _, headerMatch := range match.Headers {
+			headerName := strings.ToLower(string(headerMatch.Name))
+			if headerName == "" {
+				continue
+			}
 			headerMatcher := &route.HeaderMatcher{
-				Name: string(headerMatch.Name),
+				Name: headerName,
 			}
 
-			if headerMatch.Type != nil {
+			if headerMatch.Type == nil {
+				if headerMatch.Value != "" {
+					headerMatcher.HeaderMatchSpecifier = &route.HeaderMatcher_ExactMatch{
+						ExactMatch: headerMatch.Value,
+					}
+				}
+			} else {
 				switch *headerMatch.Type {
 				case sigsk8siogatewayapiapisv1.HeaderMatchExact:
 					if headerMatch.Value != "" {
@@ -481,13 +413,8 @@ func buildRouteMatchFromHTTPRouteMatch(match sigsk8siogatewayapiapisv1.HTTPRoute
 						}
 					}
 				case sigsk8siogatewayapiapisv1.HeaderMatchRegularExpression:
-					if headerMatch.Value != "" {
-						headerMatcher.HeaderMatchSpecifier = &route.HeaderMatcher_SafeRegexMatch{
-							SafeRegexMatch: &matcher.RegexMatcher{
-								Regex: headerMatch.Value,
-							},
-						}
-					}
+					log.Debugf("skipping unsupported regex header match on %q for Triple RDS", headerName)
+					return nil
 				}
 			}
 
@@ -501,6 +428,50 @@ func buildRouteMatchFromHTTPRouteMatch(match sigsk8siogatewayapiapisv1.HTTPRoute
 	}
 
 	return routeMatch
+}
+
+func buildOutboundDomains(hostStr string, port int) []string {
+	candidates := []string{
+		fmt.Sprintf("%s:%d", hostStr, port), // FQDN with port - MOST SPECIFIC
+		hostStr,                              // Full FQDN
+	}
+	if hostParts := strings.Split(hostStr, "."); len(hostParts) > 0 && hostParts[0] != hostStr {
+		shortName := hostParts[0]
+		if !strings.Contains(shortName, "*") {
+			candidates = append(candidates, fmt.Sprintf("%s:%d", shortName, port), shortName)
+		}
+	}
+	candidates = append(candidates, "*") // Wildcard for any domain - LEAST SPECIFIC
+
+	seen := make(map[string]struct{}, len(candidates))
+	domains := make([]string, 0, len(candidates))
+	for _, d := range candidates {
+		if !isValidTripleDomain(d) {
+			continue
+		}
+		lower := strings.ToLower(d)
+		if _, exists := seen[lower]; exists {
+			continue
+		}
+		seen[lower] = struct{}{}
+		domains = append(domains, d)
+	}
+	return domains
+}
+
+func isValidTripleDomain(domain string) bool {
+	if domain == "" {
+		return false
+	}
+	for _, r := range domain {
+		if unicode.IsSpace(r) {
+			return false
+		}
+	}
+	if !strings.Contains(domain, "*") || domain == "*" {
+		return true
+	}
+	return strings.Count(domain, "*") == 1 && (strings.HasPrefix(domain, "*.") || strings.HasSuffix(domain, ".*"))
 }
 
 func ptr(s string) *string {

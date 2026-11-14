@@ -260,8 +260,8 @@ func (node *Proxy) UpdateWatchedResource(typeURL string, updateFn func(*WatchedR
 	}
 }
 
-func (node *Proxy) IsInherentGrpc() bool {
-	return node.Metadata != nil && node.Metadata.Generator == "grpc"
+func (node *Proxy) IsInherentTriple() bool {
+	return node != nil && node.Metadata != nil && node.Metadata.Generator == "triple"
 }
 
 func (node *Proxy) ShouldUpdateServiceTargets(updates sets.Set[ConfigKey]) bool {
@@ -359,7 +359,7 @@ func ParseServiceNodeWithMetadata(nodeID string, metadata *NodeMetadata) (*Proxy
 	out.ID = parts[2]
 	out.DNSDomain = parts[3]
 
-	// Validate that ID is not empty - this is critical for Inherent gRPC
+	// Validate that ID is not empty - this is critical for Inherent Triple
 	if len(out.ID) == 0 {
 		return out, fmt.Errorf("node ID is empty in service node %q (parts[2] is empty)", nodeID)
 	}

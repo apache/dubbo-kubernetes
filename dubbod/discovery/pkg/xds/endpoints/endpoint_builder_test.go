@@ -16,7 +16,9 @@
 package endpoints
 
 import (
+	"strings"
 	"testing"
+	"unicode"
 
 	"github.com/apache/dubbo-kubernetes/dubbod/discovery/pkg/config/memory"
 	"github.com/apache/dubbo-kubernetes/dubbod/discovery/pkg/model"
@@ -196,7 +198,7 @@ func newEndpointTestProxy() *model.Proxy {
 		Type:            model.Inherent,
 		ConfigNamespace: "app",
 		Metadata: &model.NodeMetadata{
-			Generator: "grpc",
+			Generator: "triple",
 			Namespace: "app",
 			ClusterID: "Kubernetes",
 		},
@@ -237,4 +239,95 @@ func (s endpointTestServiceDiscovery) GetService(hostname host.Name) *model.Serv
 
 func (s endpointTestServiceDiscovery) GetProxyServiceTargets(*model.Proxy) []model.ServiceTarget {
 	return nil
+}
+
+func TestBuildClusterLoadAssignmentSnapshotEndpointsContract(t *testing.T) {
+	assertCLAContract := func(t *testing.T, cla *endpoint.ClusterLoadAssignment) {
+		t.Helper()
+		seen := map[string]struct{}{}
+		for lIdx, loc := range cla.GetEndpoints() {
+			if loc.GetProximity() != nil {
+				t.Fatalf("locality[%d] proximity = %v, want nil", lIdx, loc.GetProximity())
+			}
+			for eIdx, lbEp := range loc.GetLbEndpoints() {
+				if hs := lbEp.GetHealthStatus(); hs < 0 || hs > 5 {
+					t.Fatalf("locality[%d].endpoint[%d] invalid health_status %d", lIdx, eIdx, hs)
+				}
+				epIdentifier, ok := lbEp.GetHostIdentifier().(*endpoint.LbEndpoint_Endpoint)
+				if !ok || epIdentifier.Endpoint == nil {
+					t.Fatalf("locality[%d].endpoint[%d] host_identifier = %T, want LbEndpoint_Endpoint", lIdx, eIdx, lbEp.GetHostIdentifier())
+				}
+				sa := epIdentifier.Endpoint.GetAddress().GetSocketAddress()
+				if sa == nil {
+					t.Fatalf("locality[%d].endpoint[%d] address = %v, want SocketAddress", lIdx, eIdx, epIdentifier.Endpoint.GetAddress())
+				}
+				port := sa.GetPortValue()
+				if port == 0 || port > 65535 {
+					t.Fatalf("locality[%d].endpoint[%d] port = %d, want 1..65535", lIdx, eIdx, port)
+				}
+				hostAddr := sa.GetAddress()
+				if hostAddr == "" || strings.ContainsAny(hostAddr, "/@") {
+					t.Fatalf("locality[%d].endpoint[%d] invalid host %q", lIdx, eIdx, hostAddr)
+				}
+				for _, r := range hostAddr {
+					if unicode.IsSpace(r) {
+						t.Fatalf("locality[%d].endpoint[%d] host %q contains whitespace", lIdx, eIdx, hostAddr)
+					}
+				}
+				key := formatEndpointAddressKey(hostAddr, port)
+				if _, dup := seen[key]; dup {
+					t.Fatalf("duplicate endpoint address %q in CLA", key)
+				}
+				seen[key] = struct{}{}
+			}
+		}
+	}
+
+	t.Run("filters invalid hosts ports unix pipes and deduplicates across shards", func(t *testing.T) {
+		hostname := host.Name("reviews.app.svc.cluster.local")
+		svc := newEndpointTestService("reviews", "app", string(hostname), 8080)
+		push := newEndpointTestPushContext(t, nil, []*model.Service{svc})
+		index := model.NewEndpointIndex(model.DisabledCache{})
+
+		shardA := model.ShardKey{Provider: "Kubernetes"}
+		shardB := model.ShardKey{Provider: "Mock"}
+		index.UpdateServiceEndpoints(shardA, string(hostname), "app", []*model.DubboEndpoint{
+			{Addresses: []string{"10.0.0.1"}, EndpointPort: 8080, ServicePortName: "http", HealthStatus: model.Healthy},
+			{Addresses: []string{"unix:///var/run/app.sock"}, EndpointPort: 0, ServicePortName: "http", HealthStatus: model.Healthy},
+			{Addresses: []string{"10.0.0.2"}, EndpointPort: 0, ServicePortName: "http", HealthStatus: model.Healthy},
+			{Addresses: []string{"10.0.0.3"}, EndpointPort: 70000, ServicePortName: "http", HealthStatus: model.Healthy},
+			{Addresses: []string{"10.0.0.4/extra"}, EndpointPort: 8080, ServicePortName: "http", HealthStatus: model.Healthy},
+			{Addresses: []string{"user@10.0.0.5"}, EndpointPort: 8080, ServicePortName: "http", HealthStatus: model.Healthy},
+			{Addresses: []string{"10.0.0.6 "}, EndpointPort: 8080, ServicePortName: "http", HealthStatus: model.Healthy},
+		}, false)
+		index.UpdateServiceEndpoints(shardB, string(hostname), "app", []*model.DubboEndpoint{
+			{Addresses: []string{"10.0.0.1"}, EndpointPort: 8080, ServicePortName: "http", HealthStatus: model.Healthy},
+			{Addresses: []string{"fd00::1"}, EndpointPort: 8080, ServicePortName: "http", HealthStatus: model.Healthy},
+			{Addresses: []string{"fd00::1"}, EndpointPort: 8080, ServicePortName: "http", HealthStatus: model.Healthy},
+		}, false)
+
+		clusterName := model.BuildSubsetKey(model.TrafficDirectionOutbound, "", hostname, 8080)
+		cla := NewEndpointBuilder(clusterName, newEndpointTestProxy(), push).BuildClusterLoadAssignment(index)
+		assertCLAContract(t, cla)
+
+		if len(cla.GetEndpoints()) != 1 || len(cla.GetEndpoints()[0].GetLbEndpoints()) != 2 {
+			t.Fatalf("got %d localities / endpoints %v, want exactly 2 unique valid endpoints", len(cla.GetEndpoints()), cla.GetEndpoints())
+		}
+	})
+
+	t.Run("invalid external name returns empty CLA", func(t *testing.T) {
+		hostname := host.Name("bad-egress.app.svc.cluster.local")
+		svc := newEndpointTestService("bad-egress", "app", string(hostname), 443)
+		svc.Resolution = model.Alias
+		svc.Attributes.ExternalName = "bad/host@example.com"
+		push := newEndpointTestPushContext(t, nil, []*model.Service{svc})
+		index := model.NewEndpointIndex(model.DisabledCache{})
+
+		clusterName := model.BuildSubsetKey(model.TrafficDirectionOutbound, "", hostname, 443)
+		cla := NewEndpointBuilder(clusterName, newEndpointTestProxy(), push).BuildClusterLoadAssignment(index)
+		assertCLAContract(t, cla)
+		if len(cla.GetEndpoints()) != 0 {
+			t.Fatalf("endpoints = %d, want 0 for invalid ExternalName", len(cla.GetEndpoints()))
+		}
+	})
 }

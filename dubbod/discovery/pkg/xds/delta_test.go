@@ -92,7 +92,7 @@ func newDeltaXDSTestServer(generator model.XdsResourceGenerator) (*DiscoveryServ
 	server := NewDiscoveryServer(model.NewEnvironment(), nil)
 	server.Authorize = allowTestWorkload
 	server.Generators = map[string]model.XdsResourceGenerator{
-		"grpc/" + v1.ClusterType: generator,
+		"triple/" + v1.ClusterType: generator,
 	}
 	stream := newFakeDeltaADSStream()
 	con := newDeltaConnection("127.0.0.1:26010", stream)
@@ -100,7 +100,7 @@ func newDeltaXDSTestServer(generator model.XdsResourceGenerator) (*DiscoveryServ
 	con.proxy = &model.Proxy{
 		ID:               "pod-1",
 		Type:             model.Inherent,
-		Metadata:         &model.NodeMetadata{Generator: "grpc", Namespace: "app"},
+		Metadata:         &model.NodeMetadata{Generator: "triple", Namespace: "app"},
 		WatchedResources: map[string]*model.WatchedResource{},
 		LastPushContext:  push,
 	}

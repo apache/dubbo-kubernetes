@@ -14,7 +14,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package grpcgen
+package triplegen
 
 import (
 	"fmt"
@@ -23,7 +23,6 @@ import (
 	"github.com/apache/dubbo-kubernetes/dubbod/discovery/pkg/util/protoconv"
 	discovery "github.com/dubml/xds-api/service/discovery/v1"
 
-	"github.com/apache/dubbo-kubernetes/dubbod/discovery/pkg/features"
 	"github.com/apache/dubbo-kubernetes/dubbod/discovery/pkg/model"
 	"github.com/apache/dubbo-kubernetes/dubbod/discovery/pkg/networking/util"
 	"github.com/apache/dubbo-kubernetes/pkg/config/host"
@@ -45,7 +44,7 @@ type clusterBuilder struct {
 	filter sets.String
 }
 
-func (g *GrpcConfigGenerator) BuildClusters(node *model.Proxy, push *model.PushContext, names []string) model.Resources {
+func (g *TripleConfigGenerator) BuildClusters(node *model.Proxy, push *model.PushContext, names []string) model.Resources {
 	filter := newClusterFilter(names)
 	clusters := make([]*cluster.Cluster, 0, len(names))
 	for defaultClusterName, subsetFilter := range filter {
@@ -173,30 +172,11 @@ func (b *clusterBuilder) edsCluster(name string) *cluster.Cluster {
 				},
 			},
 		},
-		LbPolicy: defaultLbPolicy(),
+		LbPolicy: cluster.Cluster_ROUND_ROBIN,
 	}
 }
 
-// defaultLbPolicy resolves the mesh-wide default load balancing policy from the
-// DUBBO_DEFAULT_LB_POLICY environment variable, falling back to ROUND_ROBIN for
-// unknown values.
-func defaultLbPolicy() cluster.Cluster_LbPolicy {
-	switch strings.ToUpper(features.DefaultLoadBalancerPolicy) {
-	case "LEAST_REQUEST":
-		return cluster.Cluster_LEAST_REQUEST
-	case "RING_HASH":
-		return cluster.Cluster_RING_HASH
-	case "RANDOM":
-		return cluster.Cluster_RANDOM
-	case "ROUND_ROBIN", "":
-		return cluster.Cluster_ROUND_ROBIN
-	default:
-		log.Warnf("unknown DUBBO_DEFAULT_LB_POLICY %q, falling back to ROUND_ROBIN", features.DefaultLoadBalancerPolicy)
-		return cluster.Cluster_ROUND_ROBIN
-	}
-}
-
-// buildUpstreamTLSContext builds an UpstreamTlsContext that conforms to gRPC xDS expectations,
+// buildUpstreamTLSContext builds an UpstreamTlsContext that conforms to Triple xDS expectations,
 // reusing the common certificate-provider setup from buildCommonTLSContext.
 func (b *clusterBuilder) buildUpstreamTLSContext(c *cluster.Cluster) *tlsv1.UpstreamTlsContext {
 	// Pin the upstream identity: only certificates whose SAN matches one of the
@@ -238,7 +218,7 @@ func (b *clusterBuilder) buildUpstreamTLSContext(c *cluster.Cluster) *tlsv1.Upst
 			}
 		}
 	}
-	// Inherent gRPC always speaks HTTP/2, advertise h2 via ALPN.
+	// Inherent Triple always speaks HTTP/2, advertise h2 via ALPN.
 	tlsContext.CommonTlsContext.AlpnProtocols = []string{"h2"}
 	return tlsContext
 }

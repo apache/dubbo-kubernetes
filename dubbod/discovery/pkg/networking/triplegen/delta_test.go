@@ -14,7 +14,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package grpcgen
+package triplegen
 
 import (
 	"testing"
@@ -36,7 +36,7 @@ func TestGenerateDeltasBuildsOnlyChangedServiceClusters(t *testing.T) {
 		newRDSTestService("api", "app", apiHost, 80),
 	})
 
-	resources, removed, details, usedDelta, err := (&GrpcConfigGenerator{}).GenerateDeltas(newMTLSTestProxy(), &model.PushRequest{
+	resources, removed, details, usedDelta, err := (&TripleConfigGenerator{}).GenerateDeltas(newMTLSTestProxy(), &model.PushRequest{
 		Push:           push,
 		Full:           true,
 		ConfigsUpdated: sets.New(model.ConfigKey{Kind: kind.Service, Name: nginxHost, Namespace: "app"}),
@@ -63,7 +63,7 @@ func TestGenerateDeltasRemovesClustersForDeletedService(t *testing.T) {
 	nginxCluster := model.BuildSubsetKey(model.TrafficDirectionOutbound, "", host.Name(nginxHost), 80)
 	push := newRDSTestPushContext(t, nil, nil)
 
-	resources, removed, _, usedDelta, err := (&GrpcConfigGenerator{}).GenerateDeltas(newMTLSTestProxy(), &model.PushRequest{
+	resources, removed, _, usedDelta, err := (&TripleConfigGenerator{}).GenerateDeltas(newMTLSTestProxy(), &model.PushRequest{
 		Push:           push,
 		Full:           true,
 		ConfigsUpdated: sets.New(model.ConfigKey{Kind: kind.Service, Name: nginxHost, Namespace: "app"}),

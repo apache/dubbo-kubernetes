@@ -13,12 +13,14 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package grpcgen
+package triplegen
 
 import (
 	"reflect"
+	"strings"
 	"testing"
 	"time"
+	"unicode"
 
 	"github.com/apache/dubbo-kubernetes/dubbod/discovery/pkg/config/memory"
 	"github.com/apache/dubbo-kubernetes/dubbod/discovery/pkg/model"
@@ -158,7 +160,7 @@ func TestBuildHTTPRouteSetsGatewayAPIRequestTimeout(t *testing.T) {
 	}
 }
 
-func TestBuildHTTPRouteSetsGatewayAPIRetryPolicy(t *testing.T) {
+func TestBuildHTTPRouteOmitsGatewayAPIRetryPolicy(t *testing.T) {
 	cfg := newServiceAttachedHTTPRouteConfig("reviews-retry", "moviereview", "reviews", 9080)
 	spec := cfg.Spec.(*gatewayv1.HTTPRouteSpec)
 	spec.Rules[0].Timeouts = &gatewayv1.HTTPRouteTimeouts{
@@ -184,31 +186,17 @@ func TestBuildHTTPRouteSetsGatewayAPIRetryPolicy(t *testing.T) {
 	if rc == nil {
 		t.Fatal("buildHTTPRoute() returned nil")
 	}
-	retry := rc.VirtualHosts[0].Routes[0].GetRoute().GetRetryPolicy()
-	if retry == nil {
-		t.Fatal("retry policy = nil")
-	}
-	if got := retry.GetRetryOn(); got != "connect-failure,reset,retriable-status-codes" {
-		t.Fatalf("retry_on = %q", got)
-	}
-	if got := retry.GetNumRetries().GetValue(); got != 3 {
-		t.Fatalf("num_retries = %d, want 3", got)
-	}
-	if got := retry.GetRetriableStatusCodes(); !reflect.DeepEqual(got, []uint32{500, 503}) {
-		t.Fatalf("retriable_status_codes = %v", got)
-	}
-	if got := retry.GetPerTryTimeout().AsDuration(); got != 250*time.Millisecond {
-		t.Fatalf("per_try_timeout = %v, want 250ms", got)
-	}
-	if got := retry.GetRetryBackOff().GetBaseInterval().AsDuration(); got != 100*time.Millisecond {
-		t.Fatalf("retry backoff base = %v, want 100ms", got)
-	}
-	if got := retry.GetRetryBackOff().GetMaxInterval().AsDuration(); got != time.Second {
-		t.Fatalf("retry backoff max = %v, want 1s", got)
+	for i, r := range rc.VirtualHosts[0].Routes {
+		if r.GetRoute().GetRetryPolicy() != nil {
+			t.Fatalf("route[%d] retry policy = %v, want nil", i, r.GetRoute().GetRetryPolicy())
+		}
+		if r.GetRoute().GetFaultPolicy() != nil {
+			t.Fatalf("route[%d] fault policy = %v, want nil", i, r.GetRoute().GetFaultPolicy())
+		}
 	}
 }
 
-func TestBuildHTTPRouteSetsServiceFaultInjectionPolicy(t *testing.T) {
+func TestBuildHTTPRouteOmitsServiceFaultInjectionPolicy(t *testing.T) {
 	routeConfig := newServiceAttachedHTTPRouteConfig("reviews-fault", "moviereview", "reviews", 9080)
 	faultConfig := config.Config{
 		Meta: config.Meta{
@@ -246,22 +234,344 @@ func TestBuildHTTPRouteSetsServiceFaultInjectionPolicy(t *testing.T) {
 	if rc == nil {
 		t.Fatal("buildHTTPRoute() returned nil")
 	}
-	fault := rc.VirtualHosts[0].Routes[0].GetRoute().GetFaultPolicy()
-	if fault == nil {
-		t.Fatal("fault policy = nil")
+	for i, r := range rc.VirtualHosts[0].Routes {
+		if r.GetRoute().GetFaultPolicy() != nil {
+			t.Fatalf("route[%d] fault policy = %v, want nil", i, r.GetRoute().GetFaultPolicy())
+		}
 	}
-	if got := fault.GetDelay().GetFixedDelay().AsDuration(); got != 250*time.Millisecond {
-		t.Fatalf("fixed delay = %v, want 250ms", got)
+}
+
+func TestBuildHTTPRouteOmitsRegexMatchersAndLowercasesHeaders(t *testing.T) {
+	regexPath := gatewayv1.PathMatchRegularExpression
+	regexHeader := gatewayv1.HeaderMatchRegularExpression
+	prefixPath := gatewayv1.PathMatchPathPrefix
+	exactHeader := gatewayv1.HeaderMatchExact
+	regexPathVal := "^/v[0-9]+/.*"
+	prefixPathVal := "/ok"
+
+	cfg := newServiceAttachedHTTPRouteConfig("reviews-match", "moviereview", "reviews", 9080)
+	spec := cfg.Spec.(*gatewayv1.HTTPRouteSpec)
+	spec.Rules[0].Matches = []gatewayv1.HTTPRouteMatch{
+		{
+			Path: &gatewayv1.HTTPPathMatch{Type: &regexPath, Value: &regexPathVal},
+		},
+		{
+			Path: &gatewayv1.HTTPPathMatch{Type: &prefixPath, Value: &prefixPathVal},
+			Headers: []gatewayv1.HTTPHeaderMatch{{
+				Type:  &regexHeader,
+				Name:  "X-Canary-Regex",
+				Value: "^true$",
+			}},
+		},
+		{
+			Path: &gatewayv1.HTTPPathMatch{Type: &prefixPath, Value: &prefixPathVal},
+			Headers: []gatewayv1.HTTPHeaderMatch{{
+				Type:  &exactHeader,
+				Name:  "X-End-User",
+				Value: "Jason",
+			}},
+		},
 	}
-	if got := fault.GetDelay().GetPercentage().GetValue(); got != 20 {
-		t.Fatalf("delay percentage = %d, want 20", got)
+
+	push := newRDSTestPushContext(t, []config.Config{cfg}, []*model.Service{
+		newRDSTestService("reviews", "moviereview", "reviews.moviereview.svc.cluster.local", 9080),
+		newRDSTestService("reviews-v1", "moviereview", "reviews-v1.moviereview.svc.cluster.local", 9080),
+		newRDSTestService("reviews-v2", "moviereview", "reviews-v2.moviereview.svc.cluster.local", 9080),
+	})
+
+	rc := buildHTTPRoute(
+		&model.Proxy{ID: "moviepage.moviereview", Type: model.Inherent},
+		push,
+		"outbound|9080||reviews.moviereview.svc.cluster.local",
+	)
+	if rc == nil {
+		t.Fatal("buildHTTPRoute() returned nil")
 	}
-	if got := fault.GetAbort().GetHttpStatus(); got != 503 {
-		t.Fatalf("abort status = %d, want 503", got)
+	routes := rc.VirtualHosts[0].Routes
+	if len(routes) != 2 {
+		t.Fatalf("routes = %d, want 2 (1 valid match + 1 fallback)", len(routes))
 	}
-	if got := fault.GetAbort().GetPercentage().GetValue(); got != 10 {
-		t.Fatalf("abort percentage = %d, want 10", got)
+	for i, r := range routes {
+		if r.GetMatch().GetSafeRegex() != nil {
+			t.Fatalf("route[%d] emitted SafeRegex path matcher", i)
+		}
+		for _, h := range r.GetMatch().GetHeaders() {
+			if h.GetSafeRegexMatch() != nil {
+				t.Fatalf("route[%d] emitted SafeRegexMatch header matcher", i)
+			}
+		}
 	}
+	headers := routes[0].GetMatch().GetHeaders()
+	if len(headers) != 1 || headers[0].GetName() != "x-end-user" || headers[0].GetExactMatch() != "Jason" {
+		t.Fatalf("first route headers = %v, want lowercase x-end-user exact Jason", headers)
+	}
+}
+
+func assertRouteConfigurationSnapshotContract(t *testing.T, rc *route.RouteConfiguration) {
+	t.Helper()
+	if rc == nil {
+		t.Fatal("RouteConfiguration is nil")
+	}
+	if rc.GetAgentConfig() != nil {
+		t.Fatalf("agent_config = %v, want nil", rc.GetAgentConfig())
+	}
+
+	seenDomains := map[string]struct{}{}
+	for vhIdx, vh := range rc.GetVirtualHosts() {
+		if len(vh.GetDomains()) == 0 {
+			t.Fatalf("virtual_host[%d] domains is empty", vhIdx)
+		}
+		for _, d := range vh.GetDomains() {
+			if d == "" {
+				t.Fatalf("virtual_host[%d] contains empty domain", vhIdx)
+			}
+			for _, r := range d {
+				if unicode.IsSpace(r) {
+					t.Fatalf("virtual_host[%d] domain %q contains whitespace", vhIdx, d)
+				}
+			}
+			validWildcard := !strings.Contains(d, "*") || d == "*" || (strings.Count(d, "*") == 1 && (strings.HasPrefix(d, "*.") || strings.HasSuffix(d, ".*")))
+			if !validWildcard {
+				t.Fatalf("virtual_host[%d] invalid wildcard domain %q", vhIdx, d)
+			}
+			lower := strings.ToLower(d)
+			if _, exists := seenDomains[lower]; exists {
+				t.Fatalf("duplicate virtual host domain %q", d)
+			}
+			seenDomains[lower] = struct{}{}
+		}
+
+		for rIdx, r := range vh.GetRoutes() {
+			m := r.GetMatch()
+			if m == nil {
+				t.Fatalf("vh[%d].route[%d] missing match", vhIdx, rIdx)
+			}
+			switch spec := m.GetPathSpecifier().(type) {
+			case *route.RouteMatch_Path:
+				if !strings.HasPrefix(spec.Path, "/") {
+					t.Fatalf("vh[%d].route[%d] exact path %q must start with '/'", vhIdx, rIdx, spec.Path)
+				}
+			case *route.RouteMatch_Prefix:
+				if !strings.HasPrefix(spec.Prefix, "/") {
+					t.Fatalf("vh[%d].route[%d] prefix %q must start with '/'", vhIdx, rIdx, spec.Prefix)
+				}
+			default:
+				t.Fatalf("vh[%d].route[%d] unsupported path_specifier %T", vhIdx, rIdx, m.GetPathSpecifier())
+			}
+
+			for hIdx, h := range m.GetHeaders() {
+				if h.GetName() == "" || h.GetName() != strings.ToLower(h.GetName()) {
+					t.Fatalf("vh[%d].route[%d].header[%d] name = %q, want non-empty lowercase", vhIdx, rIdx, hIdx, h.GetName())
+				}
+				switch h.GetHeaderMatchSpecifier().(type) {
+				case *route.HeaderMatcher_ExactMatch, *route.HeaderMatcher_PrefixMatch:
+				default:
+					t.Fatalf("vh[%d].route[%d].header[%d] unsupported specifier %T", vhIdx, rIdx, hIdx, h.GetHeaderMatchSpecifier())
+				}
+			}
+
+			switch act := r.GetAction().(type) {
+			case *route.Route_Route:
+				if act.Route == nil {
+					t.Fatalf("vh[%d].route[%d] Route action is nil", vhIdx, rIdx)
+				}
+				if act.Route.GetRetryPolicy() != nil {
+					t.Fatalf("vh[%d].route[%d] retry_policy = %v, want nil", vhIdx, rIdx, act.Route.GetRetryPolicy())
+				}
+				if act.Route.GetFaultPolicy() != nil {
+					t.Fatalf("vh[%d].route[%d] fault_policy = %v, want nil", vhIdx, rIdx, act.Route.GetFaultPolicy())
+				}
+				if timeout := act.Route.GetTimeout(); timeout != nil {
+					if timeout.GetSeconds() < 0 || timeout.GetNanos() < 0 || timeout.GetNanos() >= 1_000_000_000 {
+						t.Fatalf("vh[%d].route[%d] invalid timeout %v", vhIdx, rIdx, timeout)
+					}
+				}
+				switch cs := act.Route.GetClusterSpecifier().(type) {
+				case *route.RouteAction_Cluster:
+					if cs.Cluster == "" {
+						t.Fatalf("vh[%d].route[%d] empty cluster name", vhIdx, rIdx)
+					}
+				case *route.RouteAction_WeightedClusters:
+					if cs.WeightedClusters == nil || len(cs.WeightedClusters.GetClusters()) == 0 {
+						t.Fatalf("vh[%d].route[%d] empty weighted_clusters", vhIdx, rIdx)
+					}
+					seenClusters := map[string]struct{}{}
+					var sum uint64
+					for _, wc := range cs.WeightedClusters.GetClusters() {
+						if wc.GetClusterHeader() != "" || wc.GetName() == "" {
+							t.Fatalf("vh[%d].route[%d] invalid weighted cluster %v", vhIdx, rIdx, wc)
+						}
+						if _, dup := seenClusters[wc.GetName()]; dup {
+							t.Fatalf("vh[%d].route[%d] duplicate weighted cluster %q", vhIdx, rIdx, wc.GetName())
+						}
+						seenClusters[wc.GetName()] = struct{}{}
+						if wc.GetWeight() == nil {
+							t.Fatalf("vh[%d].route[%d] weighted cluster %q missing weight", vhIdx, rIdx, wc.GetName())
+						}
+						sum += uint64(wc.GetWeight().GetValue())
+					}
+					if sum == 0 {
+						t.Fatalf("vh[%d].route[%d] zero total weighted cluster weight", vhIdx, rIdx)
+					}
+					if tw := cs.WeightedClusters.GetTotalWeight(); tw != nil && uint64(tw.GetValue()) != sum {
+						t.Fatalf("vh[%d].route[%d] total_weight = %d, sum = %d", vhIdx, rIdx, tw.GetValue(), sum)
+					}
+				default:
+					t.Fatalf("vh[%d].route[%d] unsupported cluster_specifier %T", vhIdx, rIdx, act.Route.GetClusterSpecifier())
+				}
+			case *route.Route_NonForwardingAction:
+			default:
+				t.Fatalf("vh[%d].route[%d] unsupported action %T", vhIdx, rIdx, r.GetAction())
+			}
+		}
+	}
+}
+
+func TestBuildHTTPRouteSnapshotValidationContract(t *testing.T) {
+	exactPath := gatewayv1.PathMatchExact
+	exactHeader := gatewayv1.HeaderMatchExact
+	cfg := newServiceAttachedHTTPRouteConfig("reviews-contract", "moviereview", "reviews", 9080)
+	spec := cfg.Spec.(*gatewayv1.HTTPRouteSpec)
+	spec.Rules[0].Timeouts = &gatewayv1.HTTPRouteTimeouts{
+		Request: ptrTo(gatewayv1.Duration("500ms")),
+	}
+	v1Port := gatewayv1.PortNumber(9080)
+	spec.Rules[0].BackendRefs = append(spec.Rules[0].BackendRefs, gatewayv1.HTTPBackendRef{
+		BackendRef: gatewayv1.BackendRef{
+			BackendObjectReference: gatewayv1.BackendObjectReference{
+				Name: "reviews-v1",
+				Port: &v1Port,
+			},
+			Weight: ptrTo[int32](25),
+		},
+	})
+	spec.Rules[0].Matches = []gatewayv1.HTTPRouteMatch{
+		{
+			Path: &gatewayv1.HTTPPathMatch{Type: &exactPath, Value: ptrTo("/reviews/detail")},
+			Headers: []gatewayv1.HTTPHeaderMatch{{
+				Type:  &exactHeader,
+				Name:  "X-User-Tier",
+				Value: "vip",
+			}},
+		},
+	}
+
+	push := newRDSTestPushContext(t, []config.Config{cfg}, []*model.Service{
+		newRDSTestService("reviews", "moviereview", "reviews.moviereview.svc.cluster.local", 9080),
+		newRDSTestService("reviews-v1", "moviereview", "reviews-v1.moviereview.svc.cluster.local", 9080),
+		newRDSTestService("reviews-v2", "moviereview", "reviews-v2.moviereview.svc.cluster.local", 9080),
+	})
+
+	rc := buildHTTPRoute(
+		&model.Proxy{ID: "moviepage.moviereview", Type: model.Inherent},
+		push,
+		"outbound|9080||reviews.moviereview.svc.cluster.local",
+	)
+	assertRouteConfigurationSnapshotContract(t, rc)
+
+	defaultPush := newRDSTestPushContext(t, nil, []*model.Service{
+		newRDSTestService("reviews", "moviereview", "reviews.moviereview.svc.cluster.local", 9080),
+	})
+	defaultRC := buildHTTPRoute(
+		&model.Proxy{ID: "moviepage.moviereview", Type: model.Inherent},
+		defaultPush,
+		"outbound|9080||reviews.moviereview.svc.cluster.local",
+	)
+	assertRouteConfigurationSnapshotContract(t, defaultRC)
+}
+
+func TestBuildHTTPRouteSanitizesSnapshotEdgeCases(t *testing.T) {
+	t.Run("wildcard host omits invalid short wildcard and duplicate star", func(t *testing.T) {
+		push := newRDSTestPushContext(t, nil, []*model.Service{
+			newRDSTestService("ext", "default", "*.example.com", 80),
+		})
+		rc := buildHTTPRoute(
+			&model.Proxy{ID: "caller.default", Type: model.Inherent},
+			push,
+			"outbound|80||*.example.com",
+		)
+		assertRouteConfigurationSnapshotContract(t, rc)
+		wantDomains := []string{"*.example.com:80", "*.example.com", "*"}
+		if !reflect.DeepEqual(rc.VirtualHosts[0].GetDomains(), wantDomains) {
+			t.Fatalf("domains = %v, want %v", rc.VirtualHosts[0].GetDomains(), wantDomains)
+		}
+	})
+
+	t.Run("nil path defaults to slash, relative path dropped, duplicate backends merged, negative timeout omitted", func(t *testing.T) {
+		prefixPath := gatewayv1.PathMatchPathPrefix
+		exactPath := gatewayv1.PathMatchExact
+		cfg := newServiceAttachedHTTPRouteConfig("reviews-edge", "moviereview", "reviews", 9080)
+		spec := cfg.Spec.(*gatewayv1.HTTPRouteSpec)
+		spec.Rules[0].Timeouts = &gatewayv1.HTTPRouteTimeouts{
+			Request: ptrTo(gatewayv1.Duration("-5s")),
+		}
+		spec.Rules[0].Matches = []gatewayv1.HTTPRouteMatch{
+			{Path: &gatewayv1.HTTPPathMatch{Type: &prefixPath, Value: nil}},
+			{Path: &gatewayv1.HTTPPathMatch{Type: &exactPath, Value: ptrTo("no-leading-slash")}},
+		}
+		v1Port := gatewayv1.PortNumber(9080)
+		spec.Rules[0].BackendRefs = append(spec.Rules[0].BackendRefs,
+			gatewayv1.HTTPBackendRef{
+				BackendRef: gatewayv1.BackendRef{
+					BackendObjectReference: gatewayv1.BackendObjectReference{
+						Name: "reviews-v2",
+						Port: &v1Port,
+					},
+					Weight: ptrTo[int32](20),
+				},
+			},
+			gatewayv1.HTTPBackendRef{
+				BackendRef: gatewayv1.BackendRef{
+					BackendObjectReference: gatewayv1.BackendObjectReference{
+						Name: "reviews-v1",
+						Port: &v1Port,
+					},
+					Weight: ptrTo[int32](15),
+				},
+			},
+		)
+
+		push := newRDSTestPushContext(t, []config.Config{cfg}, []*model.Service{
+			newRDSTestService("reviews", "moviereview", "reviews.moviereview.svc.cluster.local", 9080),
+			newRDSTestService("reviews-v1", "moviereview", "reviews-v1.moviereview.svc.cluster.local", 9080),
+			newRDSTestService("reviews-v2", "moviereview", "reviews-v2.moviereview.svc.cluster.local", 9080),
+		})
+
+		rc := buildHTTPRoute(
+			&model.Proxy{ID: "moviepage.moviereview", Type: model.Inherent},
+			push,
+			"outbound|9080||reviews.moviereview.svc.cluster.local",
+		)
+		assertRouteConfigurationSnapshotContract(t, rc)
+		routes := rc.VirtualHosts[0].GetRoutes()
+		if len(routes) != 2 {
+			t.Fatalf("routes = %d, want 2 (1 sanitized rule[0] + 1 fallback rule[1])", len(routes))
+		}
+		if routes[0].GetMatch().GetPrefix() != "/" {
+			t.Fatalf("prefix = %q, want /", routes[0].GetMatch().GetPrefix())
+		}
+		if routes[0].GetRoute().GetTimeout() != nil {
+			t.Fatalf("negative timeout was not omitted: %v", routes[0].GetRoute().GetTimeout())
+		}
+		gotWeights := weightedClustersByName(t, routes[0])
+		wantWeights := map[string]uint32{
+			"outbound|9080||reviews-v1.moviereview.svc.cluster.local": 15,
+			"outbound|9080||reviews-v2.moviereview.svc.cluster.local": 120,
+		}
+		if !reflect.DeepEqual(gotWeights, wantWeights) {
+			t.Fatalf("coalesced weights = %v, want %v", gotWeights, wantWeights)
+		}
+	})
+
+	t.Run("inbound non-forwarding route satisfies contract", func(t *testing.T) {
+		push := newRDSTestPushContext(t, nil, nil)
+		rc := buildHTTPRoute(
+			&model.Proxy{ID: "moviepage.moviereview", Type: model.Inherent},
+			push,
+			"8080",
+		)
+		assertRouteConfigurationSnapshotContract(t, rc)
+	})
 }
 
 func newRDSTestPushContext(t *testing.T, configs []config.Config, services []*model.Service) *model.PushContext {

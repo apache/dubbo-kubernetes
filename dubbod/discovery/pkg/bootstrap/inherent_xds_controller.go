@@ -480,7 +480,7 @@ func (c *inherentXDSWorkloadController) buildWorkloadContext(pod *corev1.Pod) (*
 		InstanceIPs: []string{podIP},
 		ProxyConfig: proxyConfig,
 		Envs: []string{
-			"DUBBO_META_GENERATOR=grpc",
+			"DUBBO_META_GENERATOR=triple",
 			"DUBBO_META_CLUSTER_ID=" + clusterID,
 			"DUBBO_META_NAMESPACE=" + pod.Namespace,
 			"DUBBO_META_MESH_ID=" + trustDomain,

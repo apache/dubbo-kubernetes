@@ -231,7 +231,7 @@ func newInherentPushBenchmarkFixture(tb testing.TB, scale inherentPushScale) *in
 
 	server := NewDiscoveryServer(env, nil)
 	server.Authorize = allowTestWorkload
-	server.Generators["grpc/"+v1.EndpointType] = &EdsGenerator{
+	server.Generators["triple/"+v1.EndpointType] = &EdsGenerator{
 		Cache:         model.DisabledCache{},
 		EndpointIndex: env.EndpointIndex,
 	}
@@ -246,7 +246,7 @@ func newInherentPushBenchmarkFixture(tb testing.TB, scale inherentPushScale) *in
 			Type:            model.Inherent,
 			ConfigNamespace: "app",
 			Metadata: &model.NodeMetadata{
-				Generator: "grpc",
+				Generator: "triple",
 				Namespace: "app",
 			},
 			WatchedResources: map[string]*model.WatchedResource{

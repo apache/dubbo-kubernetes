@@ -14,7 +14,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package grpcgen
+package triplegen
 
 import (
 	"github.com/apache/dubbo-kubernetes/dubbod/discovery/pkg/model"
@@ -25,13 +25,13 @@ import (
 	tlsv1 "github.com/dubml/xds-api/extensions/transport_sockets/tls/v1"
 )
 
-var log = dubbolog.RegisterScope("grpcgen", "xDS Generator for Inherent gRPC")
+var log = dubbolog.RegisterScope("triplegen", "xDS Generator for Inherent Triple")
 
-type GrpcConfigGenerator struct{}
+type TripleConfigGenerator struct{}
 
-var _ model.XdsDeltaResourceGenerator = &GrpcConfigGenerator{}
+var _ model.XdsDeltaResourceGenerator = &TripleConfigGenerator{}
 
-func (g *GrpcConfigGenerator) Generate(proxy *model.Proxy, w *model.WatchedResource, req *model.PushRequest) (model.Resources, model.XdsLogDetails, error) {
+func (g *TripleConfigGenerator) Generate(proxy *model.Proxy, w *model.WatchedResource, req *model.PushRequest) (model.Resources, model.XdsLogDetails, error) {
 	// Extract requested resource names from WatchedResource
 	// If ResourceNames is empty (wildcard request), pass empty slice
 	// BuildListeners will handle empty names as wildcard request and generate all listeners
@@ -56,16 +56,16 @@ func (g *GrpcConfigGenerator) Generate(proxy *model.Proxy, w *model.WatchedResou
 	return nil, model.DefaultXdsLogDetails, nil
 }
 
-func (g *GrpcConfigGenerator) GenerateDeltas(proxy *model.Proxy, req *model.PushRequest, w *model.WatchedResource) (model.Resources, model.DeletedResources, model.XdsLogDetails, bool, error) {
+func (g *TripleConfigGenerator) GenerateDeltas(proxy *model.Proxy, req *model.PushRequest, w *model.WatchedResource) (model.Resources, model.DeletedResources, model.XdsLogDetails, bool, error) {
 	if w == nil {
 		return nil, nil, model.DefaultXdsLogDetails, false, nil
 	}
-	if w.TypeUrl != v1.ClusterType || !grpcCanUseDeltaClusters(req) {
+	if w.TypeUrl != v1.ClusterType || !tripleCanUseDeltaClusters(req) {
 		resources, logDetails, err := g.Generate(proxy, w, req)
 		return resources, nil, logDetails, false, err
 	}
 
-	changedNames := grpcDeltaClusterNames(w, req)
+	changedNames := tripleDeltaClusterNames(w, req)
 	if len(changedNames) == 0 {
 		return nil, nil, model.DefaultXdsLogDetails, true, nil
 	}
@@ -87,7 +87,7 @@ func (g *GrpcConfigGenerator) GenerateDeltas(proxy *model.Proxy, req *model.Push
 	return resources, sets.SortedList(removed), logDetails, true, nil
 }
 
-func grpcCanUseDeltaClusters(req *model.PushRequest) bool {
+func tripleCanUseDeltaClusters(req *model.PushRequest) bool {
 	if req == nil || req.Forced || len(req.ConfigsUpdated) == 0 {
 		return false
 	}
@@ -99,7 +99,7 @@ func grpcCanUseDeltaClusters(req *model.PushRequest) bool {
 	return true
 }
 
-func grpcDeltaClusterNames(w *model.WatchedResource, req *model.PushRequest) sets.String {
+func tripleDeltaClusterNames(w *model.WatchedResource, req *model.PushRequest) sets.String {
 	updatedServices := sets.New[string]()
 	for cfg := range req.ConfigsUpdated {
 		updatedServices.Insert(cfg.Name)
@@ -113,13 +113,11 @@ func grpcDeltaClusterNames(w *model.WatchedResource, req *model.PushRequest) set
 	return changed
 }
 
-// buildCommonTLSContext creates a TLS context that matches gRPC xDS expectations.
+// buildCommonTLSContext creates a TLS context that matches Triple xDS expectations.
 //   - Uses certificate provider "default" for workload certs and root CA
 //   - sans, when non-empty, restricts accepted peer certificates to the given
 //     SPIFFE identities. Outbound clusters pass the target service's identities so
 //     a workload with a valid mesh certificate cannot impersonate another service.
-//     Inbound listeners pass nil: any authenticated mesh identity is accepted at
-//     the transport layer and fine-grained restrictions belong to AuthorizationPolicy.
 func buildCommonTLSContext(sans []string) *tlsv1.CommonTlsContext {
 	return &tlsv1.CommonTlsContext{
 		// Workload certificate provider instance (SPIFFE workload cert chain)

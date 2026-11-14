@@ -109,9 +109,9 @@ func connectionWatchesAnyService(con *Connection, services sets.String) bool {
 	}
 
 	con.proxy.RLock()
-	isInherentGRPC := con.proxy.Metadata != nil && con.proxy.Metadata.Generator == "grpc"
+	isInherentTriple := con.proxy.Metadata != nil && con.proxy.Metadata.Generator == "triple"
 	watched := con.proxy.WatchedResources[v1.EndpointType]
-	if !isInherentGRPC {
+	if !isInherentTriple {
 		con.proxy.RUnlock()
 		return true
 	}
@@ -241,11 +241,11 @@ func (s *DiscoveryServer) initProxyMetadata(node *core.Node) (*model.Proxy, erro
 	if err != nil {
 		return nil, status.New(codes.InvalidArgument, err.Error()).Err()
 	}
-	// Both supported runtime roles use the gRPC resource compiler.
+	// Only the Triple resource compiler is supported.
 	if meta.Generator == "" {
-		meta.Generator = "grpc"
+		meta.Generator = "triple"
 	}
-	if meta.Generator != "grpc" {
+	if meta.Generator != "triple" {
 		return nil, status.Errorf(codes.InvalidArgument, "unsupported xDS generator %q", meta.Generator)
 	}
 	// Update the config namespace associated with this proxy
