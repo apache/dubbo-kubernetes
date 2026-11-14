@@ -18,29 +18,6 @@ metadata:
     dubbo.apache.org/rev: default
     inject.dubbo.apache.org/templates: triple-engine
 spec:
-  env:
-  - name: XDS_ADDRESS
-    value: dubbod.dubbo-system.svc:26012
-  - name: CA_ADDRESS
-    value: dubbod.dubbo-system.svc:26012
-  - name: TRIPLE_ADDRESS
-    value: ""
-  - name: TRIPLE_XDS_BOOTSTRAP
-    value: /etc/dubbo/proxy/triple-bootstrap.json
-  - name: TRIPLE_XDS_EXPERIMENTAL_SECURITY_SUPPORT
-    value: "true"
-  - name: DUBBO_META_GENERATOR
-    value: "triple"
-  - name: DUBBO_META_CLUSTER_ID
-    value: Kubernetes
-  - name: DUBBO_META_MESH_ID
-    value: cluster.local
-  - name: TRUST_DOMAIN
-    value: cluster.local
-  volumeMounts:
-    - name: dubbo-xds
-      mountPath: /etc/dubbo/proxy
-      readOnly: true
   volumes:
     - name: dubbo-xds
       secret:

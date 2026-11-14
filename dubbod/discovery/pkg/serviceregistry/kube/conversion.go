@@ -84,5 +84,15 @@ func convertPort(port corev1.ServicePort) *model.Port {
 }
 
 func SecureNamingSAN(pod *corev1.Pod, mesh *meshv1alpha1.MeshConfig) string {
-	return spiffe.MustGenSpiffeURI(mesh, pod.Namespace, pod.Spec.ServiceAccountName)
+	if pod == nil || pod.Namespace == "" {
+		return ""
+	}
+	sa := pod.Spec.ServiceAccountName
+	if sa == "" {
+		sa = "default"
+	}
+	if mesh == nil || mesh.GetTrustDomain() == "" {
+		mesh = &meshv1alpha1.MeshConfig{TrustDomain: constants.DefaultClusterLocalDomain}
+	}
+	return spiffe.MustGenSpiffeURI(mesh, pod.Namespace, sa)
 }

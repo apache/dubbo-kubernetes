@@ -82,9 +82,6 @@ func TestInstallerDefaultTripleTemplateInjectsDirectXDSConnection(t *testing.T) 
 		t.Fatalf("RunTemplate() failed: %v", err)
 	}
 
-	if len(injectedPod.Spec.Containers) != 1 {
-		t.Fatalf("template containers = %d, want application overlay only", len(injectedPod.Spec.Containers))
-	}
 	if err := postProcessPod(mergedPod, *injectedPod, req); err != nil {
 		t.Fatalf("postProcessPod() failed: %v", err)
 	}
@@ -211,8 +208,24 @@ func assertDirectXDSConnection(t *testing.T, pod *corev1.Pod, containerName, sec
 		t.Fatalf("prometheus scrape annotation = %q, want true", got)
 	}
 
-	if !hasEnv(container.Env, "TRUST_DOMAIN", "cluster.local") {
-		t.Fatalf("TRUST_DOMAIN env missing")
+	for _, want := range []struct {
+		name  string
+		value string
+	}{
+		{name: "XDS_ADDRESS", value: "dubbod.dubbo-system.svc:26012"},
+		{name: "CA_ADDRESS", value: "dubbod.dubbo-system.svc:26012"},
+		{name: "TRIPLE_ADDRESS", value: ""},
+		{name: "TRIPLE_XDS_EXPERIMENTAL_SECURITY_SUPPORT", value: "true"},
+		{name: "DUBBO_META_GENERATOR", value: "triple"},
+		{name: "DUBBO_META_CLUSTER_ID", value: "Kubernetes"},
+		{name: "DUBBO_META_MESH_ID", value: "cluster.local"},
+		{name: "TRUST_DOMAIN", value: "cluster.local"},
+		{name: "DUBBO_REGISTRY_ADDRESS", value: "xds://dubbod.dubbo-system.svc:26012"},
+		{name: "DUBBO_PROTOCOL_NAME", value: "tri"},
+	} {
+		if !hasEnv(container.Env, want.name, want.value) {
+			t.Fatalf("%s=%q env missing", want.name, want.value)
+		}
 	}
 	if !hasFieldRefEnv(container.Env, "POD_NAMESPACE", "metadata.namespace") {
 		t.Fatalf("POD_NAMESPACE fieldRef env missing")
@@ -430,10 +443,17 @@ func TestInstallerTripleEngineTemplateInjectsTelemetryEnv(t *testing.T) {
 	if got := envValue(mergedPod, "OTEL_RESOURCE_ATTRIBUTES"); got != "foo=bar" {
 		t.Fatalf("OTEL_RESOURCE_ATTRIBUTES = %q, want foo=bar", got)
 	}
+	if !hasMount(app.VolumeMounts, InherentXDSVolumeName, InherentXDSMountPath, true) {
+		t.Fatalf("inherent xds mount missing")
+	}
 
-	mergedPod, _, err = RunTemplate(newParams(telemetryconfig.EffectiveTracing{}))
+	emptyParams := newParams(telemetryconfig.EffectiveTracing{})
+	mergedPod, injectedPod, err := RunTemplate(emptyParams)
 	if err != nil {
 		t.Fatalf("RunTemplate() failed: %v", err)
+	}
+	if err := postProcessPod(mergedPod, *injectedPod, emptyParams); err != nil {
+		t.Fatalf("postProcessPod() failed: %v", err)
 	}
 	if got := envValue(mergedPod, "OTEL_EXPORTER_OTLP_ENDPOINT"); got != "" {
 		t.Fatalf("OTEL_EXPORTER_OTLP_ENDPOINT = %q, want empty without Telemetry", got)
@@ -441,9 +461,13 @@ func TestInstallerTripleEngineTemplateInjectsTelemetryEnv(t *testing.T) {
 
 	disabled = true
 	tracing.DisableSpanReporting = &disabled
-	mergedPod, _, err = RunTemplate(newParams(tracing))
+	disabledParams := newParams(tracing)
+	mergedPod, injectedPod, err = RunTemplate(disabledParams)
 	if err != nil {
 		t.Fatalf("RunTemplate() failed: %v", err)
+	}
+	if err := postProcessPod(mergedPod, *injectedPod, disabledParams); err != nil {
+		t.Fatalf("postProcessPod() failed: %v", err)
 	}
 	if got := envValue(mergedPod, "OTEL_TRACES_EXPORTER"); got != "none" {
 		t.Fatalf("OTEL_TRACES_EXPORTER = %q, want none", got)

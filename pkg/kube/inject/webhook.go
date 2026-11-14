@@ -504,42 +504,53 @@ func addApplicationContainerConfig(pod *corev1.Pod, req InjectionParameters) err
 		})
 		ensureApplicationMetricsAnnotations(pod)
 	}
-	for i := range pod.Spec.Containers {
-		container := &pod.Spec.Containers[i]
-		container.Env = ensureEnvVar(container.Env, corev1.EnvVar{
-			Name:  InherentTripleBootstrapEnvName,
-			Value: InherentTripleBootstrapPath,
-		})
-		container.Env = ensureEnvVar(container.Env, corev1.EnvVar{
-			Name:  "TRUST_DOMAIN",
-			Value: trustDomain,
-		})
-		container.Env = ensureEnvVar(container.Env, corev1.EnvVar{
+	staticEnvs := []corev1.EnvVar{
+		{Name: InherentTripleBootstrapEnvName, Value: InherentTripleBootstrapPath},
+		{Name: "XDS_ADDRESS", Value: "dubbod.dubbo-system.svc:26012"},
+		{Name: "CA_ADDRESS", Value: "dubbod.dubbo-system.svc:26012"},
+		{Name: "TRIPLE_ADDRESS", Value: ""},
+		{Name: "TRIPLE_XDS_EXPERIMENTAL_SECURITY_SUPPORT", Value: "true"},
+		{Name: "DUBBO_META_GENERATOR", Value: "triple"},
+		{Name: "DUBBO_META_CLUSTER_ID", Value: "Kubernetes"},
+		{Name: "DUBBO_META_MESH_ID", Value: "cluster.local"},
+		{Name: "TRUST_DOMAIN", Value: trustDomain},
+		{
 			Name: "POD_NAMESPACE",
 			ValueFrom: &corev1.EnvVarSource{
 				FieldRef: &corev1.ObjectFieldSelector{FieldPath: "metadata.namespace"},
 			},
-		})
-		container.Env = ensureEnvVar(container.Env, corev1.EnvVar{
+		},
+		{
 			Name: "INSTANCE_IP",
 			ValueFrom: &corev1.EnvVarSource{
 				FieldRef: &corev1.ObjectFieldSelector{FieldPath: "status.podIP"},
 			},
-		})
-		if discoveryAddress != "" {
-			registryAddress := discoveryAddress
-			if !strings.HasPrefix(registryAddress, "xds://") {
-				registryAddress = "xds://" + registryAddress
-			}
-			container.Env = ensureEnvVar(container.Env, corev1.EnvVar{
-				Name:  "DUBBO_REGISTRY_ADDRESS",
-				Value: registryAddress,
-			})
+		},
+	}
+	if discoveryAddress != "" {
+		registryAddress := discoveryAddress
+		if !strings.HasPrefix(registryAddress, "xds://") {
+			registryAddress = "xds://" + registryAddress
 		}
-		container.Env = ensureEnvVar(container.Env, corev1.EnvVar{
-			Name:  "DUBBO_PROTOCOL_NAME",
-			Value: "tri",
+		staticEnvs = append(staticEnvs, corev1.EnvVar{
+			Name:  "DUBBO_REGISTRY_ADDRESS",
+			Value: registryAddress,
 		})
+	}
+	staticEnvs = append(staticEnvs, corev1.EnvVar{
+		Name:  "DUBBO_PROTOCOL_NAME",
+		Value: "tri",
+	})
+	telemetryEnvs := buildTelemetryEnvVars(pod, req)
+
+	for i := range pod.Spec.Containers {
+		container := &pod.Spec.Containers[i]
+		for _, env := range staticEnvs {
+			container.Env = ensureEnvVar(container.Env, env)
+		}
+		for _, env := range telemetryEnvs {
+			container.Env = ensureEnvVar(container.Env, env)
+		}
 
 		hasProxyVolumeMount := false
 		for _, vm := range container.VolumeMounts {
@@ -558,6 +569,37 @@ func addApplicationContainerConfig(pod *corev1.Pod, req InjectionParameters) err
 		}
 	}
 	return nil
+}
+
+func buildTelemetryEnvVars(pod *corev1.Pod, req InjectionParameters) []corev1.EnvVar {
+	var envs []corev1.EnvVar
+	if req.telemetry.Configured && req.telemetry.Disabled() {
+		envs = append(envs, corev1.EnvVar{Name: "OTEL_TRACES_EXPORTER", Value: "none"})
+	} else if endpoint := tracingOTLPEndpoint(req.telemetry); endpoint != "" {
+		deployMeta := req.deployMeta
+		if deployMeta.Name == "" {
+			deployMeta, _ = kube.GetDeployMetaFromPod(pod)
+		}
+		envs = append(envs,
+			corev1.EnvVar{Name: "OTEL_TRACES_EXPORTER", Value: "otlp"},
+			corev1.EnvVar{Name: "OTEL_EXPORTER_OTLP_PROTOCOL", Value: "grpc"},
+			corev1.EnvVar{Name: "OTEL_EXPORTER_OTLP_ENDPOINT", Value: endpoint},
+		)
+		if deployMeta.Name != "" && deployMeta.Namespace != "" {
+			envs = append(envs, corev1.EnvVar{
+				Name:  "OTEL_SERVICE_NAME",
+				Value: fmt.Sprintf("%s.%s", deployMeta.Name, deployMeta.Namespace),
+			})
+		}
+		envs = append(envs,
+			corev1.EnvVar{Name: "OTEL_TRACES_SAMPLER", Value: "parentbased_traceidratio"},
+			corev1.EnvVar{Name: "OTEL_TRACES_SAMPLER_ARG", Value: req.telemetry.SamplingRatioString()},
+		)
+	}
+	if attrs := req.telemetry.ResourceAttributes(); attrs != "" {
+		envs = append(envs, corev1.EnvVar{Name: "OTEL_RESOURCE_ATTRIBUTES", Value: attrs})
+	}
+	return envs
 }
 
 func ensureContainerPort(ports []corev1.ContainerPort, desired corev1.ContainerPort) []corev1.ContainerPort {

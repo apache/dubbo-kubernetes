@@ -574,7 +574,7 @@ func TestBuildHTTPRouteSanitizesSnapshotEdgeCases(t *testing.T) {
 	})
 }
 
-func newRDSTestPushContext(t *testing.T, configs []config.Config, services []*model.Service) *model.PushContext {
+func newRDSTestEnv(t *testing.T, configs []config.Config, services []*model.Service) *model.Environment {
 	t.Helper()
 
 	store := memory.Make(collections.DubboGatewayAPI())
@@ -591,7 +591,13 @@ func newRDSTestPushContext(t *testing.T, configs []config.Config, services []*mo
 		MeshConfig: mesh.DefaultMeshConfig(),
 	}, true))
 	env.Init()
+	return env
+}
 
+func newRDSTestPushContext(t *testing.T, configs []config.Config, services []*model.Service) *model.PushContext {
+	t.Helper()
+
+	env := newRDSTestEnv(t, configs, services)
 	push := model.NewPushContext()
 	push.InitContext(env, nil, nil)
 	return push

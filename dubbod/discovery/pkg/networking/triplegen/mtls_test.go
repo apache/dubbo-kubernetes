@@ -16,16 +16,20 @@
 package triplegen
 
 import (
+	"slices"
 	"testing"
 
 	"github.com/apache/dubbo-kubernetes/dubbod/discovery/pkg/model"
 	"github.com/apache/dubbo-kubernetes/pkg/config"
+	"github.com/apache/dubbo-kubernetes/pkg/config/host"
 	"github.com/apache/dubbo-kubernetes/pkg/config/schema/gvk"
 	"github.com/apache/dubbo-kubernetes/pkg/wellknown"
 	"github.com/apache/dubbo-kubernetes/pkg/xdsbootstrap"
 	security "github.com/dubml/api/security/v1alpha3"
 	typev1alpha3 "github.com/dubml/api/type/v1alpha3"
+	cluster "github.com/dubml/xds-api/cluster/v1"
 	core "github.com/dubml/xds-api/core/v1"
+	tlsv1 "github.com/dubml/xds-api/extensions/transport_sockets/tls/v1"
 	routerv1 "github.com/dubml/xds-api/extensions/filters/v1/http/router"
 	hcmv1 "github.com/dubml/xds-api/extensions/filters/v1/network/http_connection_manager"
 	listener "github.com/dubml/xds-api/listener/v1"
@@ -224,4 +228,76 @@ func findListener(t *testing.T, resources model.Resources, name string) *listene
 	}
 	t.Fatalf("listener %s not found in %d resources", name, len(resources))
 	return nil
+}
+
+func TestBuildClustersMTLSRequiresPeerServiceAccounts(t *testing.T) {
+	const hostName = host.Name("nginx.app.svc.cluster.local")
+	const clusterName = "outbound|80||" + string(hostName)
+	const wantSAN = "spiffe://cluster.local/ns/app/sa/nginx"
+
+	for _, tc := range []struct {
+		name     string
+		sa       string
+		wantMTLS bool
+		wantSANs []string
+	}{
+		{
+			name:     "with SPIFFE SA emits exact match_subject_alt_names",
+			sa:       wantSAN,
+			wantMTLS: true,
+			wantSANs: []string{wantSAN},
+		},
+		{
+			name:     "without SA disables mTLS instead of emitting empty SAN list",
+			sa:       "",
+			wantMTLS: false,
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			svc := newRDSTestService("nginx", "app", string(hostName), 80)
+			env := newRDSTestEnv(t, []config.Config{
+				newPeerAuthenticationConfig("app-strict-mtls", "app", security.PeerAuthentication_MutualTLS_STRICT),
+			}, []*model.Service{svc})
+			if tc.sa != "" {
+				env.EndpointIndex.UpdateServiceEndpoints(model.ShardKey{}, string(hostName), "app", []*model.DubboEndpoint{{
+					Addresses:       []string{"10.0.0.12"},
+					EndpointPort:    80,
+					ServicePortName: "http",
+					ServiceAccount:  tc.sa,
+					HealthStatus:    model.Healthy,
+				}}, false)
+			}
+			push := model.NewPushContext()
+			push.InitContext(env, nil, nil)
+
+			resources := (&TripleConfigGenerator{}).BuildClusters(newMTLSTestProxy(), push, []string{clusterName})
+			if len(resources) != 1 {
+				t.Fatalf("resources = %d, want 1", len(resources))
+			}
+			generated := &cluster.Cluster{}
+			if err := resources[0].GetResource().UnmarshalTo(generated); err != nil {
+				t.Fatalf("unmarshal cluster: %v", err)
+			}
+			if !tc.wantMTLS {
+				if generated.GetTransportSocket() != nil {
+					t.Fatalf("expected nil transport_socket when SA is missing, got %v", generated.GetTransportSocket())
+				}
+				return
+			}
+			if generated.GetTransportSocket() == nil {
+				t.Fatal("expected mTLS transport_socket when peer SA is present")
+			}
+			tlsContext := &tlsv1.UpstreamTlsContext{}
+			if err := generated.GetTransportSocket().GetTypedConfig().UnmarshalTo(tlsContext); err != nil {
+				t.Fatalf("unmarshal UpstreamTlsContext: %v", err)
+			}
+			gotSANs := tlsContext.GetCommonTlsContext().
+				GetCombinedValidationContext().
+				GetDefaultValidationContext().
+				GetMatchSubjectAltNames()
+			if !slices.Equal(gotSANs, tc.wantSANs) {
+				t.Fatalf("match_subject_alt_names = %v, want %v", gotSANs, tc.wantSANs)
+			}
+		})
+	}
 }
