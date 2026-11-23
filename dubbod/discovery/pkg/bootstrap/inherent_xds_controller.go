@@ -607,6 +607,9 @@ func isInherentTriplePod(pod *corev1.Pod) bool {
 	if pod == nil {
 		return false
 	}
+	if strings.EqualFold(pod.Annotations["cni.dubbo.apache.org/redirection"], "enabled") {
+		return true
+	}
 	for _, templateName := range strings.Split(pod.Annotations[inject.InherentInjectTemplatesAnnoName], ",") {
 		if strings.TrimSpace(templateName) == inject.InherentTripleTemplateName {
 			return true

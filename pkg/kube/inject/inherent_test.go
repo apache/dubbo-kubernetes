@@ -208,13 +208,16 @@ func assertDirectXDSConnection(t *testing.T, pod *corev1.Pod, containerName, sec
 		t.Fatalf("prometheus scrape annotation = %q, want true", got)
 	}
 
+	if got := pod.Annotations["cni.dubbo.apache.org/redirection"]; got != "enabled" {
+		t.Fatalf("cni redirection annotation = %q, want enabled", got)
+	}
+
 	for _, want := range []struct {
 		name  string
 		value string
 	}{
 		{name: "XDS_ADDRESS", value: "dubbod.dubbo-system.svc:26012"},
 		{name: "CA_ADDRESS", value: "dubbod.dubbo-system.svc:26012"},
-		{name: "TRIPLE_ADDRESS", value: ""},
 		{name: "TRIPLE_XDS_EXPERIMENTAL_SECURITY_SUPPORT", value: "true"},
 		{name: "DUBBO_META_GENERATOR", value: "triple"},
 		{name: "DUBBO_META_CLUSTER_ID", value: "Kubernetes"},
