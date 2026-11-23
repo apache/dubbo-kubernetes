@@ -13,11 +13,15 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-BINARIES            := dubboctl dubbod
+BINARIES            := dubboctl dubbod dubbo-cni dubbo-cni-node
 main_path_dubboctl  := dubboctl/main.go
 main_path_dubbod    := dubbod/discovery/cmd/main.go
+main_path_dubbo-cni := cni/cmd/dubbo-cni/main.go
+main_path_dubbo-cni-node := cni/cmd/dubbo-cni-node/main.go
 DUBBOD_BASE_IMAGE   ?=
+CNI_BASE_IMAGE      ?=
 DOCKER_DIR          = $(BIN_DIR)/docker/dubbod
+CNI_DOCKER_DIR      = $(BIN_DIR)/docker/cni
 
 ##@ Build
 
@@ -36,6 +40,11 @@ docker-base: ## Build base images declared in tools/docker.yaml (HUB=/TAG=/PUSH=
 docker-dubbod: ## Build a local Linux dubbod image (REPO=/TAG=; BUILD_ALL=false builds only dubbod).
 	$(MAKE) $(addprefix build-,$(if $(filter true,$(BUILD_ALL)),$(BINARIES),dubbod)) GOOS=linux BIN_DIR=$(DOCKER_DIR)/$(GOARCH)
 	docker build --platform linux/$(GOARCH) $(if $(DUBBOD_BASE_IMAGE),--build-arg BASE_IMAGE=$(DUBBOD_BASE_IMAGE)) -f dubbod/discovery/docker/dockerfile.dubbod -t $(IMAGE) $(DOCKER_DIR)
+
+.PHONY: docker-cni
+docker-cni: ## Build a local Linux dubbo-cni image (REPO=/TAG=).
+	$(MAKE) build-dubbo-cni build-dubbo-cni-node GOOS=linux BIN_DIR=$(CNI_DOCKER_DIR)/$(GOARCH)
+	docker build --platform linux/$(GOARCH) $(if $(CNI_BASE_IMAGE),--build-arg BASE_IMAGE=$(CNI_BASE_IMAGE)) -f cni/docker/dockerfile.cni -t $(if $(CNI_IMAGE),$(CNI_IMAGE),$(REPO)/dubbo-cni:$(TAG)) $(CNI_DOCKER_DIR)
 
 .PHONY: clone-examples
 clone-examples: ## Copy examples/ next to the binaries for release packaging.
