@@ -24,5 +24,7 @@ spec:
       enabled: true
     dubbod:
       enabled: true
+    cni:
+      enabled: true
   values: {}
 

@@ -1,0 +1,144 @@
+# Licensed to the Apache Software Foundation (ASF) under one or more
+# contributor license agreements.  See the NOTICE file distributed with
+# this work for additional information regarding copyright ownership.
+# The ASF licenses this file to You under the Apache License, Version 2.0
+# (the "License"); you may not use this file except in compliance with
+# the License.  You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+{{- $defaults := .Values._internal_default_values_not_set | default dict }}
+{{- $repo := coalesce .Values.repo $defaults.repo "dubml" }}
+{{- $tag := .Chart.AppVersion }}
+{{- if and (hasKey .Values "tag") (ne (.Values.tag | toString) "") }}
+{{- $tag = .Values.tag }}
+{{- else if and (hasKey $defaults "tag") (ne ($defaults.tag | toString) "") }}
+{{- $tag = $defaults.tag }}
+{{- end }}
+{{- $image := coalesce .Values.image $defaults.image "dubbo-cni" }}
+{{- if not (contains "/" $image) }}
+{{- $image = printf "%s/%s:%v" $repo $image $tag }}
+{{- end }}
+{{- $cniBinDir := coalesce .Values.cniBinDir $defaults.cniBinDir "/opt/cni/bin" }}
+{{- $cniNetDir := coalesce .Values.cniNetDir $defaults.cniNetDir "/etc/cni/net.d" }}
+{{- $socketPath := coalesce .Values.socketPath $defaults.socketPath "/var/run/dubbo-cni/cni.sock" }}
+{{- $statusPort := coalesce .Values.statusPort $defaults.statusPort 15021 }}
+{{- $outboundPort := coalesce .Values.outboundPort $defaults.outboundPort 15001 }}
+{{- $inboundTunnelPort := coalesce .Values.inboundTunnelPort $defaults.inboundTunnelPort 15008 }}
+{{- $discoveryAddress := coalesce .Values.discoveryAddress $defaults.discoveryAddress "dubbod.dubbo-system.svc:26012" }}
+{{- $excludeNamespaces := coalesce .Values.excludeNamespaces $defaults.excludeNamespaces "kube-system,dubbo-system" }}
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: dubbo-cni-node
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app: dubbo-cni-node
+spec:
+  selector:
+    matchLabels:
+      app: dubbo-cni-node
+  updateStrategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 1
+  template:
+    metadata:
+      labels:
+        app: dubbo-cni-node
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/path: "/metrics"
+        prometheus.io/port: "{{ $statusPort }}"
+    spec:
+      serviceAccountName: dubbo-cni-node
+      hostNetwork: true
+      dnsPolicy: ClusterFirstWithHostNet
+      priorityClassName: system-node-critical
+      tolerations:
+        - operator: Exists
+      containers:
+        - name: cni-node
+          image: {{ $image }}
+          imagePullPolicy: {{ coalesce .Values.imagePullPolicy $defaults.imagePullPolicy "IfNotPresent" }}
+          args:
+            - --cni-bin-dir=/host/opt/cni/bin
+            - --cni-net-dir=/host/etc/cni/net.d
+            - --socket-path={{ $socketPath }}
+            - --status-addr=:{{ $statusPort }}
+            - --outbound-addr=:{{ $outboundPort }}
+            - --inbound-tunnel-addr=:{{ $inboundTunnelPort }}
+            - --exclude-namespaces={{ $excludeNamespaces }}
+          env:
+            - name: NODE_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: spec.nodeName
+            - name: NODE_IP
+              valueFrom:
+                fieldRef:
+                  fieldPath: status.hostIP
+            - name: DUBBO_SYSTEM_NAMESPACE
+              value: {{ .Release.Namespace }}
+            - name: XDS_ADDRESS
+              value: {{ $discoveryAddress }}
+          ports:
+            - name: status
+              containerPort: {{ $statusPort }}
+              protocol: TCP
+            - name: outbound
+              containerPort: {{ $outboundPort }}
+              protocol: TCP
+            - name: tunnel
+              containerPort: {{ $inboundTunnelPort }}
+              protocol: TCP
+          securityContext:
+            privileged: true
+            capabilities:
+              add:
+                - NET_ADMIN
+                - NET_RAW
+                - SYS_ADMIN
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: {{ $statusPort }}
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /readyz
+              port: {{ $statusPort }}
+            initialDelaySeconds: 2
+            periodSeconds: 5
+          volumeMounts:
+            - name: cni-bin-dir
+              mountPath: /host/opt/cni/bin
+            - name: cni-net-dir
+              mountPath: /host/etc/cni/net.d
+            - name: cni-socket-dir
+              mountPath: /var/run/dubbo-cni
+            - name: host-netns
+              mountPath: /var/run/netns
+              mountPropagation: HostToContainer
+      volumes:
+        - name: cni-bin-dir
+          hostPath:
+            path: {{ $cniBinDir }}
+        - name: cni-net-dir
+          hostPath:
+            path: {{ $cniNetDir }}
+        - name: cni-socket-dir
+          hostPath:
+            path: /var/run/dubbo-cni
+            type: DirectoryOrCreate
+        - name: host-netns
+          hostPath:
+            path: /var/run/netns
+            type: DirectoryOrCreate

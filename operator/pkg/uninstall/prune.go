@@ -97,6 +97,7 @@ func GetRemovedResources(kc kube.CLIClient, dopName, dopNamespace string, includ
 		} else {
 			includeCN := []string{
 				string(component.DubboDiscoveryComponentName),
+				string(component.CniComponentName),
 			}
 			includeRequirement, lerr := klabels.NewRequirement(manifest.DubboComponentLabel, selection.In, includeCN)
 			if lerr != nil {
