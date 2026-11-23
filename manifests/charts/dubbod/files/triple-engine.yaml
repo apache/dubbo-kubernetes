@@ -17,6 +17,7 @@ metadata:
   annotations:
     dubbo.apache.org/rev: default
     inject.dubbo.apache.org/templates: triple-engine
+    cni.dubbo.apache.org/redirection: enabled
 spec:
   volumes:
     - name: dubbo-xds

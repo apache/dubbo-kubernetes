@@ -504,15 +504,24 @@ func addApplicationContainerConfig(pod *corev1.Pod, req InjectionParameters) err
 		})
 		ensureApplicationMetricsAnnotations(pod)
 	}
+	xdsAddr := discoveryAddress
+	if xdsAddr == "" {
+		xdsAddr = "dubbod.dubbo-system.svc:26012"
+	}
+	if pod.Annotations == nil {
+		pod.Annotations = map[string]string{}
+	}
+	if _, exists := pod.Annotations["cni.dubbo.apache.org/redirection"]; !exists {
+		pod.Annotations["cni.dubbo.apache.org/redirection"] = "enabled"
+	}
 	staticEnvs := []corev1.EnvVar{
 		{Name: InherentTripleBootstrapEnvName, Value: InherentTripleBootstrapPath},
-		{Name: "XDS_ADDRESS", Value: "dubbod.dubbo-system.svc:26012"},
-		{Name: "CA_ADDRESS", Value: "dubbod.dubbo-system.svc:26012"},
-		{Name: "TRIPLE_ADDRESS", Value: ""},
+		{Name: "XDS_ADDRESS", Value: xdsAddr},
+		{Name: "CA_ADDRESS", Value: xdsAddr},
 		{Name: "TRIPLE_XDS_EXPERIMENTAL_SECURITY_SUPPORT", Value: "true"},
 		{Name: "DUBBO_META_GENERATOR", Value: "triple"},
 		{Name: "DUBBO_META_CLUSTER_ID", Value: "Kubernetes"},
-		{Name: "DUBBO_META_MESH_ID", Value: "cluster.local"},
+		{Name: "DUBBO_META_MESH_ID", Value: trustDomain},
 		{Name: "TRUST_DOMAIN", Value: trustDomain},
 		{
 			Name: "POD_NAMESPACE",
