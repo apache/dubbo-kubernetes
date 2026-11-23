@@ -58,6 +58,8 @@ type DubboComponentSpec struct {
 	Base *BaseComponentSpec `json:"base,omitempty"`
 	// Using dubbod as the control plane.
 	Dubbod *DiscoveryComponentSpec `json:"dubbod,omitempty"`
+	// Using dubbo-cni-node as the node-level CNI tunnel agent.
+	Cni *CNIComponentSpec `json:"cni,omitempty"`
 }
 
 type BaseComponentSpec struct {
@@ -66,6 +68,11 @@ type BaseComponentSpec struct {
 }
 
 type DiscoveryComponentSpec struct {
+	// Selects whether this component is installed.
+	Enabled *BoolValue `json:"enabled,omitempty"`
+}
+
+type CNIComponentSpec struct {
 	// Selects whether this component is installed.
 	Enabled *BoolValue `json:"enabled,omitempty"`
 }

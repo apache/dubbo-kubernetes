@@ -371,3 +371,18 @@ func hasContainerPort(ports []interface{}, name string, number int64) bool {
 	}
 	return false
 }
+
+func TestGenerateManifestRendersDubboCNIDaemonSet(t *testing.T) {
+	manifests, _, err := GenerateManifest(nil, nil, nil, nil)
+	if err != nil {
+		t.Fatalf("GenerateManifest() error = %v", err)
+	}
+	ds := findManifest(t, manifests, "DaemonSet", "dubbo-cni-node")
+	hostNetwork, ok, err := unstructured.NestedBool(ds.Object, "spec", "template", "spec", "hostNetwork")
+	if err != nil || !ok || !hostNetwork {
+		t.Fatalf("dubbo-cni-node hostNetwork = %v (ok=%v err=%v), want true", hostNetwork, ok, err)
+	}
+	findManifest(t, manifests, "ServiceAccount", "dubbo-cni-node")
+	findManifest(t, manifests, "ClusterRole", "dubbo-cni-node")
+	findManifest(t, manifests, "ClusterRoleBinding", "dubbo-cni-node")
+}

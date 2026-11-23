@@ -27,6 +27,7 @@ type Name string
 const (
 	BaseComponentName           Name = "Base"
 	DubboDiscoveryComponentName Name = "Dubbod"
+	CniComponentName            Name = "Cni"
 )
 
 type Component struct {
@@ -66,17 +67,28 @@ var AllComponents = []Component{
 		Default:        true,
 		HelmSubDir:     "dubbod",
 	},
+	{
+		UserFacingName: CniComponentName,
+		SpecName:       "cni",
+		ResourceType:   "DaemonSet",
+		ResourceName:   "dubbo-cni-node",
+		ContainerName:  "cni-node",
+		Default:        true,
+		HelmSubDir:     "dubbo-cni",
+	},
 }
 
 var (
 	userFacingCompNames = map[Name]string{
 		BaseComponentName:           "Dubbo Resource Core",
 		DubboDiscoveryComponentName: "Dubbo control plane",
+		CniComponentName:            "Dubbo CNI node agent",
 	}
 
 	Icons = map[Name]string{
 		BaseComponentName:           "⚡️",
 		DubboDiscoveryComponentName: "⚡️",
+		CniComponentName:            "⚡️",
 	}
 )
 
